@@ -945,6 +945,8 @@ function TKMCityPlanner.GetRoadToHouse(aHT: TKMHouseType; aIdx: Integer; var aFi
     Result := True;
   end;
 
+const
+  MAX_ROAD_DISTANCE = 75;
 var
   Output: Boolean;
   NewLoc, ExistLoc: TKMPoint;
@@ -960,7 +962,8 @@ begin
   //  Output := true;
   //  ExistLoc := H.PointBelowEntrance;
   //end;
-  if Output AND fRoadPlanner.Route_Make(KMPointBelow(NewLoc), KMPointBelow(ExistLoc), aField) then
+  if Output AND fRoadPlanner.Route_Make(KMPointBelow(NewLoc), KMPointBelow(ExistLoc), aField)
+    AND ((aField.Count < MAX_ROAD_DISTANCE) OR (aHT = htWatchtower)) then
   begin
     Output := True;
     ReplaceOverlappingRoad( fPlannedHouses[aHT].Plans[aIdx].Loc );
@@ -972,7 +975,10 @@ begin
     end;
   end
   else
+  begin
+    Output := False;
     RemovePlan(aHT,aIdx);
+  end;
   Result := Output;
 end;
 
