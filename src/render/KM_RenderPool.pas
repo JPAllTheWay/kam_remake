@@ -2171,7 +2171,7 @@ begin
         SendToRender(K);
         if SHOW_SEL_BUFFER and RenderList[K].NewInst and (RenderList[K].UID > 0) then
           gRenderAux.SquareOnTerrain(RenderList[K].SelectionRect.Left , RenderList[K].SelectionRect.Top,
-                                     RenderList[K].SelectionRect.Right, RenderList[K].SelectionRect.Bottom, RenderList[K].UID or $FF000000);
+                                     RenderList[K].SelectionRect.Right, RenderList[K].SelectionRect.Bottom, RenderList[K].UID or $FF000000, 1);
         Inc(K);
         Inc(fStat_Sprites2);
       until ((K = fCount) or RenderList[K].NewInst);

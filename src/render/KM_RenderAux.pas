@@ -43,7 +43,7 @@ type
     procedure Quad(pX, pY: Integer; aCol: TColor4); overload;
     procedure Quad(pX, pY: Single); overload;
     procedure Quad(pX, pY: Single; aCol: TColor4); overload;
-    procedure SquareOnTerrain(x1, y1, x2, y2: Single; aLineColor: TColor4);
+    procedure SquareOnTerrain(x1, y1, x2, y2: Single; aLineColor: TColor4; aThickness: Integer = -1);
     procedure Text(pX, pY: Single; const aText: string; aCol: TColor4); overload;
     procedure Text(pX, pY: Single; const aText: string; aCol: TColor4; const aInset: TKMPointF; aConsiderTextLength: Boolean = True); overload;
     procedure TextAtCorner(pX, pY: Integer; const aCorner: Byte; const aText: string; aCol: TColor4);
@@ -193,12 +193,19 @@ begin
 end;
 
 
-procedure TRenderAux.SquareOnTerrain(X1, Y1, X2, Y2: Single; aLineColor: TColor4);
+procedure TRenderAux.SquareOnTerrain(X1, Y1, X2, Y2: Single; aLineColor: TColor4; aThickness: Integer = -1);
 var
-  I: Integer;
+  I, lineWidth: Integer;
 begin
   TRender.BindTexture(0); // We have to reset texture to default (0), because it could be bind to any other texture (atlas)
   glColor4ubv(@aLineColor);
+
+  if aThickness <> -1 then
+  begin
+    glGetIntegerv(GL_LINE_WIDTH, @lineWidth);
+    glLineWidth(aThickness);
+  end;
+
   glBegin(GL_LINE_LOOP);
     glVertex2f(X1, gTerrain.RenderFlatToHeight(X1, Y1));
     for I := Ceil(X1) to Trunc(X2) do
@@ -210,6 +217,10 @@ begin
       glVertex2f(I, gTerrain.RenderFlatToHeight(I, Y2));
     glVertex2f(X1, gTerrain.RenderFlatToHeight(X1, Y2));
   glEnd;
+
+    // Restore previous value for line width
+  if aThickness <> -1 then
+    glLineWidth(lineWidth);
 end;
 
 
