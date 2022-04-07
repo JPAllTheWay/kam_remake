@@ -1652,3 +1652,5 @@ TX_ERROR_ASK_TO_SEND_RNGCHECK_REPORT = 1547; //Other player got desync error. Pl
 
 TX_EXIT_WARN_MESSAGE = 1580; //Any unsaved changes will be lost. Exit?
 TX_EXIT_WARN_HEADER = 1581; //Warning
+
+TX_RESULTS_MP_CITIZENS_DISMISSED = 1589; //Citizens|dismissed

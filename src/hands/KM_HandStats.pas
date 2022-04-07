@@ -29,6 +29,7 @@ type
     Training,         //Currently in training queue
     Trained,          //Trained by player
     Lost,             //Died of hunger or killed
+    Dismissed,        //Sent away by player
     Killed: Cardinal; //Killed (incl. self)
   end;
 
@@ -92,6 +93,7 @@ type
     procedure UnitRemovedFromTrainingQueue(aType: TKMUnitType);
     procedure UnitLost(aType: TKMUnitType);
     procedure UnitKilled(aType: TKMUnitType);
+    procedure UnitDismissed(aType: TKMUnitType);
 
     property WareDistribution: TKMWareDistribution read fWareDistribution;
 
@@ -115,6 +117,7 @@ type
     function GetCitizensTrained: Cardinal;
     function GetCitizensLost: Cardinal;
     function GetCitizensKilled: Cardinal;
+    function GetCitizensDismissed: Cardinal;
     function GetHousesBuilt: Cardinal;
     function GetHousesLost: Cardinal;
     function GetHousesDestroyed: Cardinal;
@@ -272,6 +275,12 @@ end;
 procedure TKMHandStats.UnitKilled(aType: TKMUnitType);
 begin
   Inc(Units[aType].Killed);
+end;
+
+
+procedure TKMHandStats.UnitDismissed(aType: TKMUnitType);
+begin
+  Inc(Units[aType].Dismissed);
 end;
 
 
@@ -547,6 +556,15 @@ begin
   Result := 0;
   for UT := CITIZEN_MIN to CITIZEN_MAX do
     Inc(Result, Units[UT].Killed);
+end;
+
+function TKMHandStats.GetCitizensDismissed: Cardinal;
+var
+  UT: TKMUnitType;
+begin
+  Result := 0;
+  for UT := CITIZEN_MIN to CITIZEN_MAX do
+    Inc(Result, Units[UT].Dismissed);
 end;
 
 
