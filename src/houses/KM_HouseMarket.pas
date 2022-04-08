@@ -235,8 +235,8 @@ begin
     gHands[Owner].Stats.WareConsumed(fResFrom, tradeCount * RatioFrom);
     Dec(fTradeAmount, tradeCount);
     SetResOutCnt(fResTo, fMarketResOut[fResTo] + tradeCount * RatioTo);
-    gHands[Owner].Stats.WareProduced(fResTo, tradeCount * RatioTo);
     gHands[Owner].Deliveries.Queue.AddOffer(Self, fResTo, tradeCount * RatioTo);
+    gHands[Owner].Stats.WareTraded(fResTo, tradeCount * RatioTo);
 
     gScriptEvents.EventMarketTrade(Self, fResFrom, fResTo);
     gScriptEvents.ProcWareProduced(Self, fResTo, tradeCount * RatioTo);

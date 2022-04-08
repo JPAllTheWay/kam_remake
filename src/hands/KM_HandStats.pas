@@ -36,6 +36,7 @@ type
   TKMWareStats = packed record
     Initial: Cardinal;
     Produced: Cardinal;
+    Traded: Cardinal;
     Consumed: Cardinal;
   end;
 
@@ -78,6 +79,7 @@ type
     //Input reported by Player
     procedure WareInitial(aRes: TKMWareType; aCount: Cardinal);
     procedure WareProduced(aRes: TKMWareType; aCount: Cardinal);
+    procedure WareTraded(aRes: TKMWareType; aCount: Cardinal);
     procedure WareConsumed(aRes: TKMWareType; aCount: Cardinal = 1);
     procedure HousePlanned(aType: TKMHouseType);
     procedure HousePlanRemoved(aType: TKMHouseType);
@@ -127,6 +129,7 @@ type
     function GetWarriorsLost: Cardinal;
     function GetWaresProduced(aRT: TKMWareType): Cardinal;
     function GetCivilProduced: Cardinal;
+    function GetCivilTraded: Cardinal;
     function GetWeaponsProduced: Cardinal;
     function GetWarfareProduced: Cardinal;
 
@@ -303,6 +306,12 @@ begin
       WARE_MAX:   Inc(Wares[aRes].Produced, aCount);
       else        raise Exception.Create('Cant''t add produced ware ' + gResWares[aRes].Title);
     end;
+end;
+
+
+procedure TKMHandStats.WareTraded(aRes: TKMWareType; aCount: Cardinal);
+begin
+  Inc(Wares[aRes].Traded, aCount);
 end;
 
 
@@ -660,6 +669,16 @@ begin
   for WT := WARE_MIN to WARE_MAX do
   if not (WT in [WEAPON_MIN..WEAPON_MAX]) then
     Inc(Result, Wares[WT].Produced);
+end;
+
+
+function TKMHandStats.GetCivilTraded: Cardinal;
+var
+  WT: TKMWareType;
+begin
+  Result := 0;
+  for WT := WARE_MIN to WARE_MAX do
+    Inc(Result, Wares[WT].Traded);
 end;
 
 

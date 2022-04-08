@@ -317,6 +317,8 @@ const
   MAX_LOBBY_SLOTS      = MAX_LOBBY_PLAYERS + MAX_LOBBY_SPECTATORS;
   MAX_TEAMS            = MAX_LOBBY_PLAYERS div 2;
 
+  BAR_STATS_AMOUNT = 12;    //Amount of bars in MP results
+
   GAME_SPEED_NORMAL = 1;
   GAME_SP_SPEED_MAX = 10;
   GAME_MP_SPEED_MAX = 2.5;

@@ -1654,3 +1654,4 @@ TX_EXIT_WARN_MESSAGE = 1580; //Any unsaved changes will be lost. Exit?
 TX_EXIT_WARN_HEADER = 1581; //Warning
 
 TX_RESULTS_MP_CITIZENS_DISMISSED = 1589; //Citizens|dismissed
+TX_RESULTS_MP_WARES_TRADED = 1590; //Wares|traded
