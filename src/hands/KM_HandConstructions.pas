@@ -187,11 +187,13 @@ type
     procedure RemoveExtraWorkers;
     function GetIdleWorkerCount: Integer;
     function GetBestWorker(const aPoint: TKMPoint): TKMUnitWorker;
+    function GetBetterWorker(const aPoint: TKMPoint; prevWorker: TKMUnit): TKMUnitWorker;
 
     procedure AssignFieldworks;
     procedure AssignHousePlans;
     procedure AssignHouses;
     procedure AssignRepairs;
+    procedure ReassignFieldworks;
   public
     constructor Create;
     destructor Destroy; override;
@@ -219,6 +221,7 @@ uses
 const
   LENGTH_INC = 32; // Increment array lengths by this value
   BID_MODIF = 5; // Modificator for every next assigned worker
+  MIN_DIST_IMPROV = 5; // Minimum distance improvement before worker task is reassigned
 
   //Limit number of workers building each house, so they all fit in around
   MAX_WORKERS: array [TKMHouseType] of Byte = (
@@ -1276,6 +1279,26 @@ begin
 end;
 
 
+function TKMHandConstructions.GetBetterWorker(const aPoint: TKMPoint; prevWorker: TKMUnit): TKMUnitWorker;
+var
+  I: Integer;
+  newBid, bestBid: Single;
+begin
+  Result := nil;
+  bestBid := KMLengthDiag(prevWorker.Position, aPoint) - MIN_DIST_IMPROV;
+  for I := 0 to fWorkersCount - 1 do
+    if fWorkers[I].Worker.IsIdle and fWorkers[I].Worker.CanWalkTo(aPoint, 0) then
+    begin
+      newBid := KMLengthDiag(fWorkers[I].Worker.Position, aPoint);
+      if newBid < bestBid then
+      begin
+        Result := fWorkers[I].Worker;
+        bestBid := newBid;
+      end;
+    end;
+end;
+
+
 procedure TKMHandConstructions.AssignFieldworks;
 var
   I, availableWorkers, availableJobs, jobID: Integer;
@@ -1394,6 +1417,26 @@ begin
 end;
 
 
+procedure TKMHandConstructions.ReassignFieldworks;
+var
+  I: Integer;
+  bestWorker: TKMUnitWorker;
+begin
+  if GetIdleWorkerCount = 0 then Exit;
+
+  for I := 0 to fFieldworksList.fFieldsCount - 1 do
+      if fFieldworksList.fFields[I].JobStatus = jsTaken then
+      begin
+        bestWorker := GetBetterWorker(fFieldworksList.fFields[I].Loc, fFieldworksList.fFields[I].Worker);
+        if bestWorker <> nil then
+        begin
+          fFieldworksList.fFields[I].Worker.CancelTask;
+          fFieldworksList.GiveTask(I, bestWorker);
+        end;
+      end;
+end;
+
+
 procedure TKMHandConstructions.UpdateState;
 begin
   HouseList.UpdateState;
@@ -1422,6 +1465,7 @@ begin
   AssignRepairs;
   AssignHousePlans;
   AssignFieldworks;
+  ReassignFieldworks;
   AssignHouses;
 end;
 
