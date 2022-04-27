@@ -36,6 +36,7 @@ type
     procedure ListUpdate;
     procedure UpdateFilterUI;
     procedure UpdateUI;
+    procedure UpdateNewMapUI;
     procedure SetSelectedMapInfo(aID: Integer = -1); overload;
     procedure SetSelectedMapInfo(aCRC: Cardinal; const aName: UnicodeString); overload;
 
@@ -518,6 +519,7 @@ procedure TKMMenuMapEditor.NewMapEnsureNumEdValues;
 begin
   NumEdit_MapSizeX.Value := EnsureRange(NumEdit_MapSizeX.Value, MIN_MAP_SIZE, MAX_MAP_SIZE);
   NumEdit_MapSizeY.Value := EnsureRange(NumEdit_MapSizeY.Value, MIN_MAP_SIZE, MAX_MAP_SIZE);
+  UpdateRadioMapEdSizes;
 end;
 
 
@@ -548,7 +550,8 @@ end;
 procedure TKMMenuMapEditor.SizeChangeByEdit(Sender: TObject);
 begin
   UpdateRadioMapEdSizes;
-  
+  UpdateNewMapUI;
+
   gGameSettings.MenuMapEdNewMapX := EnsureRange(NumEdit_MapSizeX.Value, MIN_MAP_SIZE, MAX_MAP_SIZE);
   gGameSettings.MenuMapEdNewMapY := EnsureRange(NumEdit_MapSizeY.Value, MIN_MAP_SIZE, MAX_MAP_SIZE);
 end;
@@ -560,8 +563,20 @@ begin
     NumEdit_MapSizeX.Value := MapSize[Radio_NewMapSizeX.ItemIndex];
   if Radio_NewMapSizeY.ItemIndex <> -1 then
     NumEdit_MapSizeY.Value := MapSize[Radio_NewMapSizeY.ItemIndex];
+
+  UpdateNewMapUI;
   gGameSettings.MenuMapEdNewMapX := NumEdit_MapSizeX.Value;
   gGameSettings.MenuMapEdNewMapY := NumEdit_MapSizeY.Value;
+end;
+
+
+procedure TKMMenuMapEditor.UpdateNewMapUI;
+begin
+  Button_Create.Enabled := (NumEdit_MapSizeX.Value >= MIN_MAP_SIZE) and (NumEdit_MapSizeY.Value >= MIN_MAP_SIZE);
+  NumEdit_MapSizeX.DecButton.Enabled := NumEdit_MapSizeX.Value > MIN_MAP_SIZE;
+  NumEdit_MapSizeY.DecButton.Enabled := NumEdit_MapSizeY.Value > MIN_MAP_SIZE;
+  NumEdit_MapSizeX.IncButton.Enabled := NumEdit_MapSizeX.Value <> MAX_MAP_SIZE;
+  NumEdit_MapSizeY.IncButton.Enabled := NumEdit_MapSizeY.Value <> MAX_MAP_SIZE;
 end;
 
 
@@ -578,7 +593,7 @@ end;
 procedure TKMMenuMapEditor.MapFilterChanged(Sender: TObject);
 begin
   TrackBar_PlayersCnt.Enabled := CheckBox_ByPlayerCnt.Checked;
-  fMinimapLastListId := -1; // Clear last loasded minimap ID, as we uncheck the filter, then need to draw minimap again, probably
+  fMinimapLastListId := -1; // Clear last loaded minimap ID, as we uncheck the filter, then need to draw minimap again, probably
   RefreshList(True);
 end;
 
@@ -1138,6 +1153,7 @@ begin
 
   ListUpdate;
   UpdateUI;
+  UpdateNewMapUI;
 
   Panel_MapEd.Show;
   ColumnBox_MapEd.Focus;
