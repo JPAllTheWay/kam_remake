@@ -194,6 +194,8 @@ type
     procedure AssignHouses;
     procedure AssignRepairs;
     procedure ReassignFieldworks;
+    procedure ReassignHousePlans;
+
   public
     constructor Create;
     destructor Destroy; override;
@@ -1437,6 +1439,26 @@ begin
 end;
 
 
+procedure TKMHandConstructions.ReassignHousePlans;
+var
+  I: Integer;
+  bestWorker: TKMUnitWorker;
+begin
+  if GetIdleWorkerCount = 0 then Exit;
+
+  for I := 0 to fHousePlanList.fPlansCount - 1 do
+      if fHousePlanList.fPlans[I].JobStatus = jsTaken then
+      begin
+        bestWorker := GetBetterWorker(fHousePlanList.fPlans[I].Loc, fHousePlanList.fPlans[I].Worker);
+        if bestWorker <> nil then
+        begin
+          fHousePlanList.fPlans[I].Worker.CancelTask;
+          fHousePlanList.GiveTask(I, bestWorker);
+        end;
+      end;
+end;
+
+
 procedure TKMHandConstructions.UpdateState;
 begin
   HouseList.UpdateState;
@@ -1464,6 +1486,7 @@ begin
   //repair job (same as for building houses)
   AssignRepairs;
   AssignHousePlans;
+  ReassignHousePlans;
   AssignFieldworks;
   ReassignFieldworks;
   AssignHouses;
