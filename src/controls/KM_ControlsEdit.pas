@@ -138,6 +138,8 @@ type
     ValueMax: Integer;
     constructor Create(aParent: TKMPanel; aLeft, aTop, aValueMin, aValueMax: Integer; aFont: TKMFont = fntGrey; aSelectable: Boolean = True);
     property Value: Integer read fValue write SetValue;
+    property IncButton: TKMButton read fButtonInc write fButtonInc;
+    property DecButton: TKMButton read fButtonDec write fButtonDec;
 
     function KeyDown(Key: Word; Shift: TShiftState): Boolean; override;
     procedure MouseWheel(Sender: TObject; WheelSteps: Integer; var aHandled: Boolean); override;
