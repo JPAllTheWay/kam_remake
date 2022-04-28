@@ -520,6 +520,7 @@ begin
   NumEdit_MapSizeX.Value := EnsureRange(NumEdit_MapSizeX.Value, MIN_MAP_SIZE, MAX_MAP_SIZE);
   NumEdit_MapSizeY.Value := EnsureRange(NumEdit_MapSizeY.Value, MIN_MAP_SIZE, MAX_MAP_SIZE);
   UpdateRadioMapEdSizes;
+  UpdateNewMapUI;
 end;
 
 
