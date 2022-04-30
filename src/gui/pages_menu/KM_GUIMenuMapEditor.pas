@@ -24,6 +24,7 @@ type
     fSelectedMapInfo: TKMFileIdentInfo; // Identification info about last selected map
 
     procedure LoadClick(Sender: TObject);
+    procedure DoubleClickLoad(Sender: TObject);
     procedure MapTypeChange(Sender: TObject);
     procedure MapFilterChanged(Sender: TObject);
     procedure MapFilterReset(Sender: TObject);
@@ -264,7 +265,7 @@ begin
       ColumnBox_MapEd.SearchColumn := 2;
       ColumnBox_MapEd.OnColumnClick := ColumnClick;
       ColumnBox_MapEd.OnChange := SelectMap;
-      ColumnBox_MapEd.OnDoubleClick := LoadClick;
+      ColumnBox_MapEd.OnDoubleClick := DoubleClickLoad;
       ColumnBox_MapEd.OnCellClick := ColumnBoxMaps_CellClick;
       ColumnBox_MapEd.ShowHintWhenShort := True;
       ColumnBox_MapEd.HintBackColor := TKMColor4f.New(149, 128, 69); //Dark yellow color
@@ -472,6 +473,13 @@ begin
     end;
     Result := True; //we handle mouse click here, and do not want to propagate it further
   end;
+end;
+
+
+procedure TKMMenuMapEditor.DoubleClickLoad(Sender: TObject);
+begin
+  if ColumnBox_MapEd.ItemIndex = ColumnBox_MapEd.MouseOverRow then
+    LoadClick(Sender);
 end;
 
 

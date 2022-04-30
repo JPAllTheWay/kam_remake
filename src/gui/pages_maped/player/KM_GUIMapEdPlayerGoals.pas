@@ -120,7 +120,7 @@ begin
   I := ColumnBox_Goals.ItemIndex;
 
   //Check if user double-clicked on an existing item (not on an empty space)
-  if InRange(I, 0, gMySpectator.Hand.AI.Goals.Count - 1) then
+  if InRange(I, 0, gMySpectator.Hand.AI.Goals.Count - 1) and (ColumnBox_Goals.MouseOverRow = I) then
     Goals_Edit(I);
 end;
 
