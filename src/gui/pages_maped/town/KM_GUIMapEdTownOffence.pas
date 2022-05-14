@@ -133,7 +133,7 @@ begin
   I := ColumnBox_Attacks.ItemIndex;
 
   //Check if user double-clicked on an existing item (not on an empty space)
-  if InRange(I, 0, gMySpectator.Hand.AI.General.Attacks.Count - 1) then
+  if InRange(I, 0, gMySpectator.Hand.AI.General.Attacks.Count - 1) and (ColumnBox_Attacks.MouseOverRow = I) then
     Attacks_Edit(I);
 end;
 

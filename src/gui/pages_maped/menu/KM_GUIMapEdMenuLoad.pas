@@ -19,6 +19,7 @@ type
     procedure Menu_LoadChange(Sender: TObject);
     procedure Menu_LoadUpdate;
     procedure Menu_LoadUpdateDone(Sender: TObject);
+    procedure Menu_ListDoubleClick(Sender: TObject);
   protected
     Panel_Load: TKMPanel;
     Radio_Load_MapType: TKMRadioGroup;
@@ -74,7 +75,7 @@ begin
   ListBox_Load.ShowHintWhenShort := True;
   ListBox_Load.HintBackColor := TKMColor4f.New(87, 72, 37);
   ListBox_Load.SearchEnabled := True;
-  ListBox_Load.OnDoubleClick := Menu_LoadClick;
+  ListBox_Load.OnDoubleClick := Menu_ListDoubleClick;
   Button_LoadLoad     := TKMButton.Create(Panel_Load,9,318,Panel_Load.Width - 9,30,gResTexts[TX_MAPED_LOAD],bsGame);
   Button_LoadLoad.Anchors := [anLeft, anTop, anRight];
   Button_LoadCancel   := TKMButton.Create(Panel_Load,9,354,Panel_Load.Width - 9,30,gResTexts[TX_MAPED_LOAD_CANCEL],bsGame);
@@ -111,6 +112,13 @@ begin
   else
   if Sender = Button_LoadCancel then
     fOnDone(Self);
+end;
+
+
+procedure TKMMapEdMenuLoad.Menu_ListDoubleClick(Sender: TObject);
+begin
+  if ListBox_Load.ItemIndex = ListBox_Load.MouseOverRow then
+    Menu_LoadClick(Sender);
 end;
 
 

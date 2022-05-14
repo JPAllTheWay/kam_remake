@@ -131,6 +131,7 @@ type
     procedure Menu_Save_Click(Sender: TObject);
     procedure Menu_Load_RefreshList(Sender: TObject);
     procedure Menu_Load_ListClick(Sender: TObject);
+    procedure Menu_Load_ListDoubleClick(Sender: TObject);
     procedure Menu_Load_Click(Sender: TObject);
     procedure Selection_Assign(aId: Word; aObject: TObject);
     procedure Selection_Link(aId: Word; aObject: TObject);
@@ -527,6 +528,13 @@ begin
   finally
     fSaves.Unlock;
   end;
+end;
+
+
+procedure TKMGamePlayInterface.Menu_Load_ListDoubleClick(Sender: TObject);
+begin
+  if ListBox_Load.ItemIndex = ListBox_Load.MouseOverRow then
+    Menu_Load_Click(Sender);
 end;
 
 
@@ -1516,7 +1524,7 @@ begin
     ListBox_Load.HintBackColor := TKMColor4f.New(87, 72, 37);
     ListBox_Load.SearchEnabled := True;
     ListBox_Load.OnChange := Menu_Load_ListClick;
-    ListBox_Load.OnDoubleClick := Menu_Load_Click;
+    ListBox_Load.OnDoubleClick := Menu_Load_ListDoubleClick;
 
     Label_LoadDescription := TKMLabel.Create(Panel_Load,0,265,TB_WIDTH,0,'',fntGrey,taLeft);
     Label_LoadDescription.WordWrap := True;

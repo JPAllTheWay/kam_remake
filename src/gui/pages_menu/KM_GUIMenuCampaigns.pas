@@ -18,6 +18,7 @@ type
     fCampaigns: TKMCampaignsCollection;
 
     procedure ListChange(Sender: TObject);
+    procedure ListDoubleClick(Sender: TObject);
     procedure StartClick(Sender: TObject);
     procedure BackClick(Sender: TObject);
   protected
@@ -82,7 +83,7 @@ begin
     ColumnBox_Camps.AnchorsCenter;
     ColumnBox_Camps.SearchColumn := 0;
     ColumnBox_Camps.OnChange := ListChange;
-    ColumnBox_Camps.OnDoubleClick := StartClick;
+    ColumnBox_Camps.OnDoubleClick := ListDoubleClick;
 
     TKMBevel.Create(Panel_Campaigns, LIST_W + COL_PAD, 30, MAP_IMG_W + 2*MAP_PAD, MAP_IMG_H + 2*MAP_PAD).AnchorsCenter;
     Image_CampsPreview := TKMImage.Create(Panel_Campaigns, LIST_W + COL_PAD + MAP_PAD, 34, MAP_IMG_W, MAP_IMG_H, 0, rxGuiMain);
@@ -161,6 +162,13 @@ begin
     Memo_CampDesc.Text := camp.GetCampaignDescription;
     gGameSettings.MenuCampaignName := camp.ShortName;
   end;
+end;
+
+
+procedure TKMMenuCampaigns.ListDoubleClick(Sender: TObject);
+begin
+  if ColumnBox_Camps.ItemIndex = ColumnBox_Camps.MouseOverRow then
+    StartClick(Sender);
 end;
 
 

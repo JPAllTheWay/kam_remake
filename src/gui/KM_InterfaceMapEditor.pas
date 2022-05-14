@@ -95,6 +95,7 @@ type
     procedure History_Click(Sender: TObject);
     procedure History_JumpTo(Sender: TObject);
     procedure History_ListChange(Sender: TObject);
+    procedure History_ListDoubleClick(Sender: TObject);
     procedure History_MouseWheel(Sender: TObject; WheelSteps: Integer; var aHandled: Boolean);
     procedure History_Close;
     procedure History_UpdatePos;
@@ -313,7 +314,7 @@ begin
     ListBox_History.ShowHintWhenShort := True;
     ListBox_History.HintBackColor := TKMColor4f.New(87, 72, 37);
     ListBox_History.OnChange := History_ListChange;
-    ListBox_History.OnDoubleClick := History_JumpTo;
+    ListBox_History.OnDoubleClick := History_ListDoubleClick;
 
     Button_History_JumpTo := TKMButton.Create(PopUp_History.ItemsPanel, 10, ListBox_History.Bottom + 5,
                                                              ListBox_History.Width, 20, gResTexts[TX_MAPED_HISTORY_JUMP_TO], bsGame);
@@ -435,6 +436,13 @@ begin
   PopUp_History.Visible := not PopUp_History.Visible;
 
   Button_History.Down := PopUp_History.Visible;
+end;
+
+
+procedure TKMMapEdInterface.History_ListDoubleClick(Sender: TObject);
+begin
+  if ListBox_History.ItemIndex = ListBox_History.MouseOverRow then
+    History_JumpTo(Sender);
 end;
 
 

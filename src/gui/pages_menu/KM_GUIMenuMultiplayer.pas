@@ -794,7 +794,8 @@ procedure TKMMenuMultiplayer.MP_ServersDoubleClick(Sender: TObject);
 begin
   //MP_SelectServer gets called by first Click
   if Button_MP_GetIn.Enabled and (ColumnBox_Servers.ItemIndex <> -1)
-  and InRange(ColumnBox_Servers.Rows[ColumnBox_Servers.ItemIndex].Tag, 0, gNetworking.ServerQuery.Rooms.Count-1) then
+  and InRange(ColumnBox_Servers.Rows[ColumnBox_Servers.ItemIndex].Tag, 0, gNetworking.ServerQuery.Rooms.Count-1)
+  and (ColumnBox_Servers.ItemIndex = ColumnBox_Servers.MouseOverRow) then
     MP_GetInClick(Sender);
 end;
 
