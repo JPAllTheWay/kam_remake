@@ -14,7 +14,8 @@ type
   {Class to store all terrain data, aswell terrain routines}
   TKMTerrain = class
   private
-    fLand: TKMLand;
+    fLand: TKMLand; // Actual Land
+    fLandExt: TKMLandExt; // Precalculated Land data to speedup the render, updated on Land update. Does not saved
     fMainLand: PKMLand; // pointer to the actual fLand with all terrain data
 
     fAnimStep: Cardinal;
@@ -53,6 +54,7 @@ type
     function HousesNearTile(X,Y: Word): Boolean;
   public
     Land: PKMLand;
+    LandExt: PKMLandExt;
 
     Fences: TKMLandFences;
     FallingTrees: TKMPointTagList;
@@ -155,8 +157,8 @@ type
     function DecOreDeposit(const aLoc: TKMPoint; aWare: TKMWareType): Boolean;
 
     function GetPassablePointWithinSegment(aOriginPoint, aTargetPoint: TKMPoint; aPass: TKMTerrainPassability; aMaxDistance: Integer = -1): TKMPoint;
-    function CheckPassability(X, Y: Integer; aPass: TKMTerrainPassability): Boolean; overload;
-    function CheckPassability(const aLoc: TKMPoint; aPass: TKMTerrainPassability): Boolean; overload;
+    function CheckPassability(X, Y: Integer; aPass: TKMTerrainPassability): Boolean; overload; inline;
+    function CheckPassability(const aLoc: TKMPoint; aPass: TKMTerrainPassability): Boolean; overload; inline;
     function HasUnit(const aLoc: TKMPoint): Boolean;
     function HasVertexUnit(const aLoc: TKMPoint): Boolean;
     function GetRoadConnectID(const aLoc: TKMPoint): Byte;
@@ -207,8 +209,10 @@ type
     function TileIsCoal(X, Y: Word): Byte; inline;
     function TileIsIron(X, Y: Word): Byte; inline;
     function TileIsGold(X, Y: Word): Byte; inline;
-    function TileIsCornField(const aLoc: TKMPoint): Boolean;
-    function TileIsWineField(const aLoc: TKMPoint): Boolean;
+    function TileIsCornField(const aLoc: TKMPoint): Boolean; overload; inline;
+    function TileIsCornField(const X, Y: Word): Boolean; overload; inline;
+    function TileIsWineField(const aLoc: TKMPoint): Boolean; overload; inline;
+    function TileIsWineField(const X, Y: Word): Boolean; overload; inline;
     function TileIsWalkableRoad(const aLoc: TKMPoint): Boolean;
     function TileIsLocked(const aLoc: TKMPoint): Boolean;
     function TileIsGoodToCutTree(const aLoc: TKMPoint): Boolean;
@@ -281,6 +285,10 @@ type
     function HeightAt(inX, inY: Single): Single;
     function RenderHeightAt(inX, inY: Single): Single;
 
+    procedure UpdateRenderHeight; overload;
+    procedure UpdateRenderHeight(const aRect: TKMRect); overload;
+    procedure UpdateRenderHeight(X, Y: Integer); overload;
+
     procedure UpdateLighting; overload;
     procedure UpdateLighting(const aRect: TKMRect); overload;
     procedure UpdateLighting(X, Y: Integer); overload;
@@ -316,8 +324,9 @@ var
 
 implementation
 uses
+  KM_Entity,
   KM_Log,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_TerrainUtils, KM_TerrainWalkConnect,
   KM_Resource, KM_Units, KM_DevPerfLog,
   KM_ResSound, KM_Sound, KM_UnitActionStay, KM_UnitWarrior, KM_TerrainPainter, KM_Houses,
@@ -337,6 +346,7 @@ begin
   fTileset := gRes.Tileset; //Local shortcut
 
   fMainLand := @fLand;
+  LandExt := @fLandExt;
   SetMainLand;
 end;
 
@@ -381,6 +391,7 @@ begin
         LayersCnt    := 0;
         BaseLayer.SetAllCorners;
         Height       := HEIGHT_DEFAULT + KaMRandom(HEIGHT_RAND_VALUE, 'TKMTerrain.MakeNewMap 3');  //variation in Height
+        LandExt[I, K].RenderHeight := GetRenderHeight;
         BaseLayer.Rotation     := KaMRandom(4, 'TKMTerrain.MakeNewMap 4');  //Make it random
         Obj          := OBJ_NONE;             //none
         IsCustom     := False;
@@ -456,6 +467,7 @@ begin
 
         Land^[I,J].BaseLayer   := tileBasic.BaseLayer;
         Land^[I,J].SetHeightExact(tileBasic.Height); // Set fHeight directly, without any limitations
+        UpdateRenderHeight(J, I);
         Land^[I,J].Obj         := tileBasic.Obj;
         Land^[I,J].LayersCnt   := tileBasic.LayersCnt;
         Land^[I,J].IsCustom    := tileBasic.IsCustom;
@@ -664,6 +676,7 @@ begin
   oldHeight := aHeight;
   //Apply change
   Land^[Y, X].Height := aHeight;
+  UpdateRenderHeight(X, Y);
 
   //Don't check canElevate: If scripter wants to block mines that's his choice
 
@@ -678,6 +691,7 @@ begin
         begin
           //Rollback change
           Land^[Y, X].Height := oldHeight;
+          UpdateRenderHeight(X, Y);
           Exit(False);
         end;
 
@@ -1582,32 +1596,58 @@ end;
 //Check if the tile is a corn field
 function TKMTerrain.TileIsCornField(const aLoc: TKMPoint): Boolean;
 begin
-  Result := False;
-  if not TileInMapCoords(aLoc.X,aLoc.Y) then
-    Exit;
+  if not TileInMapCoords(aLoc.X,aLoc.Y) then Exit(False);
+
   //Tile can't be used as a field if there is road or any other overlay
-  if not fMapEditor then
-    Result := fTileset[Land^[aLoc.Y, aLoc.X].BaseLayer.Terrain].Corn
-              and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone)
+  if fMapEditor then
+    Result := (gGame.MapEditor.LandMapEd^[aLoc.Y,aLoc.X].CornOrWine = 1) and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone)
   else
-    Result := (gGame.MapEditor.LandMapEd^[aLoc.Y,aLoc.X].CornOrWine = 1) and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone);
+    Result := fTileset[Land^[aLoc.Y, aLoc.X].BaseLayer.Terrain].Corn
+              and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone);
+end;
+
+
+function TKMTerrain.TileIsCornField(const X, Y: Word): Boolean;
+begin
+  if not TileInMapCoords(X, Y) then Exit(False);
+
+  //Tile can't be used as a field if there is road or any other overlay
+  if fMapEditor then
+    Result := (gGame.MapEditor.LandMapEd^[Y,X].CornOrWine = 1) and (Land^[Y,X].TileOverlay = toNone)
+  else
+    Result := fTileset[Land^[Y, X].BaseLayer.Terrain].Corn
+              and (Land^[Y,X].TileOverlay = toNone);
 end;
 
 
 //Check if the tile is a wine field
 function TKMTerrain.TileIsWineField(const aLoc: TKMPoint): Boolean;
 begin
-  Result := False;
-  if not TileInMapCoords(aLoc.X,aLoc.Y) then
-    Exit;
+  if not TileInMapCoords(aLoc.X,aLoc.Y) then Exit(False);
+
   //Tile can't be used as a winefield if there is road or any other overlay
   //It also must have right object on it
-  if not fMapEditor then
+  if fMapEditor then
+    Result := (gGame.MapEditor.LandMapEd^[aLoc.Y,aLoc.X].CornOrWine = 2) and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone)
+  else
     Result := fTileset[Land^[aLoc.Y, aLoc.X].BaseLayer.Terrain].Wine
               and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone)
-              and ObjectIsWine(aLoc)
+              and ObjectIsWine(aLoc);
+end;
+
+
+function TKMTerrain.TileIsWineField(const X, Y: Word): Boolean;
+begin
+  if not TileInMapCoords(X, Y) then Exit(False);
+
+  //Tile can't be used as a winefield if there is road or any other overlay
+  //It also must have right object on it
+  if fMapEditor then
+    Result := (gGame.MapEditor.LandMapEd^[Y,X].CornOrWine = 2) and (Land^[Y,X].TileOverlay = toNone)
   else
-    Result := (gGame.MapEditor.LandMapEd^[aLoc.Y,aLoc.X].CornOrWine = 2) and (Land^[aLoc.Y,aLoc.X].TileOverlay = toNone);
+    Result := fTileset[Land^[Y, X].BaseLayer.Terrain].Wine
+              and (Land^[Y,X].TileOverlay = toNone)
+              and ObjectIsWine(X, Y)
 end;
 
 
@@ -1991,9 +2031,9 @@ begin
 end;
 
 
-{Check wherever unit can walk from A to B diagonaly}
-{Return true if direction is either walkable or not diagonal}
-{Maybe this can also be used later for inter-tile passability}
+// Check wherever unit can walk from A to B diagonaly
+// Return True if direction is either walkable or not diagonal
+// Maybe this can also be used later for inter-tile passability
 function TKMTerrain.CanWalkDiagonaly(const aFrom: TKMPoint; aX, aY: SmallInt): Boolean;
 begin
   Result := True;
@@ -2112,9 +2152,8 @@ begin
 end;
 
 
-procedure TKMTerrain.RemField(const aLoc: TKMPoint; aDoUpdatePass, aDoUpdateWalk: Boolean;
-                              out aUpdatePassRect: TKMRect; out aDiagObjectChanged: Boolean;
-                              aDoUpdateFences: Boolean);
+procedure TKMTerrain.RemField(const aLoc: TKMPoint; aDoUpdatePass, aDoUpdateWalk: Boolean; out aUpdatePassRect: TKMRect;
+  out aDiagObjectChanged: Boolean; aDoUpdateFences: Boolean);
 begin
   Land^[aLoc.Y,aLoc.X].TileOwner := -1;
   Land^[aLoc.Y,aLoc.X].TileOverlay := toNone;
@@ -2284,7 +2323,8 @@ begin
     toDig3: Land^[aLoc.Y,aLoc.X].TileOverlay := toDig4;
     toDig2: Land^[aLoc.Y,aLoc.X].TileOverlay := toDig3;
     toDig1: Land^[aLoc.Y,aLoc.X].TileOverlay := toDig2;
-    else     Land^[aLoc.Y,aLoc.X].TileOverlay := toDig1;
+  else
+    Land^[aLoc.Y,aLoc.X].TileOverlay := toDig1;
   end;
 end;
 
@@ -2295,7 +2335,7 @@ begin
 end;
 
 
-{ Finds a winefield ready to be picked }
+// Finds a winefield ready to be picked
 function TKMTerrain.FindWineField(const aLoc: TKMPoint; aRadius: Integer; const aAvoidLoc: TKMPoint; out aFieldPoint: TKMPointDir): Boolean;
 var
   I: Integer;
@@ -2379,9 +2419,9 @@ begin
 end;
 
 
-{ Finds a corn field }
+// Finds a corn field
 function TKMTerrain.FindCornField(const aLoc: TKMPoint; aRadius: Integer; const aAvoidLoc: TKMPoint; aPlantAct: TKMPlantAct;
-                                  out aPlantActOut: TKMPlantAct; out aFieldPoint: TKMPointDir): Boolean;
+  out aPlantActOut: TKMPlantAct; out aFieldPoint: TKMPointDir): Boolean;
 var
   I: Integer;
   validTiles, nearTiles, farTiles: TKMPointList;
@@ -2942,7 +2982,7 @@ begin
                   if Land^[P2.Y+T,P2.X+S].TileLock in [tlFenced,tlDigged,tlHouse] then
                   begin
                     MarkPoint(KMPoint(P2.X+S,P2.Y+T), TC_BLOCK);
-                    allowBuild := false;
+                    allowBuild := False;
                   end;
 
           //Mark the tile according to previous check results
@@ -2973,19 +3013,20 @@ end;
 
 function TKMTerrain.WaterHasFish(const aLoc: TKMPoint): Boolean;
 begin
-  Result := (gHands.PlayerAnimals.GetFishInWaterBody(Land^[aLoc.Y,aLoc.X].WalkConnect[wcFish],false) <> nil);
+  Result := gHands.PlayerAnimals.GetFishInWaterBody(Land^[aLoc.Y,aLoc.X].WalkConnect[wcFish],False) <> nil;
 end;
 
 
 function TKMTerrain.CatchFish(aLoc: TKMPointDir; aTestOnly: Boolean = False): Boolean;
 var
-  myFish: TKMUnitAnimal;
+  myFish: TKMUnitFish;
 begin
   //Here we are catching fish in the tile 1 in the direction
   aLoc.Loc := KMGetPointInDir(aLoc.Loc, aLoc.Dir);
   myFish := gHands.PlayerAnimals.GetFishInWaterBody(Land^[aLoc.Loc.Y, aLoc.Loc.X].WalkConnect[wcFish], not aTestOnly);
   Result := (myFish <> nil);
-  if (not aTestOnly) and (myFish <> nil) then myFish.ReduceFish; //This will reduce the count or kill it (if they're all gone)
+  if not aTestOnly and (myFish <> nil) then
+    myFish.ReduceFish; //This will reduce the count or kill it (if they're all gone)
 end;
 
 
@@ -3334,7 +3375,6 @@ end;
 function TKMTerrain.DecStoneDeposit(const aLoc: TKMPoint): Boolean;
 type
   TStoneTransitionType = (sttNone, sttGrass, sttCoastSand, sttDirt, sttSnow, sttSnowOnDirt);
-
 const
   TransitionsTerKinds: array[TStoneTransitionType] of TKMTerrainKind =
                                                       (tkGrass, tkGrass, tkCoastSand, tkDirt, tkSnow, tkSnowOnDirt);
@@ -3519,8 +3559,8 @@ begin
   transition := GetStoneTransitionType(aLoc.X,aLoc.Y + 1); //Check transition type by lower point (Y + 1)
 
   Result := True;
-  //Replace with smaller ore deposit tile (there are 2 sets of tiles, we can choose random)
-   case Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain of
+  // Replace with smaller ore deposit tile (there are 2 sets of tiles, we can choose random)
+  case Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain of
     132, 137: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 131 + KaMRandom(2, 'TKMTerrain.DecStoneDeposit')*5;
     131, 136: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 130 + KaMRandom(2, 'TKMTerrain.DecStoneDeposit 2')*5;
     130, 135: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 129 + KaMRandom(2, 'TKMTerrain.DecStoneDeposit 3')*5;
@@ -3544,7 +3584,8 @@ begin
                 //Tile type has changed and we need to update these 5 tiles transitions:
                 UpdateTransition(aLoc.X,  aLoc.Y, 0);
               end;
-    else      Exit(False);
+  else
+    Exit(False);
   end;
 
   FlattenTerrain(aLoc, True, True); //Ignore canElevate since it can prevent stonehill from being still walkable and cause a crash
@@ -3558,7 +3599,7 @@ begin
   if not (aWare in [wtIronOre,wtGoldOre,wtCoal]) then
     raise ELocError.Create('Wrong ore decrease', aLoc);
 
-  Result := true;
+  Result := True;
   case Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain of
     144: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 157 + KaMRandom(3, 'TKMTerrain.DecOreDeposit'); //Gold
     145: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 144;
@@ -3576,7 +3617,8 @@ begin
     154: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 153;
     155: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 154;
     263: Land^[aLoc.Y,aLoc.X].BaseLayer.Terrain := 155;
-    else Result := false;
+  else
+    Result := False;
   end;
   Land^[aLoc.Y,aLoc.X].BaseLayer.Rotation := KaMRandom(4, 'TKMTerrain.DecOreDeposit 5');
   UpdatePassability(aLoc);
@@ -3692,16 +3734,15 @@ begin
           housesNearVertex := True;
 
   if VerticeInMapCoords(aLoc.X,aLoc.Y)
-    and not housesNearVertex then
+  and not housesNearVertex then
     AddPassability(tpElevate);
 end;
 
 
-//Find closest passable point to TargetPoint within line segment OriginPoint <-> TargetPoint
-//MaxDistance - maximum distance between finded point and origin point. MaxDistance = -1 means there is no distance restriction
-function TKMTerrain.GetPassablePointWithinSegment(aOriginPoint, aTargetPoint: TKMPoint;
-                                                  aPass: TKMTerrainPassability;
-                                                  aMaxDistance: Integer = -1): TKMPoint;
+// Find closest passable point to TargetPoint within line segment OriginPoint <-> TargetPoint
+// MaxDistance - maximum distance between found point and origin point. MaxDistance = -1 means there is no distance restriction
+function TKMTerrain.GetPassablePointWithinSegment(aOriginPoint, aTargetPoint: TKMPoint; aPass: TKMTerrainPassability;
+  aMaxDistance: Integer = -1): TKMPoint;
 
   function IsDistBetweenPointsAllowed(const aOriginPoint, aTargetPoint: TKMPoint; aMaxDistance: Integer): Boolean; inline;
   begin
@@ -3718,8 +3759,8 @@ begin
     normDistance := Min(aMaxDistance, Floor(KMLength(aOriginPoint, aTargetPoint)));
 
   while (normDistance >= 0)
-    and (not IsDistBetweenPointsAllowed(aOriginPoint, aTargetPoint, aMaxDistance)
-         or not CheckPassability(aTargetPoint, aPass)) do
+  and (not IsDistBetweenPointsAllowed(aOriginPoint, aTargetPoint, aMaxDistance)
+       or not CheckPassability(aTargetPoint, aPass)) do
   begin
     normVector := KMNormVector(KMPoint(aTargetPoint.X - aOriginPoint.X, aTargetPoint.Y - aOriginPoint.Y), normDistance);
     aTargetPoint := KMPoint(aOriginPoint.X + normVector.X, aOriginPoint.Y + normVector.Y);
@@ -3790,7 +3831,7 @@ begin
           if (Land^[aLoc.Y+I,aLoc.X+K].IsUnit = nil) or (not aCheckUnits) then
             if aPass in Land^[aLoc.Y+I,aLoc.X+K].Passability then
             begin
-              Result := false; //at least one tile is empty, so unit is not stuck
+              Result := False; //at least one tile is empty, so unit is not stuck
               exit;
             end;
 end;
@@ -3927,14 +3968,12 @@ function TKMTerrain.RouteCanBeMade(const aLocA, aLocB: TKMPoint; aPass: TKMTerra
 var
   WC: TKMWalkConnect;
 begin
-  Result := False;
-
   case aPass of
     tpWalk:      WC := wcWalk;
     tpWalkRoad:  WC := wcRoad;
     tpFish:      WC := wcFish;
     tpWorker:    WC := wcWork;
-    else Exit;
+    else Exit(False);
   end;
 
   Result :=     CheckPassability(aLocA, aPass)
@@ -4270,14 +4309,32 @@ begin
   Assert(vertsFactored <> 0); //Non-neighbour verts will always be factored
   avg := Round(avg / vertsFactored);
 
-  if CanElevateAt(aLoc.X  , aLoc.Y  ) then
-    Land[aLoc.Y  ,aLoc.X  ].Height := Mix(avg, Land^[aLoc.Y  ,aLoc.X  ].Height, 0.5);
-  if CanElevateAt(aLoc.X+1, aLoc.Y  ) then
-    Land[aLoc.Y  ,aLoc.X+1].Height := Mix(avg, Land^[aLoc.Y  ,aLoc.X+1].Height, 0.5);
-  if CanElevateAt(aLoc.X  , aLoc.Y+1) then
-    Land[aLoc.Y+1,aLoc.X  ].Height := Mix(avg, Land^[aLoc.Y+1,aLoc.X  ].Height, 0.5);
-  if CanElevateAt(aLoc.X+1, aLoc.Y+1) then
-    Land[aLoc.Y+1,aLoc.X+1].Height := Mix(avg, Land^[aLoc.Y+1,aLoc.X+1].Height, 0.5);
+  // X, Y
+  if CanElevateAt(aLoc.X  , aLoc.Y) then
+  begin
+    Land[aLoc.Y, aLoc.X  ].Height := Mix(avg, Land^[aLoc.Y  ,aLoc.X  ].Height, 0.5);
+    UpdateRenderHeight(aLoc.X, aLoc.Y);
+  end;
+  // X + 1, Y
+  if CanElevateAt(aLoc.X + 1, aLoc.Y) then
+  begin
+    Land[aLoc.Y, aLoc.X+1].Height := Mix(avg, Land^[aLoc.Y  ,aLoc.X+1].Height, 0.5);
+    UpdateRenderHeight(aLoc.X + 1, aLoc.Y);
+  end;
+  // X, Y + 1
+  if CanElevateAt(aLoc.X, aLoc.Y + 1) then
+  begin
+    Land[aLoc.Y + 1, aLoc.X].Height := Mix(avg, Land^[aLoc.Y + 1, aLoc.X].Height, 0.5);
+    UpdateRenderHeight(aLoc.X, aLoc.Y + 1);
+  end;
+  // X + 1, Y + 1
+  if CanElevateAt(aLoc.X + 1, aLoc.Y + 1) then
+  begin
+    Land[aLoc.Y + 1 ,aLoc.X + 1].Height := Mix(avg, Land^[aLoc.Y + 1, aLoc.X + 1].Height, 0.5);
+    UpdateRenderHeight(aLoc.X + 1, aLoc.Y + 1);
+  end;
+
+
 
   //All 9 tiles around and including this one could have become unwalkable and made a unit stuck, so check them all
   for I := Max(aLoc.Y-1, 1) to Min(aLoc.Y+1, fMapY-1) do
@@ -4320,6 +4377,29 @@ begin
 end;
 
 
+procedure TKMTerrain.UpdateRenderHeight;
+begin
+  UpdateRenderHeight(fMapRect);
+end;
+
+
+procedure TKMTerrain.UpdateRenderHeight(const aRect: TKMRect);
+var
+  I, K: Integer;
+begin
+  //Valid vertices are within 1..Map
+  for I := Max(aRect.Top, 1) to Min(aRect.Bottom, fMapY) do
+    for K := Max(aRect.Left, 1) to Min(aRect.Right, fMapX) do
+      UpdateRenderHeight(K, I);
+end;
+
+
+procedure TKMTerrain.UpdateRenderHeight(X, Y: Integer);
+begin
+  LandExt[Y, X].RenderHeight := Land^[Y, X].GetRenderHeight;
+end;
+
+
 procedure TKMTerrain.UpdateLighting;
 begin
   UpdateLighting(fMapRect);
@@ -4351,19 +4431,26 @@ var
   x0, y2: Integer;
   sLight, sLightWater: Single;
 begin
-  x0 := Max(X - 1, 1);
-  y2 := Min(Y + 1, fMapY);
-  sLight := EnsureRange((Land^[Y,X].RenderHeight - (Land^[y2,X].RenderHeight + Land^[Y,x0].RenderHeight)/2)/22, -1, 1); // 1.33*16 ~=22.
-  sLightWater := EnsureRange(sLight*WATER_LIGHT_MULTIPLIER + 0.1, -1, 1);
-  Land^[Y,X].Light := ConvertLightToByte(sLight); //  1.33*16 ~=22.
-
-  //Use more contrast lighting for Waterbeds
-  if fTileset[Land^[Y, X].BaseLayer.Terrain].Water then
-    Land^[Y,X].Light := ConvertLightToByte(sLightWater);
-
   //Map borders always fade to black
   if (Y = 1) or (Y = fMapY) or (X = 1) or (X = fMapX) then
-    Land^[Y,X].Light := 0;
+    Land^[Y,X].Light := 0
+  else
+  begin
+    x0 := Max(X - 1, 1);
+    y2 := Min(Y + 1, fMapY);
+
+    sLight := EnsureRange((LandExt^[Y,X].RenderHeight - (LandExt^[y2,X].RenderHeight + LandExt^[Y,x0].RenderHeight)/2)/22, -1, 1); // 1.33*16 ~=22.
+    //Use more contrast lighting for Waterbeds
+    if fTileset[Land^[Y, X].BaseLayer.Terrain].Water then
+    begin
+      sLightWater := EnsureRange(sLight*WATER_LIGHT_MULTIPLIER + 0.1, -1, 1);
+      Land^[Y,X].Light := ConvertLightToByte(sLightWater);
+    end
+    else
+      Land^[Y,X].Light := ConvertLightToByte(sLight); //  1.33*16 ~=22.
+  end;
+
+  LandExt[Y,X].RenderLight := Land^[Y,X].GetRenderLight;
 end;
 
 
@@ -4672,7 +4759,7 @@ function TKMTerrain.CheckHeightPass(const aLoc: TKMPoint; aPass: TKMHeightPass):
 begin
   //Three types measured in KaM: >=25 - unwalkable/unroadable; >=25 - iron/gold mines unbuildable;
   //>=18 - other houses unbuildable.
-  Result := true;
+  Result := True;
 
   if not TileInMapCoords(aLoc.X, aLoc.Y) then exit;
 
@@ -4763,6 +4850,7 @@ procedure TKMTerrain.UpdateAll(const aRect: TKMRect);
 begin
   UpdatePassability(aRect);
   UpdateFences(aRect);
+  UpdateRenderHeight(aRect);
   UpdateLighting(aRect);
 end;
 
@@ -4842,8 +4930,8 @@ begin
   begin
     ii := I - lenNegative;
     tmp       := EnsureRange(Yc + ii, 1, fMapY);
-    Ycoef[I] := (Yc - 1) + ii - (Land^[tmp, Xc].RenderHeight * (1 - frac(inX))
-                          + Land^[tmp, Xc + 1].RenderHeight * frac(inX)) / CELL_HEIGHT_DIV;
+    Ycoef[I] := (Yc - 1) + ii - (LandExt^[tmp, Xc].RenderHeight * (1 - frac(inX))
+                          + LandExt^[tmp, Xc + 1].RenderHeight * frac(inX)) / CELL_HEIGHT_DIV;
   end;
 
   Result := inY; //Assign something incase following code returns nothing
@@ -4898,8 +4986,8 @@ begin
   Xc := EnsureRange(Trunc(inX), 0, fMapX-1);
   Yc := EnsureRange(Trunc(inY), 0, fMapY-1);
 
-  tmp1 := Mix(Land[Yc+1, Min(Xc+2, fMapX)].RenderHeight, Land^[Yc+1, Xc+1].RenderHeight, Frac(inX));
-  tmp2 := Mix(Land[Min(Yc+2, fMapY), Min(Xc+2, fMapX)].RenderHeight, Land^[Min(Yc+2, fMapY), Xc+1].RenderHeight, Frac(inX));
+  tmp1 := Mix(LandExt[Yc+1, Min(Xc+2, fMapX)].RenderHeight, LandExt^[Yc+1, Xc+1].RenderHeight, Frac(inX));
+  tmp2 := Mix(LandExt[Min(Yc+2, fMapY), Min(Xc+2, fMapX)].RenderHeight, LandExt^[Min(Yc+2, fMapY), Xc+1].RenderHeight, Frac(inX));
   Result := inY - Mix(tmp2, tmp1, Frac(inY)) / CELL_HEIGHT_DIV;
 end;
 
@@ -4944,8 +5032,8 @@ begin
   Xc := EnsureRange(Trunc(inX), 0, fMapX-1);
   Yc := EnsureRange(Trunc(inY), 0, fMapY-1);
 
-  tmp1 := Mix(Land[Yc+1, Min(Xc+2, fMapX)].RenderHeight, Land^[Yc+1, Xc+1].RenderHeight, Frac(inX));
-  tmp2 := Mix(Land[Min(Yc+2, fMapY), Min(Xc+2, fMapX)].RenderHeight, Land^[Min(Yc+2, fMapY), Xc+1].RenderHeight, Frac(inX));
+  tmp1 := Mix(LandExt[Yc+1, Min(Xc+2, fMapX)].RenderHeight, LandExt^[Yc+1, Xc+1].RenderHeight, Frac(inX));
+  tmp2 := Mix(LandExt[Min(Yc+2, fMapY), Min(Xc+2, fMapX)].RenderHeight, LandExt^[Min(Yc+2, fMapY), Xc+1].RenderHeight, Frac(inX));
   Result := Mix(tmp2, tmp1, Frac(inY)) / CELL_HEIGHT_DIV;
 end;
 
@@ -5054,7 +5142,11 @@ begin
 
   for I := 1 to fMapY do
     for J := 1 to fMapX do
+    begin
       UpdateFences(KMPoint(J,I), False);
+      LandExt[I,J].RenderLight := Land^[I,J].GetRenderLight;
+      LandExt[I,J].RenderHeight := Land[I,J].GetRenderHeight;
+    end;
 
   fFinder := TKMTerrainFinder.Create;
 
@@ -5068,7 +5160,7 @@ var
 begin
   for I := 1 to fMapY do
     for K := 1 to fMapX do
-      Land[I,K].IsUnit := gHands.GetUnitByUID(Cardinal(Land^[I,K].IsUnit));
+      Land[I,K].IsUnit := gHands.GetUnitByUID(Integer(Land^[I,K].IsUnit));
 end;
 
 

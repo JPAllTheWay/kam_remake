@@ -268,7 +268,7 @@ begin
 
   for I := 0 to High(Image_CampaignSubNode) do
   begin
-    Image_CampaignSubNode[I].Visible := false;
+    Image_CampaignSubNode[I].Visible := False;
     Image_CampaignSubNode[I].Left := fCampaign.Maps[fMapIndex].Nodes[I].X;
     Image_CampaignSubNode[I].Top  := fCampaign.Maps[fMapIndex].Nodes[I].Y;
   end;
@@ -332,7 +332,7 @@ begin
   if not InRange(fAnimNodeIndex, 0, fCampaign.Maps[fMapIndex].NodeCount-1) then Exit;
   if (aTickCount mod CAMP_NODE_ANIMATION_PERIOD) <> 0 then Exit;
   if Image_CampaignSubNode[fAnimNodeIndex].Visible then Exit;
-  Image_CampaignSubNode[fAnimNodeIndex].Visible := true;
+  Image_CampaignSubNode[fAnimNodeIndex].Visible := True;
   inc(fAnimNodeIndex);
 end;
 

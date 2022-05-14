@@ -126,7 +126,7 @@
 125:Vorige lied
 126:Volgende lied
 127:Vernietigen
-128:Afbreken van huizen/markeringen
+128:Afbreken van huizen/markeringen|Hou Shift en Ctrl ingedrukt om gebouwen te vernietigen zonder bevestiging
 129:Weg aanleggen
 130:Wegenbouw
 131:Akker ploegen
@@ -148,20 +148,20 @@
 149:Huidig type eenheid bewapenen. Gebruik Shift om 10 eenheden te bewapenen
 150:Volgend beroep. Gebruik Shift om het laatste beroep te krijgen
 151:Vorig beroep. Gebruik Shift om het eerste beroep te krijgen
-152:Aan wachtrij toevoegen. Gebruik RMK, Shift of Ctrl om de wachtrij te bewerken
-153:Wissel tussen leveringswijzen van producten: vraag / gesloten / aanbod. Gebruik LMK / RMK om vooruit/achteruit te veranderen
+152:Aan wachtrij toevoegen.|Gebruik RMK, Ctrl of Alt om de wachtrij te bewerken en Shift om het te vullen
+153:Wissel tussen leveringswijzen van producten: vraag / gesloten / aanbod|Gebruik LMK / RMK om vooruit / achteruit te veranderen
 154:Kosten:
 155:Huis reparatie in-/uitschakelen
 156:Gebouw nu niet beschikbaar
 157:Uith. vermogen
-158:Eenheid linksom draaien
-159:Eenheid rechtsom draaien
+158:Eenheid linksom draaien|Klik RMK of gebruik Shift om 90 graden te draaien, gebruik Ctrl om 180 graden te draaien
+159:Eenheid rechtsom draaien|Klik RMK of gebruik Shift om 90 graden te draaien, gebruik Ctrl om 180 graden te draaien
 160:Eenheid aanvallen
 161:Eenheid zenden
 162:Eenheid van voedsel voorzien
 163:Stormaanval starten
-164:Een rij toevoegen
-165:Een rij verwijderen
+164:Een rij toevoegen|Klik RMK of gebruik Shift om 5 rijen toe te voegen
+165:Een rij verwijderen|Klik RMK of gebruik Shift om 5 rijen toe te verwijderen
 166:Doelgroep|kiezen
 167:Stoppen
 168:Wissen
@@ -285,7 +285,7 @@
 286:Missie starten
 287:Titel
 288:Gr.
-289:Overwinningsconditie:
+289:Overwinningconditie:
 290:Nederlaagconditie:
 291:Bondgenoten:
 292:Vijanden:
@@ -308,6 +308,8 @@
 309:Toepassen
 310:Taal:
 311:Hoge schaduw kwaliteit
+312:Oké
+313:|Hou Shift ingedrukt om meerdere gebouwen te plaatsen
 314:Aan het laden... Een ogenblik geduld
 315:Er is een fout opgetreden!
 316:Nieuwe taalinstellingen laden
@@ -454,7 +456,7 @@
 465:Aantal groepen
 466:Aanvalsinfo
 468:Herhaling
-469:Eenmalige aanval
+469:Enkele aanval
 470:Ruiters
 471:Bogen
 472:Anti-cavalerie
@@ -607,7 +609,7 @@
 620:De vrede is voorbij. Grijp de wapens!
 621:Speeltijd:|%s
 622:Troep stoppen
-623:Troep samenvoegen
+623:Troep samenvoegen|Hou Shift ingedrukt om meerdere troepen samen te voegen
 624:Troep splitsen (%s). Splits één eenheid van de troep (Ctrl + %s)
 625:Herhalingen
 626:Herhaling weergeven
@@ -670,7 +672,7 @@
 683:Huidige onthuller verwijderen
 684:Keer terug naar de onthul mist pagina
 685:Sluiten
-686:Groepvolgorde
+686:Groep opdracht
 687:Geen
 688:Aanvalspositie
 689:Loop naar
@@ -752,7 +754,7 @@
 800:Het stemmen om terug te keren naar de lobby is mislukt
 801:Het verwijderen van een herhaling verwijderd ook het bijbehorende opgeslagen spel. Weet je zeker dat je dit spel wil verwijderen?
 802:Gebruik allemaal
-803:Aantal soldaten om aan te vallen
+803:Minimum aantal eenheden om aan te vallen
 804:Herhaling verwijderen
 805:Kaart verwijderen
 806:Weet je zeker dat je deze kaart wil verwijderen?
@@ -772,6 +774,7 @@
 820:Leer
 821:Gevarieerd
 822:Gedownloade kaarten
+823:Opmerking: de eerste "Herhaling" aanval zal alle troepen sturen die de AI speler heeft naar de nederzetting die wordt aangevallen. Echter, voor elke volgende "Herhaling" aanval (net als bij "Enkele aanval"), zal het genoeg troepen sturen om over het "Minimaal aantal eenheden om aan te vallen" te komen
 824:Verplaatsen
 825:Readme PDF openen
 826:PDF openen mislukt
@@ -785,13 +788,10 @@
 834:Verwijder deze herhaling
 835:Naam:
 836:Bevestigen
-837:Sneltoetsen bewerken
 838:Sneltoetsen
 839:Oké
 840:Functie
 841:Toets
-842:Speciale niet bewerkbare Sneltoetsen
-843:Speciale Sneltoetsen
 844:Sneltoetsen resetten
 845:Links scrollen
 846:Rechts scrollen
@@ -1300,6 +1300,7 @@
 1353:Genereer kaart
 1354:Genereer kaart met huidige Seed
 1355:Sluit Random Kaart Generator
+1356:M
 1357:Speel volgende tick in herhaling
 1358:Makkelijker
 1359:Erg makkelijk
@@ -1462,11 +1463,11 @@
 1516:HD bewegingen
 1517:HD bewegingen
 1518:Verhoog eenheid en projectielen bewegings resolutie
-1519:Speler %0:s kan %1:s door de %3:s van speler %2:s te %4:s
+1519:Voor speler %0:s om te %1:s spelers %2:s %3:s moeten zijn %4:s
 1520:winnen
 1521:overleven
-1522:vernietigen
-1523:redden
+1522:vernietigd
+1523:gered
 1524:hoofdgebouwen ( %s )
 1525:Alleen symmetrische bondgenootschappen toegestaan
 1526:HD animaties
@@ -1532,3 +1533,7 @@
 1586:Graaf overlay fase 4
 1587:Weg overlay
 1588:Stand.
+1589:Pas multiplayer AI instellingen toe op speler %d
+1590:Multiplayer instellingen voor AI speler %d
+1591:Waarschuwing: Hiermee worden alle bestaande AI instellingen voor speler %d overschreven. Doorgaan?
+1592:Slaat het huidige wachtwoord op voor toekomstig gebruik

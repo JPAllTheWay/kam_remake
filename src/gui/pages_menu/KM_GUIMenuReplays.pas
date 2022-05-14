@@ -316,7 +316,7 @@ begin
         begin
           fMinimapLastListId := aID;
           MinimapView_Replay.Show;
-          loaded := true;
+          loaded := True;
         end;
       except
         on E: Exception do

@@ -12,6 +12,7 @@ uses
   {$IFDEF USE_HASH}
   Generics.Collections, Generics.Defaults, System.Hash,
   {$ENDIF}
+  Math,
   KM_Units, KM_Houses, KM_ResHouses,
   KM_HandEntity, KM_HandTypes,
   KM_ResWares, KM_CommonClasses, KM_Defaults, KM_Points,
@@ -158,11 +159,11 @@ type
     constructor Create(aSerf: TKMUnitSerf); overload;
     constructor Create(aImportance: TKMDemandImportance; aSerf: TKMUnitSerf; oWT, dWT: TKMWareType; iO, iD: Integer; iQ: Integer = DELIVERY_NO_ID); overload;
 
-    function Cost: Single;
+    function Cost: Single; inline;
     procedure ResetValues;
-    function IsValid: Boolean;
+    function IsValid: Boolean; inline;
 
-    procedure IncAddition(aValue: Single);
+    procedure IncAddition(aValue: Single); inline;
   end;
 
   TKMDeliveryBidCalcEventType = (bceBid, bceBidBasic, bceSerfBid);
@@ -234,7 +235,7 @@ type
     procedure Form_UpdateDemandNode(aWare: TKMWareType; aI: Integer);
     procedure Form_UpdateQueueNode(aI: Integer);
 
-    function CompareBids(A, B: TKMDeliveryBid): Boolean;
+    function CompareBids(A, B: TKMDeliveryBid): Boolean; inline;
 
     function GetSerfActualPos(aSerf: TKMUnit): TKMPoint;
     procedure CloseDelivery(aID: Integer);
@@ -343,9 +344,15 @@ type
   end;
 
 
+const
+  // This const is used in the inline method, thus it should be placed in the interface section
+  NOT_REACHABLE_DEST_VALUE = MaxSingle;
+
+
 implementation
 uses
-  Classes, SysUtils, Math, TypInfo,
+  Classes, SysUtils, TypInfo,
+  KM_Entity,
   KM_Terrain,
   KM_FormLogistics, KM_UnitTaskDelivery,
   KM_Main, KM_Game, KM_GameParams, KM_Hand, KM_HandsCollection, KM_HouseBarracks, KM_HouseStore,
@@ -360,7 +367,6 @@ const
   //Approx compensation to compare Bid cost calc with pathfinding and without it. Pathfinding is usually longer
   BID_CALC_PATHF_COMPENSATION = 0.9;
   LENGTH_INC = 32; //Increment array lengths by this value
-  NOT_REACHABLE_DEST_VALUE = MaxSingle;
   CACHE_CLEAN_FREQ = 100; //In update counts
   OFFER_DEMAND_CACHED_BID_TTL = 50; //In ticks. DeliveryUpdate is not made every tick
   SERF_OFFER_CACHED_BID_TTL = 30;   //In ticks. DeliveryUpdate is not made every tick
@@ -418,7 +424,7 @@ var
 begin
   for I := 0 to fSerfCount - 1 do
   begin
-    U := gHands.GetUnitByUID(Cardinal(fSerfs[I]));
+    U := gHands.GetUnitByUID(Integer(fSerfs[I]));
     Assert(U is TKMUnitSerf, 'Non-serf in delivery list');
     fSerfs[I] := TKMUnitSerf(U);
   end;
@@ -1236,12 +1242,8 @@ begin
     end;
   end;
 
-  //If Demand and Offer aren't deleted
-//  Result := Result and (aIgnoreOffer or not offer.IsDeleted);
-
   //Do not allow delivery from 1 house to same house (f.e. store)
-  Result := Result and ((demand.Loc_House = nil)
-                       or (demand.Loc_House.UID <> offer.Loc_House.UID));
+  Result := Result and (demand.Loc_House <> offer.Loc_House);
 
   //If Demand and Offer are different HouseTypes, means forbid Store<->Store deliveries
   //except the case where 2nd store is being built and requires building materials
@@ -2284,7 +2286,7 @@ end;
 procedure TKMDeliveries.CloseOffer(aWare: TKMWareType; aID: Integer);
 begin
   Assert(fOffer[aWare,aID].BeingPerformed = 0);
-  fOffer[aWare,aID].IsDeleted := false;
+  fOffer[aWare,aID].IsDeleted := False;
   fOffer[aWare,aID].IsActive := False;
   fOffer[aWare,aID].Count := 0;
   gHands.CleanUpHousePointer(fOffer[aWare,aID].Loc_House);
@@ -2443,7 +2445,7 @@ begin
     for I := 0 to fOfferCount[WT] - 1 do
       with fOffer[WT,I] do
       begin
-        Loc_House := gHands.GetHouseByUID(Cardinal(Loc_House));
+        Loc_House := gHands.GetHouseByUID(Integer(Loc_House));
         Form_UpdateOfferNode(WT,I);
       end;
 
@@ -2451,15 +2453,15 @@ begin
     for I := 0 to fDemandCount[WT] - 1 do
       with fDemand[WT,I] do
       begin
-        Loc_House := gHands.GetHouseByUID(Cardinal(Loc_House));
-        Loc_Unit := gHands.GetUnitByUID(Cardinal(Loc_Unit));
+        Loc_House := gHands.GetHouseByUID(Integer(Loc_House));
+        Loc_Unit := gHands.GetUnitByUID(Integer(Loc_Unit));
         Form_UpdateDemandNode(WT,I);
       end;
 
   for I := 0 to fQueueCount - 1 do
     with fQueue[I] do
     begin
-      Serf := TKMUnitSerf(gHands.GetUnitByUID(Cardinal(Serf)));
+      Serf := TKMUnitSerf(gHands.GetUnitByUID(Integer(Serf)));
       Form_UpdateQueueNode(I);
     end;
 end;

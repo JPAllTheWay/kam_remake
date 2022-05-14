@@ -70,7 +70,9 @@ type
 
 implementation
 uses
-  KM_GameParams, KM_Cursor, KM_HandsCollection,
+  KM_Entity,
+  KM_GameParams, KM_Cursor,
+  KM_HandsCollection, KM_HandTypes,
   KM_Units, KM_UnitGroup, KM_UnitWarrior, KM_Houses,
   KM_CommonUtils,
   KM_GameTypes;
@@ -139,7 +141,7 @@ begin
   if UID <> UID_NONE then
   begin
     entity := gHands.GetObjectByUID(UID);
-    if entity.IsSelectable then
+    if (entity <> nil) and entity.IsSelectable then
       Result := entity
     else
       fLastSpecSelectedObjUID[fHandIndex] := UID_NONE;  // Last selected object is not valid anymore, so reset UID

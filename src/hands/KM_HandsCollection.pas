@@ -626,7 +626,7 @@ var
   I: Integer;
 begin
   Result := nil;
-  if aUID = NO_ENTITY_UID then Exit;
+  if aUID = UID_NONE then Exit;
 
   for I := 0 to fCount - 1 do
   begin
@@ -641,7 +641,7 @@ var
   I: Integer;
 begin
   Result := nil;
-  if aUID = NO_ENTITY_UID then Exit;
+  if aUID = UID_NONE then Exit;
 
   for I := 0 to fCount - 1 do
   begin
@@ -661,7 +661,7 @@ var
   I: Integer;
 begin
   Result := nil;
-  if aUID = NO_ENTITY_UID then Exit;
+  if aUID = UID_NONE then Exit;
 
   for I := 0 to fCount - 1 do
   begin
@@ -1076,7 +1076,8 @@ begin
 end;
 
 
-//MapEd procedure to remove any unit under cursor
+// MapEd procedure to remove any unit under cursor
+//todo: Since it gets a Unit.Position, we should refactor it into "procedure TKMHandsCollection.RemUnit(aUnit: TKMUnit);"
 function TKMHandsCollection.RemAnyUnit(const Position: TKMPoint): Boolean;
 var
   I: Integer;
@@ -1140,7 +1141,7 @@ var
 begin
   Result := True;
 
-  if fCheckGoals then //Already set all to true
+  if fCheckGoals then //Already set all to True
     Exit;
 
   for I := 0 to fCount - 1 do

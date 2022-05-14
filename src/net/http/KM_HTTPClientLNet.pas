@@ -54,7 +54,7 @@ var
   proto, user, pass, host, port, path: string;
 begin
   fIsUTF8 := aIsUTF8;
-  fHTTPClient.Disconnect(true); //If we were doing something, stop it
+  fHTTPClient.Disconnect(True); //If we were doing something, stop it
   HTTPBuffer := '';
   ParseURL(aURL, proto, user, pass, host, port, path);
   fHTTPClient.Host := host;

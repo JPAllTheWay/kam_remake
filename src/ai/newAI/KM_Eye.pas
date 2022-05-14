@@ -224,7 +224,9 @@ type
 
 implementation
 uses
-  KM_GameParams, KM_Terrain, KM_Hand, KM_Resource, KM_AIFields, KM_HandsCollection, KM_RenderAux, KM_ResMapElements,
+  KM_GameParams, KM_Terrain,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Resource, KM_AIFields,  KM_RenderAux, KM_ResMapElements,
   KM_NavMesh, KM_CityPlanner;
 
 
@@ -562,10 +564,10 @@ begin
   Road := TKMPointList.Create();
   try
     // Scan Resources - gold, iron
-    MineLocs := FindSeparateMineLocs(false, htIronMine);
+    MineLocs := FindSeparateMineLocs(False, htIronMine);
     for K := 0 to Length(MineLocs) - 1 do
       ScanLocArea(CenterPointArr[0], KMPointBelow(MineLocs[K]));
-    MineLocs := FindSeparateMineLocs(false, htGoldMine);
+    MineLocs := FindSeparateMineLocs(False, htGoldMine);
     for K := 0 to Length(MineLocs) - 1 do
       ScanLocArea(CenterPointArr[0], KMPointBelow(MineLocs[K]));
     // Scan Resources - coal

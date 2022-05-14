@@ -48,8 +48,9 @@ type
 implementation
 uses
   SysUtils,
+  KM_Entity,
   KM_Game, KM_GameParams, KM_HandsCollection, KM_Log, KM_Resource, KM_ResUnits, KM_UnitWarrior,
-  KM_UnitActionWalkTo,
+  KM_UnitActionWalkTo, KM_GameUIDTracker,
   KM_DevPerfLog, KM_DevPerfLogTypes,
   KM_CommonExceptions;
 
@@ -94,7 +95,7 @@ end;
 function TKMUnitsCollection.AddUnit(aOwner: TKMHandID; aUnitType: TKMUnitType; const aLoc: TKMPointDir;
                                     aAutoPlace: Boolean = True; aRequiredWalkConnect: Byte = 0; aInHouse: TKMHouse = nil): TKMUnit;
 var
-  ID: Cardinal;
+  uid: Integer;
   placeTo: TKMPoint;
   pointDir: TKMPointDir;
   U: TKMUnit;
@@ -126,17 +127,21 @@ begin
   end;
 
   pointDir := KMPointDir(placeTo, aLoc.Dir);
-  ID := gGame.GetNewUID;
+  uid := gUIDTracker.GetNewUID;
   case aUnitType of
-    utSerf:                       Result := TKMUnitSerf.Create(ID, aUnitType, pointDir, aOwner, aInHouse);
-    utBuilder:                    Result := TKMUnitWorker.Create(ID, aUnitType, pointDir, aOwner, aInHouse);
+    utSerf:                       Result := TKMUnitSerf.Create(uid, aUnitType, pointDir, aOwner, aInHouse);
+    utBuilder:                    Result := TKMUnitWorker.Create(uid, aUnitType, pointDir, aOwner, aInHouse);
     utWoodCutter..utFisher,
-    {utWorker,}
-    utStonemason..utMetallurgist: Result := TKMUnitCitizen.Create(ID, aUnitType, pointDir, aOwner, aInHouse);
-    utRecruit:                    Result := TKMUnitRecruit.Create(ID, aUnitType, pointDir, aOwner, aInHouse);
-    WARRIOR_MIN..WARRIOR_MAX:     Result := TKMUnitWarrior.Create(ID, aUnitType, pointDir, aOwner, aInHouse);
-    ANIMAL_MIN..ANIMAL_MAX:       Result := TKMUnitAnimal.Create(ID, aUnitType, pointDir, aOwner); //Do not specify aAddInHouse, we want to call TKMUnitAnimal constructor
-    else                          raise ELocError.Create('Add ' + gRes.Units[aUnitType].GUIName, pointDir.Loc);
+    {utBuilder,}
+    utStonemason..utMetallurgist: Result := TKMUnitCitizen.Create(uid, aUnitType, pointDir, aOwner, aInHouse);
+    utRecruit:                    Result := TKMUnitRecruit.Create(uid, aUnitType, pointDir, aOwner, aInHouse);
+    WARRIOR_MIN..WARRIOR_MAX:     Result := TKMUnitWarrior.Create(uid, aUnitType, pointDir, aOwner, aInHouse);
+    // Do not specify aAddInHouse, we want to call TKMUnitAnimal constructor
+    utWolf:                       Result := TKMUnitAnimal.Create(uid, aUnitType, pointDir, aOwner);
+    utFish:                       Result := TKMUnitFish.Create(uid, pointDir, aOwner);
+    utWatersnake..utDuck:         Result := TKMUnitAnimal.Create(uid, aUnitType, pointDir, aOwner);
+  else
+    raise ELocError.Create('Add ' + gRes.Units[aUnitType].GUIName, pointDir.Loc);
   end;
 
   if Result <> nil then
@@ -290,18 +295,18 @@ end;
 
 procedure TKMUnitsCollection.Load(LoadStream: TKMemoryStream);
 var
-  I, NewCount: Integer;
+  I, newCount: Integer;
   unitType: TKMUnitType;
   U: TKMUnit;
 begin
   LoadStream.CheckMarker('Units');
-  LoadStream.Read(NewCount);
-  for I := 0 to NewCount - 1 do
+  LoadStream.Read(newCount);
+  for I := 0 to newCount - 1 do
   begin
     LoadStream.Read(unitType, SizeOf(unitType));
     case unitType of
       utSerf:                   U := TKMUnitSerf.Load(LoadStream);
-      utBuilder:                 U := TKMUnitWorker.Load(LoadStream);
+      utBuilder:                U := TKMUnitWorker.Load(LoadStream);
       utWoodCutter..utFisher,
       {utWorker,}
       utStonemason..utMetallurgist:
@@ -309,7 +314,8 @@ begin
       utRecruit:                U := TKMUnitRecruit.Load(LoadStream);
       WARRIOR_MIN..WARRIOR_MAX: U := TKMUnitWarrior.Load(LoadStream);
       ANIMAL_MIN..ANIMAL_MAX:   U := TKMUnitAnimal.Load(LoadStream);
-      else                      U := nil;
+    else
+      U := nil;
     end;
 
     if U <> nil then

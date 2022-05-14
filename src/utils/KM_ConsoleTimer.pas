@@ -41,7 +41,7 @@ uses
 
 constructor TKMConsoleTimer.Create;
 begin
-  inherited Create(false);
+  inherited Create(False);
 
   {$IFDEF DEBUG}
   TThread.NameThreadForDebugging('ConsoleTimer', ThreadID);
@@ -51,7 +51,7 @@ begin
   FCancelFlag := TSimpleEvent.Create;
   FTimerProc := nil;
   FInterval := 1000;
-  Self.FreeOnTerminate := false; // Main thread controls for thread destruction
+  Self.FreeOnTerminate := False; // Main thread controls for thread destruction
 end;
 
 
@@ -101,7 +101,7 @@ begin
   lastProcTime := 0;
   while not Terminated do
   begin
-    if (WaitForMultipleObjects(2, @waitList[0], false, INFINITE) <>
+    if (WaitForMultipleObjects(2, @waitList[0], False, INFINITE) <>
       WAIT_OBJECT_0) then
       Break; // Terminate thread when FCancelFlag is signaled
     if Assigned(FTimerProc) then

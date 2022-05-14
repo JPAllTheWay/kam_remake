@@ -1208,7 +1208,7 @@ var
       listI: Integer;
     begin
       listI := fListToShow[stByPlayers].IndexOf(IntToStr(aOldI));
-      if listI > -1 then //should be always true
+      if listI > -1 then //should be always True
         TStringList(fListToShow[stByPlayers].Objects[listI]).Add(IntToStr(aHandId)); //Add same color player to list
     end;
 

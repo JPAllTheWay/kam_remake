@@ -70,8 +70,9 @@ type
 implementation
 uses
   Math, SysUtils, TypInfo,
+  KM_Entity,
   KM_RenderPool,
-  KM_HandsCollection, KM_HandLogistics,
+  KM_HandsCollection, KM_HandLogistics, KM_HandTypes, KM_HandEntity,
   KM_Resource, KM_ResSound,
   KM_ScriptingEvents, KM_Sound,
   KM_CommonUtils;

@@ -373,7 +373,7 @@ type
     procedure SetExportGameStats(aEnabled: Boolean);
     procedure SetMySpecHandIndex(aHandID: TKMHandID);
     procedure ShowFolderPermissionError;
-    procedure SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer = 0);
+    procedure SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer);
     property OnControlsUpdated: TObjectIntegerEvent read fOnControlsUpdated write fOnControlsUpdated;
 
     procedure Defocus;
@@ -500,7 +500,7 @@ begin
 
   Application.ProcessMessages;
 
-  if not fStartVideoPlayed and (gGameSettings <> nil) and gGameSettings.VideoStartup then
+  if not fStartVideoPlayed and (gGameSettings <> nil) and gGameSettings.Video.PlayOnStartup then
   begin
     gVideoPlayer.AddVideo(CAMPAIGNS_FOLDER_NAME + PathDelim + 'The Peasants Rebellion' + PathDelim + 'Logo', vfkStarting);
     gVideoPlayer.AddVideo('KaM', vfkStarting);
@@ -582,7 +582,7 @@ end;
 
 procedure TFormMain.ReloadLibxClick(Sender: TObject);
 begin
-  gRes.LoadLocaleAndFonts(gGameSettings.Locale, gGameSettings.LoadFullFonts);
+  gRes.LoadLocaleAndFonts(gGameSettings.Locale, gGameSettings.GFX.LoadFullFonts);
 end;
 
 
@@ -1124,9 +1124,9 @@ begin
     TCheckBox(aCtrl).Checked :=   (aCtrl = chkBevel)
                                or (aCtrl = chkLogNetConnection)
                                or (aCtrl = chkLogSkipTempCmd)
-                               or ((aCtrl = chkSnowHouses) and gGameSettings.AllowSnowHouses)
-                               or ((aCtrl = chkInterpolatedRender) and gGameSettings.InterpolatedRender)
-                               or ((aCtrl = chkInterpolatedAnims) and gGameSettings.InterpolatedAnimations)
+                               or ((aCtrl = chkSnowHouses) and gGameSettings.GFX.AllowSnowHouses)
+                               or ((aCtrl = chkInterpolatedRender) and gGameSettings.GFX.InterpolatedRender)
+                               or ((aCtrl = chkInterpolatedAnims) and gGameSettings.GFX.InterpolatedAnimations)
                                or (aCtrl = chkShowObjects)
                                or (aCtrl = chkShowHouses)
                                or (aCtrl = chkShowUnits)
@@ -1266,19 +1266,19 @@ begin
 end;
 
 
-procedure TFormMain.SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer = 0);
+procedure TFormMain.SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer);
 begin
   if not AllowFindObjByUID then Exit;
 
   seEntityUID.SetValueWithoutChange(aEntityUID);
   seWarriorUID.SetValueWithoutChange(aEntity2UID);
-                                                                {TODO -oOwner -cGeneral : ActionItem}
+
   if GetKeyState(VK_MENU) < 0 then
     seFindObjByUID.Value := aEntityUID // will trigger OnChange
   else
   if GetKeyState(VK_SHIFT) < 0 then
   begin
-    if aEntity2UID = 0 then
+    if aEntity2UID = UID_NONE then
       aEntity2UID := aEntityUID;
     seFindObjByUID.Value := aEntity2UID; // will trigger OnChange
   end
@@ -1293,9 +1293,9 @@ begin
 
   try
     {$IFDEF WDC}
-    chkSnowHouses.        SetCheckedWithoutClick(gGameSettings.AllowSnowHouses); // Snow houses checkbox could be updated before game
-    chkInterpolatedRender.SetCheckedWithoutClick(gGameSettings.InterpolatedRender);
-    chkInterpolatedAnims. SetCheckedWithoutClick(gGameSettings.InterpolatedAnimations);
+    chkSnowHouses.        SetCheckedWithoutClick(gGameSettings.GFX.AllowSnowHouses); // Snow houses checkbox could be updated before game
+    chkInterpolatedRender.SetCheckedWithoutClick(gGameSettings.GFX.InterpolatedRender);
+    chkInterpolatedAnims. SetCheckedWithoutClick(gGameSettings.GFX.InterpolatedAnimations);
     chkLoadUnsupSaves.    SetCheckedWithoutClick(ALLOW_LOAD_UNSUP_VERSION_SAVE);
     chkDebugScripting.    SetCheckedWithoutClick(DEBUG_SCRIPTING_EXEC);
     chkPaintSounds.       SetCheckedWithoutClick(DISPLAY_SOUNDS);
@@ -1536,10 +1536,10 @@ begin
   SKIP_RENDER_TEXT := chkSkipRenderText.Checked;
   DBG_UI_HINT_POS := chkCursorCoordinates.Checked;
 
-  {$IFDEF WDC} //one day update .lfm for lazarus...
-  gGameSettings.AllowSnowHouses := chkSnowHouses.Checked;
-  gGameSettings.InterpolatedRender := chkInterpolatedRender.Checked;
-  gGameSettings.InterpolatedAnimations := chkInterpolatedAnims.Checked;
+  {$IFDEF WDC} // one day update .lfm for lazarus...
+  gGameSettings.GFX.AllowSnowHouses := chkSnowHouses.Checked;
+  gGameSettings.GFX.InterpolatedRender := chkInterpolatedRender.Checked;
+  gGameSettings.GFX.InterpolatedAnimations := chkInterpolatedAnims.Checked;
 
   ALLOW_LOAD_UNSUP_VERSION_SAVE := chkLoadUnsupSaves.Checked;
   {$ENDIF}

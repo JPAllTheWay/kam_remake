@@ -27,7 +27,7 @@ begin
   Sender.FileName := aName;
   Sender.InitialDir := aPath;
   Sender.Filter := aFilter;
-  Result := Sender.Execute; // Returns "false" if user pressed "Cancel"
+  Result := Sender.Execute; // Returns "False" if user pressed "Cancel"
   //Result := Result and FileExists(Sender.FileName); //Already should be enabled in OpenDialog options
 end;
 
@@ -37,7 +37,7 @@ begin
   Sender.FileName   := aFileName;
   Sender.InitialDir := aFilePath;
   Sender.Filter     := aFilter;
-  Result            := Sender.Execute; //Returns "false" if user pressed "Cancel"
+  Result            := Sender.Execute; //Returns "False" if user pressed "Cancel"
   if not Result then exit;
   Sender.FileName   := AssureFileExt(Sender.FileName, aFileExt);
 end;

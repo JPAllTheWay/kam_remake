@@ -172,13 +172,8 @@ begin
 
   repeat
     case GetSurroundingsValueAndMark(x, y) of
-      1:  begin
-            direction := drN;
-
-          end;
-      2:  begin
-            direction := drE;
-          end;
+      1:  direction := drN;
+      2:  direction := drE;
       3:  direction := drE;
       4:  direction := drW;
       5:  direction := drN;
@@ -199,14 +194,14 @@ begin
       12: direction := drW;
       13: direction := drN;
       14: direction := drW;
-      else Exit;
+    else
+      Exit;
     end;
 
     x := x + POINT_ADJ[direction].X;
     y := y + POINT_ADJ[direction].Y; // accomodate change of basis
     prevDir := direction;
     aPerimeterVertexes.Add(KMPoint(x, y))
-
   until (x = initialX) and (y = initialY);
 
   Result := True;

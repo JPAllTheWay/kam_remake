@@ -113,6 +113,7 @@ var
 implementation
 uses
   Math, TypInfo,
+  KM_Entity,
   KM_GameApp,
   KM_HandEntity, KM_Hand, KM_HandLogistics, KM_HandsCollection, KM_HandTypes,
   KM_Resource, KM_ResWares, KM_ResUnits, KM_ResHouses, KM_ResTypes,

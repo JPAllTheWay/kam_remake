@@ -35,7 +35,7 @@ type
 implementation
 uses
   KM_RenderPool,
-  KM_Hand, KM_HandsCollection,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
   KM_Points, KM_CommonUtils;
 
 

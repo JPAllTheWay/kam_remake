@@ -568,35 +568,35 @@ procedure TKMGUICommonOptions.Refresh;
 begin
   Init;
 
-  TrackBar_Brightness.Position  := gGameSettings.Brightness;
-  CheckBox_LerpRender.Checked   := gGameSettings.InterpolatedRender;
+  TrackBar_Brightness.Position  := gGameSettings.GFX.Brightness;
+  CheckBox_LerpRender.Checked   := gGameSettings.GFX.InterpolatedRender;
   CheckBox_LerpAnims.Enabled    := CheckBox_LerpRender.Checked;
-  CheckBox_LerpAnims.Checked    := gGameSettings.InterpolatedAnimations;
+  CheckBox_LerpAnims.Checked    := gGameSettings.GFX.InterpolatedAnimations;
   TrackBar_ScrollSpeed.Position := Round(gGameSettings.ScrollSpeed / SCROLL_SPEED_MULTIPLIER);
-  TrackBar_SFX.Position         := Round(gGameSettings.SoundFXVolume * TrackBar_SFX.MaxValue);
-  TrackBar_Music.Position       := Round(gGameSettings.MusicVolume * TrackBar_Music.MaxValue);
-  CheckBox_MusicOff.Checked     := gGameSettings.MusicOff;
+  TrackBar_SFX.Position         := Round(gGameSettings.SFX.SoundFXVolume * TrackBar_SFX.MaxValue);
+  TrackBar_Music.Position       := Round(gGameSettings.SFX.MusicVolume * TrackBar_Music.MaxValue);
+  CheckBox_MusicOff.Checked     := not gGameSettings.SFX.MusicEnabled;
   TrackBar_Music.Enabled        := not CheckBox_MusicOff.Checked;
-  CheckBox_ShuffleOn.Checked    := gGameSettings.ShuffleOn;
+  CheckBox_ShuffleOn.Checked    := gGameSettings.SFX.ShuffleOn;
   CheckBox_ShuffleOn.Enabled    := not CheckBox_MusicOff.Checked;
-  CheckBox_SnowHouses.Checked   := gGameSettings.AllowSnowHouses;
+  CheckBox_SnowHouses.Checked   := gGameSettings.GFX.AllowSnowHouses;
 
-  CheckBox_VideoEnable.Checked   := gGameSettings.VideoOn;
-  CheckBox_VideoStretch.Checked  := gGameSettings.VideoStretch;
-  CheckBox_VideoStretch.Enabled  := gGameSettings.VideoOn;
-  CheckBox_VideoStartup.Checked  := gGameSettings.VideoStartup;
-  CheckBox_VideoStartup.Enabled  := gGameSettings.VideoOn;
+  CheckBox_VideoEnable.Checked   := gGameSettings.Video.Enabled;
+  CheckBox_VideoStretch.Checked  := gGameSettings.Video.VideoStretch;
+  CheckBox_VideoStretch.Enabled  := gGameSettings.Video.Enabled;
+  CheckBox_VideoStartup.Checked  := gGameSettings.Video.PlayOnStartup;
+  CheckBox_VideoStartup.Enabled  := gGameSettings.Video.Enabled;
 
   // Only in Menu
   if IsMenu then
   begin
     CheckBox_VSync.Checked         := gMainSettings.VSync;
     CheckBox_FullFonts.Enabled     := not gResLocales.LocaleByCode(gGameSettings.Locale).NeedsFullFonts;
-    CheckBox_FullFonts.Checked     := gGameSettings.LoadFullFonts or not CheckBox_FullFonts.Enabled;
-    CheckBox_ShadowQuality.Checked := gGameSettings.AlphaShadows;
+    CheckBox_FullFonts.Checked     := gGameSettings.GFX.LoadFullFonts or not CheckBox_FullFonts.Enabled;
+    CheckBox_ShadowQuality.Checked := gGameSettings.GFX.AlphaShadows;
 
-    Button_VideoTest.Enabled       := gGameSettings.VideoOn;
-    TrackBar_VideoVolume.Position  := Round(gGameSettings.VideoVolume * TrackBar_VideoVolume.MaxValue);
+    Button_VideoTest.Enabled       := gGameSettings.Video.Enabled;
+    TrackBar_VideoVolume.Position  := Round(gGameSettings.Video.VideoVolume * TrackBar_VideoVolume.MaxValue);
     //Disable Video volume util we will fix it
     //Video volume is set via windows mixer now, and it affect all other game sounds/music after the end of video playback
     TrackBar_VideoVolume.Enabled     := False; //gGameSettings.VideoOn;
@@ -643,34 +643,34 @@ var
   musicToggled, shuffleToggled: Boolean;
 begin
   // Change these options only if they changed state since last time
-  musicToggled := (gGameSettings.MusicOff <> CheckBox_MusicOff.Checked);
-  shuffleToggled := (gGameSettings.ShuffleOn <> CheckBox_ShuffleOn.Checked);
+  musicToggled := (gGameSettings.SFX.MusicEnabled <> not CheckBox_MusicOff.Checked);
+  shuffleToggled := (gGameSettings.SFX.ShuffleOn <> CheckBox_ShuffleOn.Checked);
 
-  gGameSettings.Brightness         := TrackBar_Brightness.Position;
-  gGameSettings.InterpolatedRender := CheckBox_LerpRender.Checked;
-  gGameSettings.InterpolatedAnimations := CheckBox_LerpAnims.Checked;
+  gGameSettings.GFX.Brightness         := TrackBar_Brightness.Position;
+  gGameSettings.GFX.InterpolatedRender := CheckBox_LerpRender.Checked;
+  gGameSettings.GFX.InterpolatedAnimations := CheckBox_LerpAnims.Checked;
 
   CheckBox_LerpAnims.Enabled       := CheckBox_LerpRender.Checked;
 
   gGameSettings.ScrollSpeed        := TrackBar_ScrollSpeed.Position * SCROLL_SPEED_MULTIPLIER;
-  gGameSettings.SoundFXVolume      := TrackBar_SFX.Position / TrackBar_SFX.MaxValue;
-  gGameSettings.MusicVolume        := TrackBar_Music.Position / TrackBar_Music.MaxValue;
-  gGameSettings.MusicOff           := CheckBox_MusicOff.Checked;
-  gGameSettings.ShuffleOn          := CheckBox_ShuffleOn.Checked;
-  gGameSettings.AllowSnowHouses    := CheckBox_SnowHouses.Checked;
+  gGameSettings.SFX.SoundFXVolume      := TrackBar_SFX.Position / TrackBar_SFX.MaxValue;
+  gGameSettings.SFX.MusicVolume        := TrackBar_Music.Position / TrackBar_Music.MaxValue;
+  gGameSettings.SFX.MusicEnabled       := not CheckBox_MusicOff.Checked;
+  gGameSettings.SFX.ShuffleOn          := CheckBox_ShuffleOn.Checked;
+  gGameSettings.GFX.AllowSnowHouses    := CheckBox_SnowHouses.Checked;
 
   TrackBar_Music.Enabled      := not CheckBox_MusicOff.Checked;
   CheckBox_ShuffleOn.Enabled  := not CheckBox_MusicOff.Checked;
 
-  gSoundPlayer.UpdateSoundVolume(gGameSettings.SoundFXVolume);
-  gMusic.Volume := gGameSettings.MusicVolume;
+  gSoundPlayer.UpdateSoundVolume(gGameSettings.SFX.SoundFXVolume);
+  gMusic.Volume := gGameSettings.SFX.MusicVolume;
 
-  gGameSettings.VideoOn            := CheckBox_VideoEnable.Checked;
-  gGameSettings.VideoStretch       := CheckBox_VideoStretch.Checked;
-  gGameSettings.VideoStartup       := CheckBox_VideoStartup.Checked;
+  gGameSettings.Video.Enabled         := CheckBox_VideoEnable.Checked;
+  gGameSettings.Video.VideoStretch    := CheckBox_VideoStretch.Checked;
+  gGameSettings.Video.PlayOnStartup   := CheckBox_VideoStartup.Checked;
 
   if IsMenu then
-    gGameSettings.VideoVolume      := TrackBar_VideoVolume.Position / TrackBar_VideoVolume.MaxValue;
+    gGameSettings.Video.VideoVolume      := TrackBar_VideoVolume.Position / TrackBar_VideoVolume.MaxValue;
 
   if Sender = CheckBox_VideoEnable then
   begin
@@ -690,14 +690,14 @@ begin
   if IsMenu then
   begin
     gMainSettings.VSync        := CheckBox_VSync.Checked;
-    gGameSettings.AlphaShadows := CheckBox_ShadowQuality.Checked;
+    gGameSettings.GFX.AlphaShadows := CheckBox_ShadowQuality.Checked;
 
     // Menu options
     SetupVSync(gMainSettings.VSync);
 
     if Sender = CheckBox_FullFonts then
     begin
-      gGameSettings.LoadFullFonts := CheckBox_FullFonts.Checked;
+      gGameSettings.GFX.LoadFullFonts := CheckBox_FullFonts.Checked;
       if CheckBox_FullFonts.Checked and (gRes.Fonts.LoadLevel <> fllFull) then
       begin
         // When enabling full fonts, use ToggleLocale reload the entire interface
@@ -741,13 +741,13 @@ begin
 
   if musicToggled then
   begin
-    gMusic.ToggleEnabled(not gGameSettings.MusicOff);
-    if not gGameSettings.MusicOff then
+    gMusic.ToggleEnabled(gGameSettings.SFX.MusicEnabled);
+    if gGameSettings.SFX.MusicEnabled then
       shuffleToggled := True; // Re-shuffle songs if music has been enabled
   end;
 
   if shuffleToggled then
-    gMusic.ToggleShuffle(gGameSettings.ShuffleOn);
+    gMusic.ToggleShuffle(gGameSettings.SFX.ShuffleOn);
 
   if Assigned(OnOptionsChange) then
     OnOptionsChange();
@@ -896,7 +896,7 @@ begin
   if IsMenu then
   begin
     fResolutions := gMain.Resolutions;
-    fLastAlphaShadows := gGameSettings.AlphaShadows;
+    fLastAlphaShadows := gGameSettings.GFX.AlphaShadows;
   end;
 end;
 
@@ -931,7 +931,7 @@ begin
   // Return to MainMenu and restore resolution changes
   gGameAppSettings.SaveSettings;
 
-  if IsMenu and (fLastAlphaShadows <> gGameSettings.AlphaShadows)
+  if IsMenu and (fLastAlphaShadows <> gGameSettings.GFX.AlphaShadows)
     and Assigned(OnPreloadGameResources) then
     OnPreloadGameResources;  //Update loaded game resources, if we changed alpha shadow setting
 

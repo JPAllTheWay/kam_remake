@@ -56,7 +56,7 @@ type
 
 implementation
 uses
-  Math, KM_Game;
+  Math, KM_Game, KM_GameUIDTracker;
 
 
 { TAIAttacks }
@@ -103,7 +103,7 @@ begin
   if fCount >= Length(fAttacks) then
     SetLength(fAttacks, fCount + 16);
 
-  aAttack.UID := gGame.GetNewUID;
+  aAttack.UID := gUIDTracker.GetNewUID;
   fAttacks[fCount] := aAttack;
   Inc(fCount);
   Result := aAttack.UID;
@@ -143,7 +143,7 @@ end;
 
 
 //Remove AIAttack by its ID
-//Result - true, if delete was succesfull, false, if no AIAttack was found
+//Result - True, if delete was succesfull, False, if no AIAttack was found
 function TKMAIAttacks.Remove(aAttackUID: Integer): Boolean;
 var
   I: Integer;

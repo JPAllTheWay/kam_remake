@@ -139,7 +139,7 @@ end;
 function ExtractOpenedFileName(const in_s: string): string;
 var k:word; out_s:string; QMarks:boolean;
 begin
-k:=0; out_s:=''; QMarks:=false;
+k:=0; out_s:=''; QMarks:=False;
 
 repeat      //First of all skip exe path
 inc(k);
@@ -159,13 +159,13 @@ if (length(in_s)>k) then begin
 
     if in_s[k]='"' then begin
     inc(k); //Getting path from "...."
-    QMarks:=true;
+    QMarks:=True;
     end;
 
     repeat
     out_s:=out_s+in_s[k];
     inc(k);
-    until((length(in_s)=k-1)or(in_s[k]='"')or((QMarks=false)and(in_s[k]=' ')));
+    until((length(in_s)=k-1)or(in_s[k]='"')or((QMarks=False)and(in_s[k]=' ')));
 
 end else out_s:='';
 

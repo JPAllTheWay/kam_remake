@@ -12,7 +12,7 @@ type
   TKMWarriorEvent = procedure(aWarrior: TKMUnitWarrior) of object;
   TKMWarrior2Event = procedure(aWarrior: TKMUnitWarrior; aUnit: TKMUnit) of object;
 
-  //What player has ordered us to do
+  // What player has ordered us to do
   TKMWarriorOrder = (
     woNone, //No orders
     woWalk, //Walk somewhere
@@ -140,9 +140,11 @@ type
 implementation
 uses
   TypInfo, Generics.Collections,
-  KM_ResTexts, KM_HandsCollection, KM_RenderPool, KM_UnitTaskAttackHouse, KM_HandLogistics,
+  KM_Entity,
+  KM_ResTexts, KM_HandsCollection, KM_RenderPool, KM_UnitTaskAttackHouse,
+  KM_Hand, KM_HandLogistics, KM_HandTypes, KM_HandEntity,
   KM_UnitActionFight, KM_UnitActionGoInOut, KM_UnitActionWalkTo, KM_UnitActionStay,
-  KM_UnitActionStormAttack, KM_Resource, KM_ResUnits, KM_Hand, KM_UnitGroup,
+  KM_UnitActionStormAttack, KM_Resource, KM_ResUnits, KM_UnitGroup,
   KM_GameParams, KM_CommonUtils, KM_RenderDebug, KM_UnitVisual,
   KM_CommonExceptions,
   KM_ResTypes;
@@ -187,10 +189,10 @@ procedure TKMUnitWarrior.SyncLoad;
 begin
   inherited;
 
-  fGroup := TKMUnitGroup(  gHands.GetGroupByUID( Cardinal(fGroup) )  );
-  fOrderTargetUnit := TKMUnitWarrior(gHands.GetUnitByUID( Cardinal(fOrderTargetUnit) ));
-  fAttackingUnit := TKMUnitWarrior(gHands.GetUnitByUID( Cardinal(fAttackingUnit) ));
-  fOrderTargetHouse := gHands.GetHouseByUID( Cardinal(fOrderTargetHouse) );
+  fGroup := TKMUnitGroup(gHands.GetGroupByUID(Integer(fGroup)));
+  fOrderTargetUnit := TKMUnitWarrior(gHands.GetUnitByUID(Integer(fOrderTargetUnit)));
+  fAttackingUnit := TKMUnitWarrior(gHands.GetUnitByUID(Integer(fAttackingUnit)));
+  fOrderTargetHouse := gHands.GetHouseByUID(Integer(fOrderTargetHouse));
 
   if Action is TKMUnitActionGoInOut then
     TKMUnitActionGoInOut(Action).OnWalkedOut := WalkedOut;
@@ -480,7 +482,7 @@ begin
 end;
 
 
-// Return true if we are attacking or following specified unit
+// Return True if we are attacking or following specified unit
 function TKMUnitWarrior.IsAttackingUnit(aUnit: TKMUnit): Boolean;
 begin
   if (Self = nil) or (aUnit = nil) then Exit(False);
@@ -592,7 +594,7 @@ end;
 function TKMUnitWarrior.OrderDone: Boolean;
 begin
   Result := False;
-  if fNextOrder <> woNone then Exit; //We haven't had time to take the order yet, so return false
+  if fNextOrder <> woNone then Exit; //We haven't had time to take the order yet, so return False
 
   //Did we performed the Order?
   case fOrder of
@@ -689,7 +691,7 @@ begin
   else
     testDir := dirNA;
 
-  range := GetFightMaxRange(true);
+  range := GetFightMaxRange(True);
   //AI has an "auto attack range" for melee like in TSK/TPR so you can't sneak past them (when idle)
   if not IsRanged and IsIdle and gHands[Owner].IsComputer then
     range := Max(range, gHands[Owner].AI.Setup.AutoAttackRange);
@@ -1110,8 +1112,8 @@ begin
   V := fVisual.GetLerp(aTickLag);
 
   act := V.Action;
-  unitPos.X := V.PosF.X + UNIT_OFF_X + V.SlideX;
-  unitPos.Y := V.PosF.Y + UNIT_OFF_Y + V.SlideY;
+  unitPos.X := V.PositionF.X + UNIT_OFF_X + V.SlideX;
+  unitPos.Y := V.PositionF.Y + UNIT_OFF_Y + V.SlideY;
 
   gRenderPool.AddUnit(fType, UID, act, V.Dir, V.AnimStep, V.AnimFraction, unitPos.X, unitPos.Y, gHands[Owner].GameFlagColor, True);
 

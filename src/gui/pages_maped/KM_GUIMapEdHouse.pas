@@ -25,7 +25,6 @@ type
     procedure HouseHealthChange(Sender: TObject; Shift: TShiftState);
     procedure HouseHealthClickHold(Sender: TObject; AButton: TMouseButton; var aHandled: Boolean);
 
-    procedure House_SetDeliveryMode(aMode: TKMDeliveryMode);
     procedure House_UpdateDeliveryMode(aMode: TKMDeliveryMode);
     procedure House_DeliveryModeToggle(Sender: TObject; Shift: TShiftState);
     procedure House_RepairToggle(Sender: TObject);
@@ -53,13 +52,17 @@ type
   protected
     Panel_House: TKMPanel;
       Label_House: TKMLabel;
-      Image_House_Logo, Image_House_Worker: TKMImage;
-      Button_HouseDeliveryMode, Button_HouseRepair: TKMButton;
+      Image_House_Logo: TKMImage;
+      Image_House_Worker: TKMImage;
+      Button_HouseDeliveryMode: TKMButton;
+      Button_HouseRepair: TKMButton;
       Image_House_Worker_Closed: TKMImage;
       Button_House_Worker: TKMButton;
       HealthBar_House: TKMPercentBar;
-      Button_HouseHealthDec, Button_HouseHealthInc: TKMButton;
-      Label_House_Input, Label_House_Output: TKMLabel;
+      Button_HouseHealthDec: TKMButton;
+      Button_HouseHealthInc: TKMButton;
+      Label_House_Input: TKMLabel;
+      Label_House_Output: TKMLabel;
       ResRow_Ware_Input: array [0..3] of TKMWareOrderRow;
       ResRow_Ware_Output: array [0..3] of TKMWareOrderRow;
 
@@ -99,7 +102,8 @@ implementation
 uses
   {$IFDEF MSWindows} Windows, {$ENDIF}
   {$IFDEF Unix} LCLType, {$ENDIF}
-  KM_HandsCollection, KM_ResTexts, KM_Resource, KM_RenderUI, KM_ResUnits,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_ResTexts, KM_Resource, KM_RenderUI, KM_ResUnits,
   KM_HouseBarracks, KM_HouseTownHall, KM_HouseStore,
   KM_ResWares, KM_ResFonts, KM_ResTypes,
   KM_Cursor, KM_UtilsExt;
@@ -638,17 +642,8 @@ end;
 
 
 procedure TKMMapEdHouse.House_UpdateDeliveryMode(aMode: TKMDeliveryMode);
-var
-  texId: Word;
 begin
-  texId := 0;
-
-  case aMode of
-    dmDelivery:  texId := 37;
-    dmClosed:    texId := 38;
-    dmTakeOut:   texId := 664;
-  end;
-  Button_HouseDeliveryMode.TexID := texId;
+  Button_HouseDeliveryMode.TexID := DELIVERY_MODE_SPRITE[aMode];
 end;
 
 
@@ -657,43 +652,23 @@ begin
   if aHandled then Exit;
 
   if (Key = VK_ESCAPE)
-    and Visible
-    and (gMySpectator.Selected <> nil) then
-    begin
-      gMySpectator.Selected := nil;
-      Hide;
-      aHandled := True;
-    end;
+  and Visible
+  and (gMySpectator.Selected <> nil) then
+  begin
+    gMySpectator.Selected := nil;
+    Hide;
+    aHandled := True;
+  end;
 end;
-
-
-procedure TKMMapEdHouse.House_SetDeliveryMode(aMode: TKMDeliveryMode);
-begin
-  fHouse.SetDeliveryModeInstantly(aMode);
-  House_UpdateDeliveryMode(aMode);
-end;
-
 
 procedure TKMMapEdHouse.House_DeliveryModeToggle(Sender: TObject; Shift: TShiftState);
 begin
-  //todo: Replace with Tag property
-  case Button_HouseDeliveryMode.TexID of
-    37: // dmDelivery
-          if ssLeft in Shift then
-            House_SetDeliveryMode(dmClosed)
-          else if ssRight in Shift then
-            House_SetDeliveryMode(dmTakeOut);
-    38: // dmClosed
-          if ssLeft in Shift then
-            House_SetDeliveryMode(dmTakeOut)
-          else if ssRight in Shift then
-            House_SetDeliveryMode(dmDelivery);
-    664: // dmTakeOut
-          if ssLeft in Shift then
-            House_SetDeliveryMode(dmDelivery)
-          else if ssRight in Shift then
-            House_SetDeliveryMode(dmClosed);
-  end;
+  if ssLeft in Shift then
+    fHouse.SetNextDeliveryMode
+  else if ssRight in Shift then
+    fHouse.SetPrevDeliveryMode;
+
+  House_UpdateDeliveryMode(fHouse.DeliveryMode);
 end;
 
 

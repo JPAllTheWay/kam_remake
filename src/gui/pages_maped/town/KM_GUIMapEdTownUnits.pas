@@ -68,7 +68,7 @@ begin
   end;
   Button_UnitCancel := TKMButtonFlat.Create(Panel_Units, 9 + 4 * 37, lineY+(Length(Button_Citizen) div 5)*37, 33, 33, 340);
   Button_UnitCancel.Hint := GetHintWHotkey(TX_MAPED_UNITS_REMOVE_HINT, MAPED_SUBMENU_ACTIONS_HOTKEYS[0]);
-  Button_UnitCancel.Tag := 255; //Erase
+  Button_UnitCancel.Tag := UNIT_REMOVE_TAG; //Erase
   Button_UnitCancel.OnClick := Town_UnitChange;
 
   lineY := 146;

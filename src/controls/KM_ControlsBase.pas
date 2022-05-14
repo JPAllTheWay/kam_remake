@@ -496,7 +496,7 @@ begin
     Parent.MasterControl.CtrlOver := Self;
     Parent.MasterControl.CtrlUp := Self;
     if Assigned(OnClick) then OnClick(Self);
-    Result := true; //Click has happened
+    Result := True; //Click has happened
   end
   else
     Result := False; //No, we couldn't click for Control is unreachable

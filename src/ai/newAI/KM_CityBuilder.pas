@@ -1881,7 +1881,7 @@ var
         aHT := gResHouses[aHT].ReleasedBy; // House have to be unlocked by this house
       end;
     end;
-    // Output = false only in case that house is already under construction OR is blocked by script / settings from the map editor
+    // Output = False only in case that house is already under construction OR is blocked by script / settings from the map editor
     Result := Output AND ( (initHT = aHT) OR (gHands[fOwner].Stats.GetHouseTotal(aHT) = 0) );
   end;
 
@@ -2023,7 +2023,7 @@ var
         aHT := gResHouses[aHT].ReleasedBy; // House have to be unlocked by this house
       end;
     end;
-    // Output = false only in case that house is already under construction OR is blocked by script / settings from the map editor
+    // Output = False only in case that house is already under construction OR is blocked by script / settings from the map editor
     Result := Output AND ( (initHT = aHT) OR (gHands[fOwner].Stats.GetHouseTotal(aHT) = 0) );
   end;
 

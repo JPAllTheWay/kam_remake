@@ -119,9 +119,9 @@ type
     function MessageLog_ItemClick(Sender: TObject; Shift: TShiftState; const X,Y: Integer): Boolean;
     procedure MessageLog_Close(Sender: TObject);
     procedure MessageLog_Update(aFullRefresh: Boolean);
-    procedure Minimap_Update(Sender: TObject; const X,Y:integer);
-    procedure Minimap_RightClick(Sender: TObject; const X,Y:integer);
-    procedure Minimap_Click(Sender: TObject; const X,Y:integer);
+    procedure Minimap_Update(Sender: TObject; const X,Y: Integer);
+    procedure Minimap_RightClick(Sender: TObject; const X,Y: Integer);
+    procedure Minimap_Click(Sender: TObject; const X,Y: Integer);
     procedure GameOptionsChanged;
 
     procedure Menu_Save_RefreshList(Sender: TObject);
@@ -153,7 +153,7 @@ type
     procedure Update_Image_AlliesMute(aImage: TKMImage);
     procedure UpdateNetPlayersMapping;
     procedure Menu_Update;
-    procedure DirectionCursorShow(X,Y: Integer; Dir: TKMDirection);
+    procedure DirectionCursorShow(X,Y: Integer; aDir: TKMDirection);
     procedure DirectionCursorHide;
     function HasLostMPGame: Boolean;
     procedure UpdateSelectedObject;
@@ -277,7 +277,7 @@ type
       Panel_PlayMoreMsg: TKMPanel;
         Image_PlayMore: TKMImage;
         Label_PlayMore: TKMLabel;
-        Button_PlayMore,Button_PlayQuit: TKMButton;
+        Button_PlayMore,Button_PlayMore_ReturnToMapEd,Button_PlayQuit: TKMButton;
     Panel_MPPlayMore: TKMPanel;
       Bevel_MPPlayMore: TKMBevel;
       Image_MPPlayMore: TKMImage;
@@ -332,9 +332,9 @@ type
     procedure MessageIssue(aKind: TKMMessageKind; const aText: UnicodeString; const aLoc: TKMPoint); overload;
     procedure UpdateUI;
     procedure UpdateClock(aSpeedActual, aDefaultSpeed, aSpeedRecorded: Single);
-    procedure ShowPlayMore(DoShow: Boolean; Msg: TKMGameResultMsg);
-    procedure ShowMPPlayMore(Msg: TKMGameResultMsg);
-    procedure ShowNetworkLag(aShow: Boolean; aPlayers: TKMByteArray; IsHost: Boolean);
+    procedure ShowPlayMore(aDoShow: Boolean; aMsg: TKMGameResultMsg);
+    procedure ShowMPPlayMore(aMsg: TKMGameResultMsg);
+    procedure ShowNetworkLag(aShow: Boolean; aPlayers: TKMByteArray; aIsHost: Boolean);
 
     procedure SetScriptedOverlay(const aText: UnicodeString; const aSettings: TKMOverlayTextSettings);
 
@@ -389,6 +389,7 @@ type
 implementation
 uses
   KM_Main, KM_System,
+  KM_Entity,
   KM_GameInputProcess, KM_GameInputProcess_Multi, KM_AI, KM_RenderUI, KM_Cursor, KM_Maps,
   KM_HandsCollection, KM_Hand,
   KM_RenderPool, KM_ResTexts, KM_Game, KM_GameApp, KM_HouseBarracks, KM_HouseTownHall,
@@ -626,7 +627,7 @@ begin
   HidePages;
 
   // If Sender is one of 4 main buttons, then open the page, hide the buttons and show Return button
-  Flip4MainButtons(false);
+  Flip4MainButtons(False);
   fOpenedMenu := tbNone;
   if Sender = Button_Main[tbBuild] then
   begin
@@ -1063,8 +1064,11 @@ begin
 
       Label_PlayMore  := TKMLabel.Create(Panel_PlayMoreMsg,100,80,NO_TEXT,fntOutline,taCenter);
       Button_PlayMore := TKMButton.Create(Panel_PlayMoreMsg,0,100,200,30,NO_TEXT,bsGame);
+      Button_PlayMore_ReturnToMapEd := TKMButton.Create(Panel_PlayMoreMsg,0,140,200,30,gResTexts[TX_MENU_RETURN_TO_MAPED],bsGame);
+      Button_PlayMore_ReturnToMapEd.Hide;
       Button_PlayQuit := TKMButton.Create(Panel_PlayMoreMsg,0,140,200,30,NO_TEXT,bsGame);
       Button_PlayMore.OnClick := PlayMoreClick;
+      Button_PlayMore_ReturnToMapEd.OnClick := Menu_ReturnToMapEd;
       Button_PlayQuit.OnClick := PlayMoreClick;
     Panel_PlayMore.Hide; // Initially hidden
 end;
@@ -1127,7 +1131,7 @@ var
 begin
   Image_Chat := TKMImage.Create(Panel_Main,TOOLBAR_WIDTH,Panel_Main.Height-48,30,48,494);
   Image_Chat.Anchors := [anLeft, anBottom];
-  Image_Chat.HighlightOnMouseOver := true;
+  Image_Chat.HighlightOnMouseOver := True;
   Image_Chat.Hint := gResTexts[TX_GAMEPLAY_CHAT_HINT];
   Image_Chat.OnClick := Chat_Click;
   Label_ChatUnread := TKMLabel.Create(Panel_Main,TOOLBAR_WIDTH,Panel_Main.Height-30,30,36,'',fntOutline,taCenter);
@@ -1144,7 +1148,7 @@ begin
 
   Image_MessageLog := TKMImage.Create(Panel_Main,TOOLBAR_WIDTH,Panel_Main.Height - 48 - IfThen(fUIMode in [umMP, umSpectate], 48*2),30,48,495);
   Image_MessageLog.Anchors := [anLeft, anBottom];
-  Image_MessageLog.HighlightOnMouseOver := true;
+  Image_MessageLog.HighlightOnMouseOver := True;
   Image_MessageLog.Hint := gResTexts[TX_GAME_MESSAGE_LOG];
   Image_MessageLog.OnClick := MessageLog_Click;
   Image_MessageLog.Hide; // Will be shows on first message
@@ -1689,7 +1693,7 @@ begin
   fGuiGameChat.Hide;
   MessageLog_Close(nil);
   Panel_Message.Show;
-  // Must update top AFTER showing panel, otherwise Button_MessageGoTo.Visible will always return false
+  // Must update top AFTER showing panel, otherwise Button_MessageGoTo.Visible will always return False
   Button_MessageDelete.Top := IfThen(Button_MessageGoTo.Visible, 104, 74);
   gSoundPlayer.Play(sfxMessageOpen); // Play parchment sound when they open the message
 end;
@@ -1988,10 +1992,10 @@ procedure TKMGamePlayInterface.SelectEntity(aEntity: TKMHandEntity);
 begin
   if Self = nil then Exit;
   if gHands = nil then Exit;
-
+  if aEntity = nil then Exit;
   if not aEntity.IsSelectable then Exit;
 
-  fViewport.Position := aEntity.PositionF;
+  fViewport.Position := aEntity.PositionForDisplayF;
 
   if aEntity is TKMUnitWarrior then
     gMySpectator.Selected := aEntity.AsUnitWarrior.Group
@@ -2034,7 +2038,7 @@ begin
   lastSelectedEntity := gMySpectator.LastSpecSelectedEntity;
   if lastSelectedEntity <> nil then
     // Center screen on last selected object for chosen hand
-    fViewport.Position := lastSelectedEntity.PositionF
+    fViewport.Position := lastSelectedEntity.PositionForDisplayF
   else
   if not KMSamePoint(gHands[gMySpectator.HandID].CenterScreen, KMPOINT_ZERO) then
     fViewport.Position := gHands[gMySpectator.HandID].CenterScreen.ToFloat //By default set viewport position to hand CenterScreen
@@ -2235,7 +2239,7 @@ begin
       mkHouse:  begin
                   // Find among houses for a spectator hand
                   H := gHands[gMySpectator.HandID].Houses.GetHouseByUID(msg.EntityUID);
-                  if H.IsSelectable then
+                  if (H <> nil) and H.IsSelectable then
                   begin
                     loc := H.Position;
                     gMySpectator.Highlight := H;
@@ -2246,7 +2250,7 @@ begin
       mkGroup:  begin
                   // Find among groups for a spectator hand
                   G := gHands[gMySpectator.HandID].UnitGroups.GetGroupByUID(msg.EntityUID);
-                  if G.IsSelectable then
+                  if (G <> nil) and G.IsSelectable then
                   begin
                     loc := G.Position;
                     SelectUnitGroup(G);
@@ -2343,10 +2347,10 @@ end;
 
 procedure TKMGamePlayInterface.Menu_Update;
 begin
-  if gGameSettings.MusicOff then
-    Label_Menu_Track.Caption := '-'
+  if gGameSettings.SFX.MusicEnabled then
+    Label_Menu_Track.Caption := gMusic.GetTrackTitle
   else
-    Label_Menu_Track.Caption := gMusic.GetTrackTitle;
+    Label_Menu_Track.Caption := '-';
 
   Label_Menu_Track.WordWrap := Length(Label_Menu_Track.Caption) > MAX_TRACKNAME_LENGTH;
   Label_Menu_Track.Top := IfThen(Label_Menu_Track.WordWrap, 19, 22);
@@ -2364,9 +2368,9 @@ begin
   end else
     Panel_Track.Top := PANEL_TRACK_TOP;
 
-  Label_Menu_Track.Enabled      := not gGameSettings.MusicOff;
-  Button_Menu_TrackUp.Enabled   := not gGameSettings.MusicOff;
-  Button_Menu_TrackDown.Enabled := not gGameSettings.MusicOff;
+  Label_Menu_Track.Enabled      := gGameSettings.SFX.MusicEnabled;
+  Button_Menu_TrackUp.Enabled   := gGameSettings.SFX.MusicEnabled;
+  Button_Menu_TrackDown.Enabled := gGameSettings.SFX.MusicEnabled;
 end;
 
 
@@ -2598,11 +2602,15 @@ begin
 
   if gGame.StartedFromMapEditor then
   begin
-    Button_ReturnToMapEd.Visible := True; //Do not use Show here, as we will show this tab in UI immidiately
+    Button_ReturnToMapEd.Visible := True; //Do not use Show here, as we will show this tab in UI immidiately in that case
     Button_Quit_No.Top := Button_ReturnToMapEd.Bottom + 20;
+    Button_PlayMore_ReturnToMapEd.Visible := True; //Do not use Show here, as we will show this tab in UI immidiately in that case
+    Button_PlayQuit.Top := Button_PlayMore_ReturnToMapEd.Bottom + 20;
   end else begin
     Button_ReturnToMapEd.Hide;
     Button_Quit_No.Top := Button_ReturnToMapEd.Top;
+    Button_PlayMore_ReturnToMapEd.Hide;
+    Button_PlayQuit.Top := Button_PlayMore_ReturnToMapEd.Top;
   end;
 
   // Chat and Allies setup should be accessible only in Multiplayer
@@ -2703,11 +2711,11 @@ begin
 end;
 
 
-procedure TKMGamePlayInterface.ShowPlayMore(DoShow: Boolean; Msg: TKMGameResultMsg);
+procedure TKMGamePlayInterface.ShowPlayMore(aDoShow: Boolean; aMsg: TKMGameResultMsg);
 begin
   ReleaseDirectionSelector;
-  fPlayMoreMsg := Msg;
-  case Msg of
+  fPlayMoreMsg := aMsg;
+  case aMsg of
     grWin:       begin
                     Label_PlayMore.Caption := gResTexts[TX_GAMEPLAY_WON];
                     Button_PlayMore.Caption := gResTexts[TX_GAMEPLAY_CONTINUE_PLAYING];
@@ -2723,18 +2731,18 @@ begin
                     Button_PlayMore.Caption := gResTexts[TX_GAMEPLAY_REPLAY_CONTINUEWATCHING];
                     Button_PlayQuit.Caption := gResTexts[TX_GAMEPLAY_QUIT_TO_MENU];
                  end;
-    else if DoShow then
+    else if aDoShow then
       raise Exception.Create('Wrong message in ShowPlayMore'); // Can become hidden with any message
   end;
-  Panel_PlayMore.Visible := DoShow;
+  Panel_PlayMore.Visible := aDoShow;
 end;
 
 
-procedure TKMGamePlayInterface.ShowMPPlayMore(Msg: TKMGameResultMsg);
+procedure TKMGamePlayInterface.ShowMPPlayMore(aMsg: TKMGameResultMsg);
 begin
   ReleaseDirectionSelector;
-  fPlayMoreMsg := Msg;
-  case Msg of
+  fPlayMoreMsg := aMsg;
+  case aMsg of
     grWin:       begin
                     Label_MPPlayMore.Caption := gResTexts[TX_GAMEPLAY_WON];
                     Button_MPPlayMore.Caption := gResTexts[TX_GAMEPLAY_CONTINUE_PLAYING];
@@ -2752,7 +2760,7 @@ begin
                   end;
     else raise Exception.Create('Wrong message in ShowMPPlayMore');
   end;
-  Panel_MPPlayMore.Visible := true;
+  Panel_MPPlayMore.Visible := True;
 end;
 
 
@@ -2794,7 +2802,7 @@ begin
 end;
 
 
-procedure TKMGamePlayInterface.ShowNetworkLag(aShow: Boolean; aPlayers: TKMByteArray; IsHost: Boolean);
+procedure TKMGamePlayInterface.ShowNetworkLag(aShow: Boolean; aPlayers: TKMByteArray; aIsHost: Boolean);
 var
   I: Integer;
   waitPlayersMsg, waitDCPlayersMsg: UnicodeString;
@@ -2835,7 +2843,7 @@ begin
 
     waitPlayersMsg := waitPlayersMsg + waitDCPlayersMsg;
 
-    Button_NetDropPlayers.Visible := IsHost;
+    Button_NetDropPlayers.Visible := aIsHost;
 
     if not aShow then
       fNetWaitDropPlayersDelayStarted := 0
@@ -2943,12 +2951,12 @@ begin
 end;
 
 
-procedure TKMGamePlayInterface.DirectionCursorShow(X,Y: Integer; Dir: TKMDirection);
+procedure TKMGamePlayInterface.DirectionCursorShow(X,Y: Integer; aDir: TKMDirection);
 begin
   Image_DirectionCursor.Visible := True;
-  Image_DirectionCursor.Left    := X + gRes.Cursors.CursorOffset(Dir).X;
-  Image_DirectionCursor.Top     := Y + gRes.Cursors.CursorOffset(Dir).Y;
-  Image_DirectionCursor.TexID   := gRes.Cursors.CursorTexID(Dir);
+  Image_DirectionCursor.Left    := X + gRes.Cursors.CursorOffset(aDir).X;
+  Image_DirectionCursor.Top     := Y + gRes.Cursors.CursorOffset(aDir).Y;
+  Image_DirectionCursor.TexID   := gRes.Cursors.CursorTexID(aDir);
 end;
 
 
@@ -3901,7 +3909,7 @@ begin
   if fSelectingTroopDirection then
   begin
     gMain.ApplyCursorRestriction; // Reset the cursor restrictions from selecting direction
-    fSelectingTroopDirection := false;
+    fSelectingTroopDirection := False;
     DirectionCursorHide;
   end;
 

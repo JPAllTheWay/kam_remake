@@ -30,6 +30,7 @@ implementation
 uses
   dglOpenGL,
   SysUtils,
+  KM_Entity,
   KM_RenderAux,
   KM_Game, KM_GameParams,
   KM_Units,

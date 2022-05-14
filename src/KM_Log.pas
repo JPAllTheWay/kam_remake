@@ -92,7 +92,7 @@ type
 
     property MultithreadLogging: Boolean read GetMultithreadLogging write SetMultithreadLogging;
 
-    // Add line if TestValue=false
+    // Add line if TestValue=False
     procedure AddAssert(const aMessageText: UnicodeString);
     // AddToLog simply adds the text
     procedure AddNoTime(const aText: UnicodeString; aWithPrefix: Boolean = True);

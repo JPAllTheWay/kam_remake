@@ -15,4 +15,3 @@
 @SET SpritesRXADir_LOCAL=C:\Games\KaM Remake Beta r13651\data\Sprites
 @SET ScriptingEditorDir_LOCAL=F:\Development_Win7\Repos\ScriptingEditor
 @SET BuildFullDir_LOCAL=F:\KaM_Remake Beta
-@SET KMRVideosDir_LOCAL=F:\Development_Win7\Graphic\Video\KaMVideos_v2_ok

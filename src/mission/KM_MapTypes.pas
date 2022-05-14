@@ -13,20 +13,20 @@ type
   // (we can add more parameters/conditions as well as existing KaM ones, possibly using a new script command)
   // Some things are probably named unclearly, please give me suggestions or change them. Goals are the one part
   // of scripting that seems to confuse everyone at first, mainly because of the TGoalStatus. In 99% of cases gsTrue and gtDefeat
-  // go together, because the if the defeat conditions is NOT true you lose, not the other way around. I guess it should be called a
+  // go together, because the if the defeat conditions is NOT True you lose, not the other way around. I guess it should be called a
   // "survival" conditions rather than defeat.
   // I put some examples below to give you an idea of how it works. Remember this is basically a copy of the goal scripting system in KaM,
   // not something I designed. It can change, this is just easiest to implement from script compatability point of view.
   TKMGoalType = (
     gltNone = 0,  // Means: It is not required for victory or defeat (e.g. simply display a message)
-    gltVictory,   // Means: "The following condition must be true for you to win"
-    gltSurvive    // Means: "The following condition must be true or else you lose"
+    gltVictory,   // Means: "The following condition must be True for you to win"
+    gltSurvive    // Means: "The following condition must be True or else you lose"
   );
 
   // Conditions are the same numbers as in KaM script
   TKMGoalCondition = (
     gcUnknown0,        // Not used/unknown
-    gcBuildTutorial,   // Must build a tannery (and other buildings from tutorial?) for it to be true. In KaM tutorial messages will be dispalyed if this is a goal
+    gcBuildTutorial,   // Must build a tannery (and other buildings from tutorial?) for it to be True. In KaM tutorial messages will be dispalyed if this is a goal
     gcTime,            // A certain time must pass
     gcBuildings,       // Storehouse, school, barracks, TownHall
     gcTroops,          // All troops

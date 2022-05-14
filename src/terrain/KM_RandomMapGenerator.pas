@@ -2041,12 +2041,12 @@ begin
   //   | [Y2,X0]  [Y2,X1]  [Y2,X2] |                        | 6  5  4 |
   //    ———————————————————————————                          —————————
   overflow := 0;
-  repeatWhile := true;
+  repeatWhile := True;
   // There are changes which affect previous tiles so the cycle somethimes have to be repeated
   while repeatWhile AND (overflow < 10) do
   begin
     overflow := overflow + 1;
-    repeatWhile := false;
+    repeatWhile := False;
     for Y1 := 1 to High(A)-2 do
     begin
       Y0 := Y1-1;
@@ -2092,7 +2092,7 @@ begin
 
           else// if A[Y1,X1] > 0 then // When is grass here do nothing
           begin
-            repeatWhile := true;
+            repeatWhile := True;
             if (A[Y1,X1] = A[Y1,X0]) then
             begin
               A[Y2,X0] := A[Y1,X1];
@@ -3998,13 +3998,13 @@ end;
 //
 //    // Detect 8 surrounding tiles and store ideal transition of each tile into B
 //      //{
-//      check := true;
+//      check := True;
 //      for aY := 0 to 2 do
 //        for aX := 0 to 2 do
 //        begin
 //          B[Y1,X1,aY,aX] := BT[ A[Y1,X1] , A[Y0+aY,X0+aX] ];
 //          if (B[Y1,X1,aY,aX] <> -1) then
-//            check := false
+//            check := False
 //          else
 //            B[Y1,X1,aY,aX] := A[Y1,X1];
 //        end;
@@ -4217,14 +4217,14 @@ end;
 //  var
 //    i,j: Integer;
 //  begin
-//    Result := false;
+//    Result := False;
 //    for i := Low(Arr) to High(Arr)-1 do
 //    begin
 //      Tile := Arr[I];
 //      for j := i+1 to High(Arr) do
 //        if (Tile = Arr[j]) then
 //        begin
-//          Result := true;
+//          Result := True;
 //          Exit;
 //        end;
 //    end;
@@ -4404,7 +4404,7 @@ end;
 //      // 4-tiles transition
 //        15: begin
 //            // Special case where are 2 diagonal tiles same
-//              check := false;
+//              check := False;
 //              if (B[Y1,X1] = B[Y2,X2]) then // 1 = 4
 //              begin
 //                if not canWalk[ B[Y1,X2] ] then
@@ -4412,7 +4412,7 @@ end;
 //                else if not canWalk[ B[Y2,X1] ] then
 //                  B[Y2,X1] := B[Y1,X1] // 3 := 1
 //                else
-//                   check := true;
+//                   check := True;
 //              end
 //              else if (B[Y2,X1] = B[Y1,X2]) then // 2 = 3
 //              begin
@@ -4421,10 +4421,10 @@ end;
 //                else if not canWalk[ B[Y2,X2] ] then
 //                  B[Y2,X2] := B[Y2,X1] // 4 := 2
 //                else
-//                   check := true;
+//                   check := True;
 //              end
 //              else
-//                check := true;
+//                check := True;
 //
 //            // 4 different tiles
 //              if check then

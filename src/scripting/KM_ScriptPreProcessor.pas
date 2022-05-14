@@ -205,7 +205,7 @@ begin
 end;
 
 
-// Returns true if we will handle directive
+// Returns True if we will handle directive
 function TKMScriptPreProcessor.TryLoadCustomEventDirectives(const aDirectiveName, aDirectiveParam: string; aParser: TPSPascalPreProcessorParser): Boolean;
 const
   CUSTOM_EVENT_DIRECTIVE = 'EVENT';
@@ -214,7 +214,7 @@ begin
 end;
 
 
-// Returns true if we will handle directive
+// Returns True if we will handle directive
 function TKMScriptPreProcessor.TryLoadCustomConsoleCommands(const aDirectiveName, aDirectiveParam: string; aParser: TPSPascalPreProcessorParser): Boolean;
 const
   CUSTOM_CONSOLE_COMMAND_DIRECTIVE = 'COMMAND';

@@ -27,7 +27,10 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_ResSound, KM_Sound, KM_Resource, KM_Projectiles, KM_GameParams, KM_ResUnits;
+  KM_Entity,
+  KM_HandsCollection,
+  KM_Resource, KM_ResSound, KM_ResUnits,
+  KM_Sound, KM_Projectiles, KM_GameParams;
 
 
 const
@@ -58,7 +61,7 @@ end;
 procedure TKMTaskAttackHouse.SyncLoad;
 begin
   inherited;
-  fHouse := gHands.GetHouseByUID(Cardinal(fHouse));
+  fHouse := gHands.GetHouseByUID(Integer(fHouse));
 end;
 
 

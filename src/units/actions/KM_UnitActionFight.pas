@@ -38,7 +38,9 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_ResSound, KM_Sound, KM_UnitWarrior, KM_Resource, KM_Projectiles,
+  KM_Entity,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_ResSound, KM_Sound, KM_UnitWarrior, KM_Resource, KM_Projectiles,
   KM_ResUnits, KM_Hand;
 
 
@@ -97,7 +99,7 @@ procedure TKMUnitActionFight.SyncLoad;
 begin
   inherited;
 
-  fOpponent := gHands.GetUnitByUID(Cardinal(fOpponent));
+  fOpponent := gHands.GetUnitByUID(Integer(fOpponent));
 end;
 
 
@@ -188,6 +190,7 @@ begin
   //See if Opponent has walked away (i.e. Serf) or died
   if fOpponent.IsDeadOrDying //Don't continue to fight dead units
   or not fOpponent.Visible //Don't continue to fight units that have went into a house
+  or (gHands[fUnit.Owner].Alliances[fOpponent.Owner] = atAlly) //Unit could become ally from script
   or not TKMUnitWarrior(fUnit).WithinFightRange(fOpponent.Position)
   or not fUnit.CanWalkDiagonaly(fUnit.Position, fOpponent.Position) then //Might be a tree between us now
   begin
@@ -201,7 +204,7 @@ begin
       //Start fighting this opponent by resetting the action
       fOpponent.GetPointer; //Add to pointer count
       TKMUnitWarrior(fUnit).OnPickedFight(TKMUnitWarrior(fUnit), fOpponent);
-      Locked := true;
+      Locked := True;
       fFightDelay := -1;
       //Ranged units should turn to face the new opponent immediately
       if TKMUnitWarrior(fUnit).IsRanged then
@@ -221,7 +224,7 @@ begin
 end;
 
 
-//A result of true means exit from Execute
+//A result of True means exit from Execute
 function TKMUnitActionFight.ExecuteProcessRanged(Step: Byte): Boolean;
 var
   W: TKMUnitWarrior;
@@ -259,7 +262,7 @@ begin
 end;
 
 
-//A result of true means exit from Execute
+//A result of True means exit from Execute
 function TKMUnitActionFight.ExecuteProcessMelee(Step: Byte): Boolean;
 var
   isHit: Boolean;

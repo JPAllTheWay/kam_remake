@@ -830,7 +830,7 @@ begin
         //Now that we know texture IDs we can fill GFXData structure
         SetGFXData(Tx, SpriteInfo, SAT);
 
-        if EXPORT_SPRITE_ATLASES_RXA then
+        if EXPORT_SPRITE_ATLASES_RXA and (fRT in EXPORT_SPRITE_ATLASES_LIST) then
           SaveTextureToPNG(SpriteInfo.Width, SpriteInfo.Height, RXInfo[fRT].FileName + '_rxa_' +
                            SPRITE_TYPE_EXPORT_NAME[SAT] + IntToStr(I), Data);
       end;
@@ -1292,7 +1292,7 @@ procedure TKMSpritePack.MakeGFX_BinPacking(aTexType: TTexFormat; aStartingIndex:
 
       Inc(TexCount);
 
-      if aFillGFXData and EXPORT_SPRITE_ATLASES then
+      if aFillGFXData and EXPORT_SPRITE_ATLASES and (fRT in EXPORT_SPRITE_ATLASES_LIST) then
         SaveTextureToPNG(SpriteInfo[I].Width, SpriteInfo[I].Height, RXInfo[fRT].FileName + '_' +
                          SPRITE_TYPE_EXPORT_NAME[aMode] + IntToStr(aStartingIndex+I), TD);
     end;
@@ -1426,7 +1426,7 @@ begin
         //Now that we know texture IDs we can fill GFXData structure
         SetGFXData(Tx, SpriteInfo, SAT);
 
-        if EXPORT_SPRITE_ATLASES then
+        if EXPORT_SPRITE_ATLASES and (fRT in EXPORT_SPRITE_ATLASES_LIST) then
           SaveTextureToPNG(SpriteInfo.Width, SpriteInfo.Height, RXInfo[fRT].FileName + '_' +
                            SPRITE_TYPE_EXPORT_NAME[SAT] + IntToStr(I+1), Data);
       end;

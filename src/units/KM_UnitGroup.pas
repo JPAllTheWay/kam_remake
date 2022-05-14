@@ -86,12 +86,12 @@ type
     procedure SetSelected(aValue: TKMUnitWarrior);
     function GetSelected: TKMUnitWarrior;
   protected
-    function GetPosition: TKMPoint; override;
+    function GetPosition: TKMPoint; inline;
     function GetInstance: TKMUnitGroup; override;
-    function GetPositionF: TKMPointF; override;
-    procedure SetPositionF(const aPositionF: TKMPointF); override;
+    function GetPositionForDisplayF: TKMPointF; override;
+    function GetPositionF: TKMPointF; inline;
     procedure SetOwner(const aOwner: TKMHandID); override;
-    function IsSelectableImpl: Boolean; override;
+    function GetIsSelectable: Boolean; override;
   public
     //Each group can have initial order
     //SendGroup - walk to some location
@@ -99,8 +99,8 @@ type
     MapEdOrder: TKMMapEdOrder;
     OnGroupDied: TKMUnitGroupEvent;
 
-    constructor Create(aID: Cardinal; aCreator: TKMUnitWarrior); overload;
-    constructor Create(aID: Cardinal; aOwner: TKMHandID; aUnitType: TKMUnitType; PosX, PosY: Word; aDir: TKMDirection;
+    constructor Create(aUID: Integer; aCreator: TKMUnitWarrior); overload;
+    constructor Create(aUID: Integer; aOwner: TKMHandID; aUnitType: TKMUnitType; PosX, PosY: Word; aDir: TKMDirection;
                        aUnitPerRow, aCount: Word); overload;
     constructor Load(LoadStream: TKMemoryStream); override;
     procedure SyncLoad;
@@ -119,10 +119,12 @@ type
     function IsAttackingHouse: Boolean; //Attacking house
     function IsAttackingUnit: Boolean;
     function IsIdleToAI(aOrderWalkKindSet: TKMOrderWalkKindSet = []): Boolean;
+
+    property Position: TKMPoint read GetPosition;
+    property PositionF: TKMPointF read GetPositionF;
+
     function IsPositioned(const aLoc: TKMPoint; Dir: TKMDirection): Boolean;
-    function IsAllyTo(aUnit: TKMUnit): Boolean; overload;
-    function IsAllyTo(aUnitGroup: TKMUnitGroup): Boolean; overload;
-    function IsAllyTo(aHouse: TKMHouse): Boolean; overload;
+    function IsAllyTo(aEntity: TKMHandEntity): Boolean;
     function CanTakeOrders: Boolean;
     function CanWalkTo(const aTo: TKMPoint; aDistance: Single): Boolean;
     function FightMaxRange: Single;
@@ -232,7 +234,11 @@ type
 implementation
 uses
   TypInfo,
-  KM_Game, KM_GameParams, KM_Hand, KM_HandsCollection, KM_Terrain, KM_CommonUtils, KM_ResTexts, KM_RenderPool,
+  KM_Entity,
+  KM_Game, KM_GameParams, KM_GameUIDTracker,
+  KM_Hand, KM_HandsCollection,
+  KM_Terrain, KM_CommonUtils,
+  KM_ResTexts, KM_RenderPool,
   KM_Hungarian, KM_UnitActionWalkTo, KM_ResUnits, KM_ScriptingEvents,
   KM_UnitActionStormAttack, KM_CommonClassesExt, KM_RenderAux,
   KM_GameTypes, KM_Log, KM_DevPerfLog, KM_DevPerfLogTypes,
@@ -244,10 +250,10 @@ const
 
 
 { TKMUnitGroup }
-//Create a Group from a single warrior (short version)
-constructor TKMUnitGroup.Create(aID: Cardinal; aCreator: TKMUnitWarrior);
+// Create a Group from a single warrior (short version)
+constructor TKMUnitGroup.Create(aUID: Integer; aCreator: TKMUnitWarrior);
 begin
-  inherited Create(etGroup, aID, aCreator.Owner);
+  inherited Create(etGroup, aUID, aCreator.Owner);
 
   fGroupType := UNIT_TO_GROUP_TYPE[aCreator.UnitType];
   Assert(fGroupType in GROUP_TYPES_VALID, 'Can''t assign group type ' + GetEnumName(TypeInfo(TKMGroupType), Integer(fGroupType)));
@@ -263,8 +269,8 @@ begin
 end;
 
 
-//Create a Group from script (creates all the warriors as well)
-constructor TKMUnitGroup.Create(aID: Cardinal; aOwner: TKMHandID; aUnitType: TKMUnitType; PosX, PosY: Word;
+// Create a Group from script (creates all the warriors as well)
+constructor TKMUnitGroup.Create(aUID: Integer; aOwner: TKMHandID; aUnitType: TKMUnitType; PosX, PosY: Word;
                                 aDir: TKMDirection; aUnitPerRow, aCount: Word);
 var
   I: Integer;
@@ -274,7 +280,7 @@ var
   newCondition: Word;
   desiredArea: Byte;
 begin
-  inherited Create(etGroup, aID, aOwner);
+  inherited Create(etGroup, aUID, aOwner);
 
   fGroupType := UNIT_TO_GROUP_TYPE[aUnitType];
   Assert(fGroupType in GROUP_TYPES_VALID, 'Can''t assign group type ' + GetEnumName(TypeInfo(TKMGroupType), Integer(fGroupType)));
@@ -376,17 +382,17 @@ begin
   //Assign event handlers after load
   for I := 0 to Count - 1 do
   begin
-    fMembers[I] := TKMUnitWarrior(gHands.GetUnitByUID(Cardinal(fMembers[I])));
+    fMembers[I] := TKMUnitWarrior(gHands.GetUnitByUID(Integer(fMembers[I])));
     fMembers[I].OnWarriorDied := Member_Died;
     fMembers[I].OnPickedFight := Member_PickedFight;
   end;
 
   for I := 0 to fOffenders.Count - 1 do
-    fOffenders[I] := TKMUnitWarrior(gHands.GetUnitByUID(Cardinal(TKMUnitWarrior(fOffenders[I]))));
+    fOffenders[I] := TKMUnitWarrior(gHands.GetUnitByUID(Integer(TKMUnitWarrior(fOffenders[I]))));
 
-  fOrderTargetGroup := gHands.GetGroupByUID(Cardinal(fOrderTargetGroup));
-  fOrderTargetHouse := gHands.GetHouseByUID(Cardinal(fOrderTargetHouse));
-  fOrderTargetUnit  := gHands.GetUnitByUID(Cardinal(fOrderTargetUnit));
+  fOrderTargetGroup := gHands.GetGroupByUID(Integer(fOrderTargetGroup));
+  fOrderTargetHouse := gHands.GetHouseByUID(Integer(fOrderTargetHouse));
+  fOrderTargetUnit  := gHands.GetUnitByUID(Integer(fOrderTargetUnit));
 end;
 
 
@@ -693,7 +699,7 @@ end;
 //If the player is allowed to issue orders to group
 function TKMUnitGroup.CanTakeOrders: Boolean;
 begin
-  Result := (IsRanged or not InFight) and (not fBlockOrders);
+  Result := (IsRanged or not InFight) and not fBlockOrders;
 end;
 
 
@@ -703,7 +709,7 @@ begin
 end;
 
 
-//Group is dead, but still exists cos of pointers to it
+// Group is dead, but still exists cos of pointers to it
 function TKMUnitGroup.IsDead: Boolean;
 begin
   Result := (Count = 0);
@@ -716,7 +722,7 @@ begin
 end;
 
 
-function TKMUnitGroup.IsSelectableImpl: Boolean;
+function TKMUnitGroup.GetIsSelectable: Boolean;
 begin
   Result := not IsDead;
 end;
@@ -1153,21 +1159,9 @@ begin
 end;
 
 
-function TKMUnitGroup.IsAllyTo(aUnit: TKMUnit): Boolean;
+function TKMUnitGroup.IsAllyTo(aEntity: TKMHandEntity): Boolean;
 begin
-  Result := gHands[Owner].Alliances[aUnit.Owner] = atAlly;
-end;
-
-
-function TKMUnitGroup.IsAllyTo(aUnitGroup: TKMUnitGroup): Boolean;
-begin
-  Result := gHands[Owner].Alliances[aUnitGroup.Owner] = atAlly;
-end;
-
-
-function TKMUnitGroup.IsAllyTo(aHouse: TKMHouse): Boolean;
-begin
-  Result := gHands[Owner].Alliances[aHouse.Owner] = atAlly;
+  Result := gHands[Owner].Alliances[aEntity.Owner] = atAlly;
 end;
 
 
@@ -1401,7 +1395,7 @@ begin
   if aClearOffenders and CanTakeOrders then
     ClearOffenders;
 
-  //Halt is not a true order, it is just OrderWalk
+  //Halt is not a True order, it is just OrderWalk
   //hose target depends on previous activity
   case fOrder of
     goNone:         if not KMSamePoint(fOrderLoc.Loc, KMPOINT_ZERO) then
@@ -1944,9 +1938,9 @@ begin
 end;
 
 
-procedure TKMUnitGroup.SetPositionF(const aPositionF: TKMPointF);
+function TKMUnitGroup.GetPositionForDisplayF: TKMPointF;
 begin
-  raise Exception.Create('Can''t set PositionF for UnitGroup');
+  Result := FlagBearer.PositionF;
 end;
 
 
@@ -2194,12 +2188,12 @@ end;
 procedure TKMUnitGroup.PaintHighlighted(aTickLag: Single; aHandColor, aFlagColor: Cardinal; aDoImmediateRender: Boolean = False;
                                         aDoHighlight: Boolean = False; aHighlightColor: Cardinal = 0);
 
-  function GetFlagPositionF(const aV: TKMUnitVisualState): TKMPointF;
+  function GetFlagPositionF(const aUVS: TKMUnitVisualState): TKMPointF;
   begin
-    Result.X := aV.PosF.X + UNIT_OFF_X + aV.SlideX;
-    Result.Y := aV.PosF.Y + UNIT_OFF_Y + aV.SlideY;
+    Result.X := aUVS.PositionF.X + UNIT_OFF_X + aUVS.SlideX;
+    Result.Y := aUVS.PositionF.Y + UNIT_OFF_Y + aUVS.SlideY;
     //Flag needs to be rendered above or below unit depending on direction (see AddUnitFlag)
-    if IsFlagRenderBeforeUnit(aV.Dir) then
+    if IsFlagRenderBeforeUnit(aUVS.Dir) then
       Result.Y := Result.Y - FLAG_X_OFFSET
     else
       Result.Y := Result.Y + FLAG_X_OFFSET;
@@ -2286,7 +2280,7 @@ end;
 
 function TKMUnitGroups.AddGroup(aWarrior: TKMUnitWarrior): TKMUnitGroup;
 begin
-  Result := TKMUnitGroup.Create(gGame.GetNewUID, aWarrior);
+  Result := TKMUnitGroup.Create(gUIDTracker.GetNewUID, aWarrior);
   fGroups.Add(Result)
 end;
 
@@ -2297,7 +2291,7 @@ begin
   Result := nil;
   Assert(aUnitType in [WARRIOR_MIN..WARRIOR_MAX]);
 
-  Result := TKMUnitGroup.Create(gGame.GetNewUID, aOwner, aUnitType, PosX, PosY, aDir, aUnitPerRow, aCount);
+  Result := TKMUnitGroup.Create(gUIDTracker.GetNewUID, aOwner, aUnitType, PosX, PosY, aDir, aUnitPerRow, aCount);
 
   //If group failed to create (e.g. due to being placed on unwalkable position)
   //then its memberCount = 0
@@ -2374,12 +2368,12 @@ begin
                    else
                    begin
                      //Create a new group with this one warrior
-                     Result := TKMUnitGroup.Create(gGame.GetNewUID, aUnit);
+                     Result := TKMUnitGroup.Create(gUIDTracker.GetNewUID, aUnit);
                      fGroups.Add(Result);
                    end;
                  end;
     hndComputer: begin
-                   Result := TKMUnitGroup.Create(gGame.GetNewUID, aUnit);
+                   Result := TKMUnitGroup.Create(gUIDTracker.GetNewUID, aUnit);
                    fGroups.Add(Result);
                  end;
   end;

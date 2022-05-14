@@ -159,7 +159,7 @@ begin
 
   {$IFDEF USEBASS}
   BASS_Stop; //Stop all Bass output
-  //Free the streams we may have used (will just return false if the stream is invalid)
+  //Free the streams we may have used (will just return False if the stream is invalid)
   BASS_StreamFree(fBassStream);
   BASS_StreamFree(fBassOtherStream);
   BASS_Free; //Frees this usage of BASS, allowing it to be recreated successfully
@@ -191,7 +191,7 @@ begin
     Exit; //Playback failed to start
   {$ENDIF}
   {$IFDEF USEBASS}
-  BASS_StreamFree(fBassStream); //Free the existing stream (will just return false if the stream is invalid)
+  BASS_StreamFree(fBassStream); //Free the existing stream (will just return False if the stream is invalid)
   fBassStream := BASS_StreamCreateFile(FALSE, PChar(FileName), 0, 0, BASS_STREAM_AUTOFREE {$IFDEF UNICODE} or BASS_UNICODE{$ENDIF});
 
   BASS_ChannelPlay(fBassStream, True); //Start playback from the beggining
@@ -225,7 +225,7 @@ begin
     Exit; //Playback failed to start
   {$ENDIF}
   {$IFDEF USEBASS}
-  BASS_StreamFree(fBassOtherStream); //Free the existing stream (will just return false if the stream is invalid)
+  BASS_StreamFree(fBassOtherStream); //Free the existing stream (will just return False if the stream is invalid)
   fBassOtherStream := BASS_StreamCreateFile(FALSE, PChar(FileName), 0, 0, BASS_STREAM_AUTOFREE {$IFDEF UNICODE} or BASS_UNICODE{$ENDIF});
 
   BASS_ChannelPlay(fBassOtherStream, True); //Start playback from the beggining

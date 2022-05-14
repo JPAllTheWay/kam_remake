@@ -309,10 +309,10 @@ begin
   if ColumnBox_Load.ItemIndex = -1 then Exit;
 
   if Sender = Button_Delete then
-    Load_DeleteConfirmation(true);
+    Load_DeleteConfirmation(True);
 
   if (Sender = Button_DeleteYes) or (Sender = Button_DeleteNo) then
-    Load_DeleteConfirmation(false); //Hide confirmation anyways
+    Load_DeleteConfirmation(False); //Hide confirmation anyways
 
   //Delete the savegame
   if Sender = Button_DeleteYes then

@@ -151,6 +151,7 @@ uses
   RegExpr,
   {$ENDIF}
   TypInfo, KromUtils,
+  KM_Entity,
   KM_Game,
   KM_HandTypes,
   KM_ResTexts, KM_ResUnits,

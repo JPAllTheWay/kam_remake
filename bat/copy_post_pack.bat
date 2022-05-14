@@ -48,7 +48,7 @@ xcopy "%KMRMapsRepoDir%"\Tutorials "%kam_folder%"\Tutorials\ /y /r /s
 REM ============================================================
 REM Copy video files
 REM ============================================================
-xcopy "%KMRVideosDir%" "%kam_folder%" /y /r /s
+xcopy "%KMRPrivateRepoDir%"\Video "%kam_folder%" /y /r /s
 
 REM ============================================================
 REM Copy files from KMRPrevVersionDir

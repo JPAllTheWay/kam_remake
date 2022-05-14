@@ -150,7 +150,7 @@ begin
     //it works only from within the loop, means mask is recreated when we access canvas or something like that
     bm2.ReleaseMaskHandle;
 
-    iconInfo.fIcon := false; //true=Icon, false=Cursor
+    iconInfo.fIcon := False; //True=Icon, False=Cursor
     iconInfo.hbmColor := bm.Handle;
 
     //I have a suspicion that maybe Windows could create icon delayed, at a time when bitmap data is

@@ -232,9 +232,9 @@ end;
 
 procedure TAISquad.SyncLoad();
 begin
-  fGroup := gHands.GetGroupByUID( Cardinal(fGroup) );
-  fTargetUnit := gHands.GetUnitByUID( Cardinal(fTargetUnit) );
-  fTargetHouse := gHands.GetHouseByUID( Cardinal(fTargetHouse) );
+  fGroup := gHands.GetGroupByUID(Integer(fGroup) );
+  fTargetUnit := gHands.GetUnitByUID(Integer(fTargetUnit) );
+  fTargetHouse := gHands.GetHouseByUID(Integer(fTargetHouse) );
 end;
 
 
@@ -541,8 +541,8 @@ var
   I: Integer;
   GT: TKMGroupType;
 begin
-  fTargetUnit := gHands.GetUnitByUID( Cardinal(fTargetUnit) );
-  fTargetHouse := gHands.GetHouseByUID( Cardinal(fTargetHouse) );
+  fTargetUnit := gHands.GetUnitByUID(Integer(fTargetUnit) );
+  fTargetHouse := gHands.GetHouseByUID(Integer(fTargetHouse) );
   for GT := GROUP_TYPE_MIN to GROUP_TYPE_MAX do
     for I := 0 to fSquads[GT].Count - 1 do
       TAISquad( Squads[GT].Items[I] ).SyncLoad();
@@ -1741,7 +1741,7 @@ begin
   aTargetUnit := nil;
   aTargetGroup := nil;
   // Compute common stuf first
-  aTargetHouse := gHands.GetClosestHouse(aInitPoint, fOwner, atEnemy, TARGET_HOUSES, false);
+  aTargetHouse := gHands.GetClosestHouse(aInitPoint, fOwner, atEnemy, TARGET_HOUSES, False);
   if (aTargetHouse = nil) then
   begin
     aTargetGroup := gHands.GetClosestGroup(aInitPoint, fOwner, atEnemy);

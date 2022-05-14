@@ -44,7 +44,6 @@ uses
 
 
 { TKMResInterpolation }
-
 procedure TKMResInterpolation.LoadFromFile(const FileName: string);
 var
   S: TKMemoryStreamBinary;
@@ -72,15 +71,13 @@ begin
 
     S.CheckMarker('Beasts');
     S.Read(fBeasts, SizeOf(fBeasts));
-
   finally
     S.Free;
   end;
 end;
 
 
-function TKMResInterpolation.UnitAction(aUnit: TKMUnitType;
-  aAct: TKMUnitActionType; aDir: TKMDirection; aStep: Integer;
+function TKMResInterpolation.UnitAction(aUnit: TKMUnitType; aAct: TKMUnitActionType; aDir: TKMDirection; aStep: Integer;
   aStepFrac: Single): Integer;
 var
   A: TKMAnimLoop;
@@ -93,16 +90,15 @@ begin
 
   Result := fUnitActions[aUnit, aAct, aDir, Step, SubStep];
 
-  //While in development disable interpolation if the sprite is missing
-  if not gGameSettings.InterpolatedAnimations
+  // While in development disable interpolation if the sprite is missing
+  if not gGameSettings.GFX.InterpolatedAnimations
   or (Result <= 0) or (Result > gRes.Sprites[rxUnits].RXData.Count)
   or (gRes.Sprites[rxUnits].RXData.Size[Result].X = 0) then
     Result := A.Step[Step] + 1;
 end;
 
 
-function TKMResInterpolation.UnitActionByPercent(aUnit: TKMUnitType;
-  aAct: TKMUnitActionType; aDir: TKMDirection; aPercent: Single): Integer;
+function TKMResInterpolation.UnitActionByPercent(aUnit: TKMUnitType; aAct: TKMUnitActionType; aDir: TKMDirection; aPercent: Single): Integer;
 var
   count: Integer;
   fracStep: Single;
@@ -123,8 +119,8 @@ begin
 
   Result := fUnitThoughts[aTh, Step, SubStep];
 
-  //While in development disable interpolation if the sprite is missing
-  if not gGameSettings.InterpolatedAnimations
+  // While in development disable interpolation if the sprite is missing
+  if not gGameSettings.GFX.InterpolatedAnimations
   or (Result <= 0) or (Result > gRes.Sprites[rxUnits].RXData.Count)
   or (gRes.Sprites[rxUnits].RXData.Size[Result].X = 0) then
   begin
@@ -134,8 +130,7 @@ begin
 end;
 
 
-function TKMResInterpolation.SerfCarry(aWare: TKMWareType; aDir: TKMDirection;
-  aStep: Integer; aStepFrac: Single): Integer;
+function TKMResInterpolation.SerfCarry(aWare: TKMWareType; aDir: TKMDirection; aStep: Integer; aStepFrac: Single): Integer;
 var
   A: TKMAnimLoop;
   Step, SubStep: Integer;
@@ -147,8 +142,8 @@ begin
 
   Result := fSerfCarry[aWare, aDir, Step, SubStep];
 
-  //While in development disable interpolation if the sprite is missing
-  if not gGameSettings.InterpolatedAnimations
+  // While in development disable interpolation if the sprite is missing
+  if not gGameSettings.GFX.InterpolatedAnimations
   or (Result <= 0) or (Result > gRes.Sprites[rxUnits].RXData.Count)
   or (gRes.Sprites[rxUnits].RXData.Size[Result].X = 0) then
     Result := A.Step[Step] + 1;
@@ -171,16 +166,15 @@ begin
 
   Result := fTrees[aObject, Step, SubStep];
 
-  //While in development disable interpolation if the sprite is missing
-  if not gGameSettings.InterpolatedAnimations
+  // While in development disable interpolation if the sprite is missing
+  if not gGameSettings.GFX.InterpolatedAnimations
   or (Result <= 0) or (Result > gRes.Sprites[rxTrees].RXData.Count)
   or (gRes.Sprites[rxTrees].RXData.Size[Result].X = 0) then
     Result := A.Step[Step] + 1;
 end;
 
 
-function TKMResInterpolation.House(aHT: TKMHouseType; aAct: TKMHouseActionType;
-  aStep: Integer; aStepFrac: Single): Integer;
+function TKMResInterpolation.House(aHT: TKMHouseType; aAct: TKMHouseActionType; aStep: Integer; aStepFrac: Single): Integer;
 var
   A: TKMAnimLoop;
   Step, SubStep: Integer;
@@ -192,16 +186,15 @@ begin
 
   Result := fHouses[aHT, aAct, Step, SubStep];
 
-  //While in development disable interpolation if the sprite is missing
-  if not gGameSettings.InterpolatedAnimations
+  // While in development disable interpolation if the sprite is missing
+  if not gGameSettings.GFX.InterpolatedAnimations
   or (Result <= 0) or (Result > gRes.Sprites[rxHouses].RXData.Count)
   or (gRes.Sprites[rxHouses].RXData.Size[Result].X = 0) then
     Result := A.Step[Step] + 1;
 end;
 
 
-function TKMResInterpolation.Beast(aHT: TKMHouseType; BeastId, BeastAge,
-  aStep: Integer; aStepFrac: Single): Integer;
+function TKMResInterpolation.Beast(aHT: TKMHouseType; BeastId, BeastAge, aStep: Integer; aStepFrac: Single): Integer;
 var
   A: TKMAnimLoop;
   Step, SubStep: Integer;
@@ -212,14 +205,14 @@ begin
   SubStep := EnsureRange(Floor(INTERP_LEVEL*aStepFrac), 0, INTERP_LEVEL-1);
 
   case aHT of
-    htSwine:       Result := fBeasts[1, BeastId, BeastAge, Step, SubStep];
-    htStables:     Result := fBeasts[2, BeastId, BeastAge, Step, SubStep];
-    htMarket: Result := fBeasts[3, BeastId, 1,        Step, SubStep];
-    else           Result := -1;
+    htSwine:   Result := fBeasts[1, BeastId, BeastAge, Step, SubStep];
+    htStables: Result := fBeasts[2, BeastId, BeastAge, Step, SubStep];
+    htMarket:  Result := fBeasts[3, BeastId, 1,        Step, SubStep];
+    else       Result := -1;
   end;
 
-  //While in development disable interpolation if the sprite is missing
-  if not gGameSettings.InterpolatedAnimations
+  // While in development disable interpolation if the sprite is missing
+  if not gGameSettings.GFX.InterpolatedAnimations
   or (Result <= 0) or (Result > gRes.Sprites[rxHouses].RXData.Count)
   or (gRes.Sprites[rxHouses].RXData.Size[Result].X = 0) then
     Result := A.Step[Step] + 1;

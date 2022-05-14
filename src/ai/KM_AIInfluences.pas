@@ -84,7 +84,7 @@ type
     // Avoid building
     procedure AddAvoidBuilding(aX,aY: Word; aRad: Single);
     procedure RemAvoidBuilding(aArea: TKMRect);
-    procedure MarkForest(aPoint: TKMPoint; aRad, aDecreaseCoef: Single; aOnlyUnmarkedArea: Boolean = false);
+    procedure MarkForest(aPoint: TKMPoint; aRad, aDecreaseCoef: Single; aOnlyUnmarkedArea: Boolean = False);
     // Army presence
     function GetAllianceIdx(const aPL: TKMHandID; var aIdx: Integer): Boolean;
     function GetArmyTraffic(const aAlliance, aIdx: Word): Word;
@@ -257,7 +257,7 @@ begin
 end;
 
 
-procedure TKMInfluences.MarkForest(aPoint: TKMPoint; aRad, aDecreaseCoef: Single; aOnlyUnmarkedArea: Boolean = false);
+procedure TKMInfluences.MarkForest(aPoint: TKMPoint; aRad, aDecreaseCoef: Single; aOnlyUnmarkedArea: Boolean = False);
 var
   X,Y, Rad: Integer;
   SqrDist, SqrMaxDist: Single;

@@ -104,7 +104,7 @@ end;
 
 procedure TKMNetClientLNet.Disconnect;
 begin
-  if fSocket <> nil then fSocket.Disconnect(true);
+  if fSocket <> nil then fSocket.Disconnect(True);
 end;
 
 

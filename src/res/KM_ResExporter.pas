@@ -240,7 +240,7 @@ begin
     sprites: TKMResSprites;
     resTexts: TKMTextLibraryMulti;
   begin
-    sprites := TKMResSprites.Create(nil, nil, true);
+    sprites := TKMResSprites.Create(nil, nil, True);
     sprites.LoadSprites(rxHouses, False); //BMP can't show alpha shadows anyways
     spritePack := sprites[rxHouses];
 

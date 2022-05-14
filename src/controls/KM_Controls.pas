@@ -126,7 +126,7 @@ type
 
     fEnabled: Boolean;
     fVisible: Boolean;
-    fFocusable: Boolean; //Can this control have focus (e.g. TKMEdit sets this true)
+    fFocusable: Boolean; //Can this control have focus (e.g. TKMEdit sets this True)
     fHitable: Boolean; //Can this control be hit with the cursor?
     fControlIndex: Integer; //Index number of this control in his Parent's (TKMPanel) collection
     fID: Integer; //Control global ID

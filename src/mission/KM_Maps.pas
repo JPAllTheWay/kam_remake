@@ -406,7 +406,7 @@ begin
     fMapAndDatCRC := datCRC xor mapCRC;
     fVersion := GAME_REVISION;
 
-    //First reset everything because e.g. CanBeHuman is assumed false by default and set true when we encounter SET_USER_PLAYER
+    //First reset everything because e.g. CanBeHuman is assumed False by default and set True when we encounter SET_USER_PLAYER
     ResetInfo;
 
     missionParser := TKMMissionParserInfo.Create;
@@ -600,7 +600,7 @@ begin
   //Do not append Extra info twice
   if fInfoAmount = iaExtra then Exit;
 
-  //First reset everything because e.g. CanBeHuman is assumed false by default and set true when we encounter SET_USER_PLAYER
+  //First reset everything because e.g. CanBeHuman is assumed False by default and set True when we encounter SET_USER_PLAYER
   ResetInfo;
 
   datFile := fDir + fName + '.dat';
@@ -1620,7 +1620,7 @@ begin
     fMaps[fCount] := aMap;
     Inc(fCount);
 
-    //Set the scanning to false so we could Sort
+    //Set the scanning to False so we could Sort
     fScanning := False;
 
     //Keep the maps sorted

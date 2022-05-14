@@ -13,15 +13,48 @@ uses
 
 
 type
-  //Gameplay settings, those that affect the game
-  //Everything gets written through setter to set fNeedsSave flag
+  TKMSettingsGFX = record
+  private
+    fBrightness: Byte;
+    procedure SetBrightness(aValue: Byte);
+  public
+    AlphaShadows: Boolean;
+    LoadFullFonts: Boolean;
+    InterpolatedRender: Boolean;
+    InterpolatedAnimations: Boolean;
+    AllowSnowHouses: Boolean;
+    property Brightness: Byte read fBrightness write SetBrightness;
+  end;
+
+  TKMSettingsSFX = record
+  private
+    fMusicVolume: Single;
+    fSoundFXVolume: Single;
+    procedure SetMusicVolume(aValue: Single);
+    procedure SetSoundFXVolume(aValue: Single);
+  public
+    MusicEnabled: Boolean;
+    ShuffleOn: Boolean;
+    property MusicVolume: Single read fMusicVolume write SetMusicVolume;
+    property SoundFXVolume: Single read fSoundFXVolume write SetSoundFXVolume;
+  end;
+
+  TKMSettingsVideo = record
+  private
+    fVideoVolume: Single;
+    procedure SetVideoVolume(aValue: Single);
+  public
+    Enabled: Boolean;
+    VideoStretch: Boolean;
+    PlayOnStartup: Boolean;
+    property VideoVolume: Single read fVideoVolume write SetVideoVolume;
+  end;
+
+
+  // Gameplay settings, those that affect the game
+  // Everything gets written through setter to set fNeedsSave flag
   TKMGameSettings = class(TKMGameAppSettingsPart)
   private
-    //GFX
-    fBrightness: Byte;
-    fAlphaShadows: Boolean;
-    fLoadFullFonts: Boolean;
-
     //Game
     fAutosave: Boolean;
     fAutosaveAtGameEnd: Boolean;
@@ -56,29 +89,12 @@ type
     fDayGamesCount: Integer;       //Number of games played today (used for saves namings)
     fLastDayGamePlayed: TDateTime; //Last day game played
 
-    //GameTweaks
-    fGameTweaks_AllowSnowHouses: Boolean;
-    fGameTweaks_InterpolatedRender: Boolean;
-    fGameTweaks_InterpolatedAnimations: Boolean;
-
     //Campaign
     fCampaignLastDifficulty: TKMMissionDifficulty;
 
     //Replay
     fReplaySavepoint: Boolean;
     fReplaySavepointFrequency: Integer;
-
-    //SFX
-    fMusicOff: Boolean;
-    fShuffleOn: Boolean;
-    fMusicVolume: Single;
-    fSoundFXVolume: Single;
-
-    //Video
-    fVideoOn: Boolean;
-    fVideoStretch: Boolean;
-    fVideoStartup: Boolean;
-    fVideoVolume: Single;
 
     //MapEd
     fMapEdHistoryDepth: Integer;
@@ -121,129 +137,56 @@ type
 
     fFavouriteMaps: TKMMapsCRCList;
 
-    //GFX
-    procedure SetBrightness(aValue: Byte);
-    procedure SetAlphaShadows(aValue: Boolean);
-    procedure SetLoadFullFonts(aValue: Boolean);
-
     //Game
-    procedure SetAutosave(aValue: Boolean);
-    procedure SetAutosaveAtGameEnd(aValue: Boolean);
     procedure SetAutosaveFrequency(aValue: Integer);
     procedure SetAutosaveCount(aValue: Integer);
     procedure SetLocale(const aLocale: AnsiString);
-    procedure SetSpecShowBeacons(aValue: Boolean);
-    procedure SetShowGameTime(aValue: Boolean);
-    procedure SetShowGameSpeed(aValue: Boolean);
 
-    procedure SetSaveCheckpoints(const aValue: Boolean);
+
     procedure SetSaveCheckpointsFreq(const aValue: Integer);
     procedure SetSaveCheckpointsLimit(const aValue: Integer);
 
-    procedure SetPlayersColorMode(aValue: TKMPlayerColorMode);
-    procedure SetPlayerColorSelf(aValue: Cardinal);
-    procedure SetPlayerColorAlly(aValue: Cardinal);
-    procedure SetPlayerColorEnemy(aValue: Cardinal);
-
-    procedure SetDayGamesCount(aValue: Integer);
-    procedure SetLastDayGamePlayed(aValue: TDateTime);
-
-    //GameTweaks
-    procedure SetAllowSnowHouses(aValue: Boolean);
-    procedure SetInterpolatedRender(aValue: Boolean);
-    procedure SetInterpolatedAnimations(const aValue: Boolean);
-
-    //Campaign
-    procedure SetCampaignLastDifficulty(aValue: TKMMissionDifficulty);
-
     //Replay
-    procedure SetReplayAutopause(aValue: Boolean);
-    procedure SetReplayShowBeacons(aValue: Boolean);
-    procedure SetReplaySavepoint(aValue: Boolean);
     procedure SetReplaySavepointFrequency(aValue: Integer);
-
-    //SFX
-    procedure SetMusicOff(aValue: Boolean);
-    procedure SetShuffleOn(aValue: Boolean);
-    procedure SetMusicVolume(aValue: Single);
-    procedure SetSoundFXVolume(aValue: Single);
-
-    //Video
-    procedure SetVideoOn(aValue: Boolean);
-    procedure SetVideoStretch(aValue: Boolean);
-    procedure SetVideoStartup(aValue: Boolean);
-    procedure SetVideoVolume(aValue: Single);
 
     //MapEd
     procedure SetMapEdHistoryDepth(const aValue: Integer);
     procedure SetMapEdMaxTerrainHeight(const aValue: Integer);
 
-    //Multiplayer
-    procedure SetMultiplayerName(const aValue: AnsiString);
-    procedure SetLastIP(const aValue: string);
-    procedure SetLastPort(const aValue: string);
-    procedure SetLastRoom(const aValue: string);
-    procedure SetLastPassword(const aValue: string);
-    procedure SetFlashOnMessage(aValue: Boolean);
-
     //Menu
     procedure SetMenuFavouriteMapsStr(const aValue: UnicodeString);
-    procedure SetMenuMapSPType(aValue: Byte);
-    procedure SetMenuReplaysType(aValue: Byte);
-    procedure SetMenuMapEdMapType(aValue: Byte);
-    procedure SetMenuMapEdNewMapX(aValue: Word);
-    procedure SetMenuMapEdNewMapY(aValue: Word);
-    procedure SetMenuMapEdSPMapCRC(aValue: Cardinal);
-    procedure SetMenuMapEdMPMapCRC(aValue: Cardinal);
-    procedure SetMenuMapEdMPMapName(const aValue: UnicodeString);
-    procedure SetMenuMapEdDLMapCRC(aValue: Cardinal);
-    procedure SetMenuCampaignName(const aValue: UnicodeString);
-    procedure SetMenuReplaySPSaveName(const aValue: UnicodeString);
-    procedure SetMenuReplayMPSaveName(const aValue: UnicodeString);
-    procedure SetMenuSPScenarioMapCRC(aValue: Cardinal);
-    procedure SetMenuSPMissionMapCRC(aValue: Cardinal);
-    procedure SetMenuSPTacticMapCRC(aValue: Cardinal);
-    procedure SetMenuSPSpecialMapCRC(aValue: Cardinal);
-    procedure SetMenuSPSaveFileName(const aValue: UnicodeString);
-    procedure SetMenuLobbyMapType(aValue: Byte);
 
     procedure SetSpeedPace(const aValue: Word);
     function GetFavouriteMaps: TKMMapsCRCList;
     function GetAsyncGameResLoader: Boolean;
-
-    //Debug
-    procedure SetDebugSaveRandomChecks(aValue: Boolean);
-    procedure SetDebugSaveGameAsText(aValue: Boolean);
   public
+    GFX: TKMSettingsGFX;
+    SFX: TKMSettingsSFX;
+    Video: TKMSettingsVideo;
+
     constructor Create;
     destructor Destroy; override;
 
     procedure LoadFromXML; override;
     procedure SaveToXML; override;
 
-    //GFX
-    property Brightness: Byte read fBrightness write SetBrightness;
-    property AlphaShadows: Boolean read fAlphaShadows write SetAlphaShadows;
-    property LoadFullFonts: Boolean read fLoadFullFonts write SetLoadFullFonts;
-
-    //Game
-    property Autosave: Boolean read fAutosave write SetAutosave;
-    property AutosaveAtGameEnd: Boolean read fAutosaveAtGameEnd write SetAutosaveAtGameEnd;
-
+    // Game
+    property Autosave: Boolean read fAutosave write fAutosave;
+    property AutosaveAtGameEnd: Boolean read fAutosaveAtGameEnd write fAutosaveAtGameEnd;
     property AutosaveFrequency: Integer read fAutosaveFrequency write SetAutosaveFrequency;
     property AutosaveCount: Integer read fAutosaveCount write SetAutosaveCount;
-    property SpecShowBeacons: Boolean read fSpecShowBeacons write SetSpecShowBeacons;
-    property ShowGameTime: Boolean read fShowGameTime write SetShowGameTime;
-    property ShowGameSpeed: Boolean read fShowGameSpeed write SetShowGameSpeed;
+    property SpecShowBeacons: Boolean read fSpecShowBeacons write fSpecShowBeacons;
+    property ShowGameTime: Boolean read fShowGameTime write fShowGameTime;
+    property ShowGameSpeed: Boolean read fShowGameSpeed write fShowGameSpeed;
 
-    property SaveCheckpoints: Boolean read fSaveCheckpoints write SetSaveCheckpoints;
+    property SaveCheckpoints: Boolean read fSaveCheckpoints write fSaveCheckpoints;
     property SaveCheckpointsFreq: Integer read fSaveCheckpointsFreq write SetSaveCheckpointsFreq;
     property SaveCheckpointsLimit: Integer read fSaveCheckpointsLimit write SetSaveCheckpointsLimit;
 
-    property PlayersColorMode: TKMPlayerColorMode read fPlayersColorMode write SetPlayersColorMode;
-    property PlayerColorSelf: Cardinal read fPlayerColorSelf write SetPlayerColorSelf;
-    property PlayerColorAlly: Cardinal read fPlayerColorAlly write SetPlayerColorAlly;
-    property PlayerColorEnemy: Cardinal read fPlayerColorEnemy write SetPlayerColorEnemy;
+    property PlayersColorMode: TKMPlayerColorMode read fPlayersColorMode write fPlayersColorMode;
+    property PlayerColorSelf: Cardinal read fPlayerColorSelf write fPlayerColorSelf;
+    property PlayerColorAlly: Cardinal read fPlayerColorAlly write fPlayerColorAlly;
+    property PlayerColorEnemy: Cardinal read fPlayerColorEnemy write fPlayerColorEnemy;
 
     property DefaultZoom: Single read fDefaultZoom;
     property ZoomBehaviour: TKMZoomBehaviour read fZoomBehaviour write fZoomBehaviour;
@@ -256,73 +199,56 @@ type
     property WareDistribution: TKMWareDistribution read fWareDistribution;
     property SaveWareDistribution: Boolean read fSaveWareDistribution;
 
-    property DayGamesCount: Integer read fDayGamesCount write SetDayGamesCount;
-    property LastDayGamePlayed: TDateTime read fLastDayGamePlayed write SetLastDayGamePlayed;
+    property DayGamesCount: Integer read fDayGamesCount write fDayGamesCount;
+    property LastDayGamePlayed: TDateTime read fLastDayGamePlayed write fLastDayGamePlayed;
 
-    //GameTweaks
-    property AllowSnowHouses: Boolean read fGameTweaks_AllowSnowHouses write SetAllowSnowHouses;
-    property InterpolatedRender: Boolean read fGameTweaks_InterpolatedRender write SetInterpolatedRender;
-    property InterpolatedAnimations: Boolean read fGameTweaks_InterpolatedAnimations write SetInterpolatedAnimations;
+    // Campaign
+    property CampaignLastDifficulty: TKMMissionDifficulty read fCampaignLastDifficulty write fCampaignLastDifficulty;
 
-    //Campaign
-    property CampaignLastDifficulty: TKMMissionDifficulty read fCampaignLastDifficulty write SetCampaignLastDifficulty;
-
-    //Replay
-    property ReplayAutopause: Boolean read fReplayAutopause write SetReplayAutopause;
-    property ReplayShowBeacons: Boolean read fReplayShowBeacons write SetReplayShowBeacons;
-    property ReplaySavepoint: Boolean read fReplaySavepoint write SetReplaySavepoint;
+    // Replay
+    property ReplayAutopause: Boolean read fReplayAutopause write fReplayAutopause;
+    property ReplayShowBeacons: Boolean read fReplayShowBeacons write fReplayShowBeacons;
+    property ReplaySavepoint: Boolean read fReplaySavepoint write fReplaySavepoint;
     property ReplaySavepointFrequency: Integer read fReplaySavepointFrequency write SetReplaySavepointFrequency;
 
-    //SFX
-    property MusicOff: Boolean read fMusicOff write SetMusicOff;
-    property ShuffleOn: Boolean read fShuffleOn write SetShuffleOn;
-    property MusicVolume: Single read fMusicVolume write SetMusicVolume;
-    property SoundFXVolume: Single read fSoundFXVolume write SetSoundFXVolume;
-
-    //Video
-    property VideoOn: Boolean read fVideoOn write SetVideoOn;
-    property VideoStretch: Boolean read fVideoStretch write SetVideoStretch;
-    property VideoStartup: Boolean read fVideoStartup write SetVideoStartup;
-    property VideoVolume: Single read fVideoVolume write SetVideoVolume;
-
-    //MapEd
+    // MapEd
     property MapEdHistoryDepth: Integer read fMapEdHistoryDepth write SetMapEdHistoryDepth;
     property MapEdMaxTerrainHeight: Integer read fMapEdMaxTerrainHeight write SetMapEdMaxTerrainHeight;
 
     //Multiplayer
-    property MultiplayerName: AnsiString read fMultiplayerName write SetMultiplayerName;
-    property FlashOnMessage: Boolean read fFlashOnMessage write SetFlashOnMessage;
-    property LastIP: string read fLastIP write SetLastIP;
-    property LastPort: string read fLastPort write SetLastPort;
-    property LastRoom: string read fLastRoom write SetLastRoom;
-    property LastPassword: string read fLastPassword write SetLastPassword;
+    property MultiplayerName: AnsiString read fMultiplayerName write fMultiplayerName;
+    property FlashOnMessage: Boolean read fFlashOnMessage write fFlashOnMessage;
+    property LastIP: string read fLastIP write fLastIP;
+    property LastPort: string read fLastPort write fLastPort;
+    property LastRoom: string read fLastRoom write fLastRoom;
+    property LastPassword: string read fLastPassword write fLastPassword;
 
     //Misc
     property AsyncGameResLoader: Boolean read GetAsyncGameResLoader;
 
-    //Menu
-    property MenuMapSPType: Byte read fMenu_MapSPType write SetMenuMapSPType;
-    property MenuReplaysType: Byte read fMenu_ReplaysType write SetMenuReplaysType;
-    property MenuMapEdMapType: Byte read fMenu_MapEdMapType write SetMenuMapEdMapType;
-    property MenuMapEdNewMapX: Word read fMenu_MapEdNewMapX write SetMenuMapEdNewMapX;
-    property MenuMapEdNewMapY: Word read fMenu_MapEdNewMapY write SetMenuMapEdNewMapY;
-    property MenuMapEdSPMapCRC: Cardinal read fMenu_MapEdSPMapCRC write SetMenuMapEdSPMapCRC;
-    property MenuMapEdMPMapCRC: Cardinal read fMenu_MapEdMPMapCRC write SetMenuMapEdMPMapCRC;
-    property MenuMapEdMPMapName: UnicodeString read fMenu_MapEdMPMapName write SetMenuMapEdMPMapName;
-    property MenuMapEdDLMapCRC: Cardinal read fMenu_MapEdDLMapCRC write SetMenuMapEdDLMapCRC;
-    property MenuCampaignName: UnicodeString read fMenu_CampaignName write SetMenuCampaignName;
-    property MenuReplaySPSaveName: UnicodeString read fMenu_ReplaySPSaveName write SetMenuReplaySPSaveName;
-    property MenuReplayMPSaveName: UnicodeString read fMenu_ReplayMPSaveName write SetMenuReplayMPSaveName;
-    property MenuSPScenarioMapCRC: Cardinal read fMenu_SPScenarioMapCRC write SetMenuSPScenarioMapCRC;
-    property MenuSPMissionMapCRC: Cardinal read fMenu_SPMissionMapCRC write SetMenuSPMissionMapCRC;
-    property MenuSPTacticMapCRC: Cardinal read fMenu_SPTacticMapCRC write SetMenuSPTacticMapCRC;
-    property MenuSPSpecialMapCRC: Cardinal read fMenu_SPSpecialMapCRC write SetMenuSPSpecialMapCRC;
-    property MenuSPSaveFileName: UnicodeString read fMenu_SPSaveFileName write SetMenuSPSaveFileName;
-    property MenuLobbyMapType: Byte read fMenu_LobbyMapType write SetMenuLobbyMapType;
+    // Menu
+    property MenuMapSPType: Byte read fMenu_MapSPType write fMenu_MapSPType;
+    property MenuReplaysType: Byte read fMenu_ReplaysType write fMenu_ReplaysType;
+    property MenuMapEdMapType: Byte read fMenu_MapEdMapType write fMenu_MapEdMapType;
+    property MenuMapEdNewMapX: Word read fMenu_MapEdNewMapX write fMenu_MapEdNewMapX;
+    property MenuMapEdNewMapY: Word read fMenu_MapEdNewMapY write fMenu_MapEdNewMapY;
+    property MenuMapEdSPMapCRC: Cardinal read fMenu_MapEdSPMapCRC write fMenu_MapEdSPMapCRC;
+    property MenuMapEdMPMapCRC: Cardinal read fMenu_MapEdMPMapCRC write fMenu_MapEdMPMapCRC;
+    property MenuMapEdMPMapName: UnicodeString read fMenu_MapEdMPMapName write fMenu_MapEdMPMapName;
+    property MenuMapEdDLMapCRC: Cardinal read fMenu_MapEdDLMapCRC write fMenu_MapEdDLMapCRC;
+    property MenuCampaignName: UnicodeString read fMenu_CampaignName write fMenu_CampaignName;
+    property MenuReplaySPSaveName: UnicodeString read fMenu_ReplaySPSaveName write fMenu_ReplaySPSaveName;
+    property MenuReplayMPSaveName: UnicodeString read fMenu_ReplayMPSaveName write fMenu_ReplayMPSaveName;
+    property MenuSPScenarioMapCRC: Cardinal read fMenu_SPScenarioMapCRC write fMenu_SPScenarioMapCRC;
+    property MenuSPMissionMapCRC: Cardinal read fMenu_SPMissionMapCRC write fMenu_SPMissionMapCRC;
+    property MenuSPTacticMapCRC: Cardinal read fMenu_SPTacticMapCRC write fMenu_SPTacticMapCRC;
+    property MenuSPSpecialMapCRC: Cardinal read fMenu_SPSpecialMapCRC write fMenu_SPSpecialMapCRC;
+    property MenuSPSaveFileName: UnicodeString read fMenu_SPSaveFileName write fMenu_SPSaveFileName;
+    property MenuLobbyMapType: Byte read fMenu_LobbyMapType write fMenu_LobbyMapType;
 
     //Debug
-    property DebugSaveRandomChecks: Boolean read fDebug_SaveRandomChecks write SetDebugSaveRandomChecks;
-    property DebugSaveGameAsText: Boolean read fDebug_SaveGameAsText write SetDebugSaveGameAsText;
+    property DebugSaveRandomChecks: Boolean read fDebug_SaveRandomChecks write fDebug_SaveRandomChecks;
+    property DebugSaveGameAsText: Boolean read fDebug_SaveGameAsText write fDebug_SaveGameAsText;
 
     property FavouriteMaps: TKMMapsCRCList read GetFavouriteMaps;
   end;
@@ -337,7 +263,34 @@ uses
   KM_TerrainTypes;
 
 
-{ TGameSettings }
+{ TKMSettingsGFX }
+procedure TKMSettingsGFX.SetBrightness(aValue: Byte);
+begin
+  fBrightness := EnsureRange(aValue, 0, 20);
+end;
+
+
+{ TKMSettingsSFX }
+procedure TKMSettingsSFX.SetSoundFXVolume(aValue: Single);
+begin
+  fSoundFXVolume := EnsureRange(aValue, 0, 1);
+end;
+
+
+procedure TKMSettingsSFX.SetMusicVolume(aValue: Single);
+begin
+  fMusicVolume := EnsureRange(aValue, 0, 1);
+end;
+
+
+{ TKMSettingsVideo }
+procedure TKMSettingsVideo.SetVideoVolume(aValue: Single);
+begin
+  fVideoVolume := EnsureRange(aValue, 0, 1);
+end;
+
+
+{ TKMGameSettings }
 constructor TKMGameSettings.Create;
 begin
   inherited;
@@ -409,26 +362,26 @@ begin
 
   // Game GFX
   nGFX := nGameSettings.AddOrFindChild('GFX');
-    fBrightness     := nGFX.Attributes['Brightness'].AsInteger(1);
-    fAlphaShadows   := nGFX.Attributes['AlphaShadows'].AsBoolean(True);
-    fLoadFullFonts  := nGFX.Attributes['LoadFullFonts'].AsBoolean(False);
+    GFX.Brightness     := nGFX.Attributes['Brightness'].AsInteger(1);
+    GFX.AlphaShadows   := nGFX.Attributes['AlphaShadows'].AsBoolean(True);
+    GFX.LoadFullFonts  := nGFX.Attributes['LoadFullFonts'].AsBoolean(False);
 
   // SFX
   nSFX := nGameSettings.AddOrFindChild('SFX');
-    fSoundFXVolume  := nSFX.Attributes['Volume'].AsFloat(0.5);
+    SFX.SoundFXVolume  := nSFX.Attributes['Volume'].AsFloat(0.5);
 
   // Music
   nMusic := nGameSettings.AddOrFindChild('Music');
-    fMusicOff     := not nMusic.Attributes['Enabled'].AsBoolean(True); // Reversed value
-    fMusicVolume  := nMusic.Attributes['Volume'].AsFloat(0.5);
-    fShuffleOn    := nMusic.Attributes['Shuffle'].AsBoolean(False);
+    SFX.MusicEnabled := nMusic.Attributes['Enabled'].AsBoolean(True);
+    SFX.MusicVolume  := nMusic.Attributes['Volume'].AsFloat(0.5);
+    SFX.ShuffleOn    := nMusic.Attributes['Shuffle'].AsBoolean(False);
 
   // Video
   nVideo := nGameSettings.AddOrFindChild('Video');
-    fVideoOn      := nVideo.Attributes['Enabled'].AsBoolean(False); //Disabled by default
-    fVideoStretch := nVideo.Attributes['Stretch'].AsBoolean(True);
-    fVideoStartup := nVideo.Attributes['Startup'].AsBoolean(True);
-    fVideoVolume  := nVideo.Attributes['Volume'].AsFloat(0.5);
+    Video.Enabled      := nVideo.Attributes['Enabled'].AsBoolean(False); //Disabled by default
+    Video.VideoStretch := nVideo.Attributes['Stretch'].AsBoolean(True);
+    Video.PlayOnStartup := nVideo.Attributes['Startup'].AsBoolean(True);
+    Video.VideoVolume  := nVideo.Attributes['Volume'].AsFloat(0.5);
 
   // GameCommon
   nGameCommon := nGameSettings.AddOrFindChild('GameCommon');
@@ -495,8 +448,8 @@ begin
 
     // Tweaks
     nGameTweaks := nGameCommon.AddOrFindChild('Tweaks');
-      AllowSnowHouses    := nGameTweaks.Attributes['AllowSnowHouses'].AsBoolean(True);     // With restriction by ALLOW_SNOW_HOUSES
-      InterpolatedRender := nGameTweaks.Attributes['InterpolatedRender'].AsBoolean(False); // With restriction by ALLOW_INTERPOLATED_RENDER
+      GFX.AllowSnowHouses    := nGameTweaks.Attributes['AllowSnowHouses'].AsBoolean(True);
+      GFX.InterpolatedRender := nGameTweaks.Attributes['InterpolatedRender'].AsBoolean(False);
 
   // Campaign
   nCampaign := nGameSettings.AddOrFindChild('Campaign');
@@ -610,26 +563,26 @@ begin
 
   // Game GFX
   nGFX := nGameSettings.AddOrFindChild('GFX');
-    nGFX.Attributes['Brightness']     := fBrightness;
-    nGFX.Attributes['AlphaShadows']   := fAlphaShadows;
-    nGFX.Attributes['LoadFullFonts']  := fLoadFullFonts;
+    nGFX.Attributes['Brightness']     := GFX.Brightness;
+    nGFX.Attributes['AlphaShadows']   := GFX.AlphaShadows;
+    nGFX.Attributes['LoadFullFonts']  := GFX.LoadFullFonts;
 
   // SFX
   nSFX := nGameSettings.AddOrFindChild('SFX');
-    nSFX.Attributes['Volume'] := fSoundFXVolume;
+    nSFX.Attributes['Volume'] := SFX.SoundFXVolume;
 
   // Music
   nMusic := nGameSettings.AddOrFindChild('Music');
-    nMusic.Attributes['Enabled']  := not fMusicOff; // Reversed value
-    nMusic.Attributes['Volume']   := fMusicVolume;
-    nMusic.Attributes['Shuffle']  := fShuffleOn;
+    nMusic.Attributes['Enabled']  := SFX.MusicEnabled; // Reversed value
+    nMusic.Attributes['Volume']   := SFX.MusicVolume;
+    nMusic.Attributes['Shuffle']  := SFX.ShuffleOn;
 
   // Video
   nVideo := nGameSettings.AddOrFindChild('Video');
-    nVideo.Attributes['Enabled']  := fVideoOn;
-    nVideo.Attributes['Stretch']  := fVideoStretch;
-    nVideo.Attributes['Startup']  := fVideoStartup;
-    nVideo.Attributes['Volume']   := fVideoVolume;
+    nVideo.Attributes['Enabled']  := Video.Enabled;
+    nVideo.Attributes['Stretch']  := Video.VideoStretch;
+    nVideo.Attributes['Startup']  := Video.PlayOnStartup;
+    nVideo.Attributes['Volume']   := Video.VideoVolume;
 
   // GameCommon
   nGameCommon := nGameSettings.AddOrFindChild('GameCommon');
@@ -682,8 +635,8 @@ begin
 
     // Tweaks
     nGameTweaks := nGameCommon.AddOrFindChild('Tweaks');
-      nGameTweaks.Attributes['AllowSnowHouses']    := fGameTweaks_AllowSnowHouses;
-      nGameTweaks.Attributes['InterpolatedRender'] := fGameTweaks_InterpolatedRender;
+      nGameTweaks.Attributes['AllowSnowHouses']    := GFX.AllowSnowHouses;
+      nGameTweaks.Attributes['InterpolatedRender'] := GFX.InterpolatedRender;
 
   // Campaign
   nCampaign := nGameSettings.AddOrFindChild('Campaign');
@@ -762,153 +715,10 @@ begin
 end;
 
 
-procedure TKMGameSettings.SetBrightness(aValue: Byte);
-begin
-  fBrightness := EnsureRange(aValue, 0, 20);
-end;
-
-
-procedure TKMGameSettings.SetFlashOnMessage(aValue: Boolean);
-begin
-  fFlashOnMessage := aValue;
-end;
-
-
 procedure TKMGameSettings.SetMenuFavouriteMapsStr(const aValue: UnicodeString);
 begin
+  // This proc is used by an event
   fMenu_FavouriteMapsStr := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapSPType(aValue: Byte);
-begin
-  fMenu_MapSPType := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuReplaysType(aValue: Byte);
-begin
-  fMenu_ReplaysType := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdMapType(aValue: Byte);
-begin
-  fMenu_MapEdMapType := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdNewMapX(aValue: Word);
-begin
-  fMenu_MapEdNewMapX := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdNewMapY(aValue: Word);
-begin
-  fMenu_MapEdNewMapY := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdSPMapCRC(aValue: Cardinal);
-begin
-  fMenu_MapEdSPMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdMPMapCRC(aValue: Cardinal);
-begin
-  fMenu_MapEdMPMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdMPMapName(const aValue: UnicodeString);
-begin
-  fMenu_MapEdMPMapName := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuMapEdDLMapCRC(aValue: Cardinal);
-begin
-  fMenu_MapEdDLMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuCampaignName(const aValue: UnicodeString);
-begin
-  fMenu_CampaignName := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuReplaySPSaveName(const aValue: UnicodeString);
-begin
-  fMenu_ReplaySPSaveName := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuReplayMPSaveName(const aValue: UnicodeString);
-begin
-  fMenu_ReplayMPSaveName := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuSPScenarioMapCRC(aValue: Cardinal);
-begin
-  fMenu_SPScenarioMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuSPMissionMapCRC(aValue: Cardinal);
-begin
-  fMenu_SPMissionMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuSPTacticMapCRC(aValue: Cardinal);
-begin
-  fMenu_SPTacticMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuSPSpecialMapCRC(aValue: Cardinal);
-begin
-  fMenu_SPSpecialMapCRC := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuSPSaveFileName(const aValue: UnicodeString);
-begin
-  fMenu_SPSaveFileName := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMenuLobbyMapType(aValue: Byte);
-begin
-  fMenu_LobbyMapType := aValue;
-end;
-
-
-procedure TKMGameSettings.SetDebugSaveRandomChecks(aValue: Boolean);
-begin
-  fDebug_SaveRandomChecks := aValue;
-end;
-
-
-procedure TKMGameSettings.SetDebugSaveGameAsText(aValue: Boolean);
-begin
-  fDebug_SaveGameAsText := aValue;
-end;
-
-
-procedure TKMGameSettings.SetAutosave(aValue: Boolean);
-begin
-  fAutosave := aValue;
-end;
-
-
-procedure TKMGameSettings.SetAutosaveAtGameEnd(aValue: Boolean);
-begin
-  fAutosaveAtGameEnd := aValue;
 end;
 
 
@@ -921,12 +731,6 @@ end;
 procedure TKMGameSettings.SetAutosaveFrequency(aValue: Integer);
 begin
   fAutosaveFrequency := EnsureRange(aValue, AUTOSAVE_FREQUENCY_MIN, AUTOSAVE_FREQUENCY_MAX);
-end;
-
-
-procedure TKMGameSettings.SetSpecShowBeacons(aValue: Boolean);
-begin
-  fSpecShowBeacons := aValue;
 end;
 
 
@@ -944,24 +748,6 @@ begin
 end;
 
 
-procedure TKMGameSettings.SetShowGameTime(aValue: Boolean);
-begin
-  fShowGameTime := aValue;
-end;
-
-
-procedure TKMGameSettings.SetShowGameSpeed(aValue: Boolean);
-begin
-  fShowGameSpeed := aValue;
-end;
-
-
-procedure TKMGameSettings.SetSaveCheckpoints(const aValue: Boolean);
-begin
-  fSaveCheckpoints := aValue;
-end;
-
-
 procedure TKMGameSettings.SetSaveCheckpointsFreq(const aValue: Integer);
 begin
   fSaveCheckpointsFreq := EnsureRange(aValue, GAME_SAVE_CHECKPOINT_FREQ_MIN, GAME_SAVE_CHECKPOINT_FREQ_MAX);
@@ -974,182 +760,9 @@ begin
 end;
 
 
-procedure TKMGameSettings.SetPlayersColorMode(aValue: TKMPlayerColorMode);
-begin
-  fPlayersColorMode := aValue;
-end;
-
-
-procedure TKMGameSettings.SetPlayerColorSelf(aValue: Cardinal);
-begin
-  fPlayerColorSelf := aValue;
-end;
-
-
-procedure TKMGameSettings.SetPlayerColorAlly(aValue: Cardinal);
-begin
-  fPlayerColorAlly := aValue;
-end;
-
-
-procedure TKMGameSettings.SetPlayerColorEnemy(aValue: Cardinal);
-begin
-  fPlayerColorEnemy := aValue;
-end;
-
-
-procedure TKMGameSettings.SetDayGamesCount(aValue: Integer);
-begin
-  fDayGamesCount := aValue;
-end;
-
-
-procedure TKMGameSettings.SetLastDayGamePlayed(aValue: TDateTime);
-begin
-  fLastDayGamePlayed := aValue;
-end;
-
-
-procedure TKMGameSettings.SetAllowSnowHouses(aValue: Boolean);
-begin
-  if not ALLOW_SNOW_HOUSES then Exit;
-
-  fGameTweaks_AllowSnowHouses := aValue;
-end;
-
-procedure TKMGameSettings.SetInterpolatedAnimations(const aValue: Boolean);
-begin
-  if not ALLOW_INTERPOLATED_ANIMS then Exit;
-
-  fGameTweaks_InterpolatedAnimations := aValue;
-end;
-
-
-procedure TKMGameSettings.SetInterpolatedRender(aValue: Boolean);
-begin
-  if not ALLOW_INTERPOLATED_RENDER then Exit;
-
-  fGameTweaks_InterpolatedRender := aValue;
-end;
-
-
-procedure TKMGameSettings.SetCampaignLastDifficulty(aValue: TKMMissionDifficulty);
-begin
-  fCampaignLastDifficulty := aValue;
-end;
-
-
-procedure TKMGameSettings.SetReplayAutopause(aValue: Boolean);
-begin
-  fReplayAutopause := aValue;
-end;
-
-
-procedure TKMGameSettings.SetReplayShowBeacons(aValue: Boolean);
-begin
-  fReplayShowBeacons := aValue;
-end;
-
-
-procedure TKMGameSettings.SetReplaySavepoint(aValue: Boolean);
-begin
-  fReplaySavepoint := aValue;
-end;
-
-
 procedure TKMGameSettings.SetReplaySavepointFrequency(aValue: Integer);
 begin
   fReplaySavepointFrequency := EnsureRange(aValue, REPLAY_SAVEPOINT_FREQUENCY_MIN, REPLAY_SAVEPOINT_FREQUENCY_MAX);
-end;
-
-
-procedure TKMGameSettings.SetAlphaShadows(aValue: Boolean);
-begin
-  fAlphaShadows := aValue;
-end;
-
-
-procedure TKMGameSettings.SetLoadFullFonts(aValue: Boolean);
-begin
-  fLoadFullFonts := aValue;
-end;
-
-
-procedure TKMGameSettings.SetSoundFXVolume(aValue: Single);
-begin
-  fSoundFXVolume := EnsureRange(aValue, 0, 1);
-end;
-
-
-procedure TKMGameSettings.SetMultiplayerName(const aValue: AnsiString);
-begin
-  fMultiplayerName := aValue;
-end;
-
-
-procedure TKMGameSettings.SetLastIP(const aValue: string);
-begin
-  fLastIP := aValue;
-end;
-
-
-procedure TKMGameSettings.SetLastPort(const aValue: string);
-begin
-  fLastPort := aValue;
-end;
-
-
-procedure TKMGameSettings.SetLastRoom(const aValue: string);
-begin
-  fLastRoom := aValue;
-end;
-
-
-procedure TKMGameSettings.SetLastPassword(const aValue: string);
-begin
-  fLastPassword := aValue;
-end;
-
-
-procedure TKMGameSettings.SetMusicVolume(aValue: Single);
-begin
-  fMusicVolume := EnsureRange(aValue, 0, 1);
-end;
-
-
-procedure TKMGameSettings.SetMusicOff(aValue: Boolean);
-begin
-  fMusicOff := aValue;
-end;
-
-
-procedure TKMGameSettings.SetShuffleOn(aValue: Boolean);
-begin
-  fShuffleOn := aValue;
-end;
-
-
-procedure TKMGameSettings.SetVideoOn(aValue: Boolean);
-begin
-  fVideoOn := aValue;
-end;
-
-
-procedure TKMGameSettings.SetVideoStretch(aValue: Boolean);
-begin
-  fVideoStretch := aValue;
-end;
-
-
-procedure TKMGameSettings.SetVideoStartup(aValue: Boolean);
-begin
-  fVideoStartup := aValue;
-end;
-
-
-procedure TKMGameSettings.SetVideoVolume(aValue: Single);
-begin
-  fVideoVolume := EnsureRange(aValue, 0, 1);
 end;
 
 

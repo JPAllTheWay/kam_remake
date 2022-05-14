@@ -20,6 +20,7 @@ type
     X,Y: Single;
     class operator Equal(const A, B: TKMPointF): Boolean;
     class operator NotEqual(A: TKMPointF; B: TKMPointF): Boolean;
+    class operator Add(const A, B: TKMPointF): TKMPointF;
     function ToString: String;
     constructor New(aX, aY: Single);
   end;
@@ -298,6 +299,11 @@ end;
 class operator TKMPointF.NotEqual(A: TKMPointF; B: TKMPointF): Boolean;
 begin
   Result := not KMSamePointF(A,B);
+end;
+
+class operator TKMPointF.Add(const A, B: TKMPointF): TKMPointF;
+begin
+  Result := KMPointF(A.X + B.X, A.Y + B.Y);
 end;
 
 function TKMPointF.ToString: String;
@@ -1072,11 +1078,15 @@ end;
 
 //Rough and faster Length as combination of straight and diagonal
 function KMLengthDiag(const A, B: TKMPoint): Single;
+var
+  absX, absY: Integer;
 begin
-  if Abs(A.X - B.X) > Abs(A.Y - B.Y) then
-    Result := Abs(A.X - B.X) + Abs(A.Y - B.Y) * 0.41
+  absX := Abs(A.X - B.X);
+  absY := Abs(A.Y - B.Y);
+  if absX > absY then
+    Result := absX + absY * 0.41
   else
-    Result := Abs(A.Y - B.Y) + Abs(A.X - B.X) * 0.41;
+    Result := absY + absX * 0.41;
 end;
 
 

@@ -5,11 +5,15 @@ uses
   KM_CommonClasses;
 
 type
+  // Abstract entity (has only the basic properties)
   TKMEntity = class abstract
   private
     fUID: Integer; //unique entity ID
   protected
-    function GetUID: Integer;
+    // Accessing field directly with a getter is a hair faster,
+    // but it is more cumbersome to have 2 getters and we don't need it anyway,
+    // since getting 65k UIDs (in XXL Terrain.Load) speeds up by only 0.05sec
+    function GetUID: Integer; inline;
     procedure SetUID(aUID: Integer);
   public
     constructor Create(aUID: Integer);
@@ -22,15 +26,14 @@ type
     function ObjToStringShort(const aSeparator: String = '|'): String; virtual;
   end;
 
-const
-  NO_ENTITY_UID = 0;
-
 
 implementation
 uses
-  SysUtils;
+  SysUtils,
+  KM_Defaults;
 
 
+{ TKMEntity }
 constructor TKMEntity.Create(aUID: Integer);
 begin
   inherited Create;
@@ -63,7 +66,7 @@ end;
 
 function TKMEntity.GetUID: Integer;
 begin
-  if Self = nil then Exit(NO_ENTITY_UID); // Exit with 0, if object is not set. Good UID is always > 0
+  if Self = nil then Exit(UID_NONE);
 
   Result := fUID;
 end;

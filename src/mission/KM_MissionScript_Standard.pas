@@ -45,7 +45,8 @@ type
 implementation
 uses
   Classes, SysUtils, Math, KromUtils,
-  KM_Hand, KM_Game, KM_GameParams, KM_GameTypes, KM_HandsCollection,
+  KM_Hand, KM_HandEntity,
+  KM_Game, KM_GameParams, KM_GameTypes, KM_HandsCollection,
   KM_UnitsCollection, KM_UnitWarrior,
   KM_HouseCollection, KM_HouseBarracks, KM_HouseStore,
   KM_AI,
@@ -359,11 +360,11 @@ begin
                           if PointInMap(P[1]+1, P[2]+1) and InRange(P[0], Low(HOUSE_ID_TO_TYPE), High(HOUSE_ID_TO_TYPE)) then
                             if gTerrain.CanPlaceHouseFromScript(HOUSE_ID_TO_TYPE[P[0]], KMPoint(P[1]+1, P[2]+1)) then
                               fLastHouse := gHands[fLastHand].AddHouse(
-                                HOUSE_ID_TO_TYPE[P[0]], P[1]+1, P[2]+1, false)
+                                HOUSE_ID_TO_TYPE[P[0]], P[1]+1, P[2]+1, False)
                             else
                               AddError('ct_SetHouse failed, can not place house at ' + TypeToString(KMPoint(P[1]+1, P[2]+1)));
 
-    ctSetHouseDamage:   if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+    ctSetHouseDamage:   if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                           begin
                             if not fLastHouse.IsDestroyed then //Could be destroyed already by damage
@@ -373,7 +374,7 @@ begin
                             AddError('ct_SetHouseDamage without prior declaration of House');
 
     ctSetHouseDeliveryMode:
-                        if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+                        if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                           begin
                             if InRange(P[0], Byte(Low(TKMDeliveryMode)), Byte(High(TKMDeliveryMode))) then //Check allowed range for delivery mode value
@@ -389,14 +390,14 @@ begin
                             AddError('ct_SetHouseDeliveryMode without prior declaration of House');
 
     ctSetHouseRepairMode:
-                        if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+                        if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                             fLastHouse.BuildingRepair := True
                           else
                             AddError('ct_SetHouseRepairMode without prior declaration of House');
 
     ctSetHouseClosedForWorker:
-                        if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+                        if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                             fLastHouse.IsClosedForWorker := True
                           else
@@ -1050,13 +1051,13 @@ begin
       if gHands[I].Locks.HouseBlocked[HT] then
       begin
         AddCommand(ctBlockHouse, [HOUSE_TYPE_TO_ID[HT]-1]);
-        releaseAllHouses := false;
+        releaseAllHouses := False;
       end
       else
         if gHands[I].Locks.HouseGranted[HT] then
           AddCommand(ctReleaseHouse, [HOUSE_TYPE_TO_ID[HT]-1])
         else
-          releaseAllHouses := false;
+          releaseAllHouses := False;
     end;
     if releaseAllHouses then
       AddCommand(ctReleaseAllHouses, []);

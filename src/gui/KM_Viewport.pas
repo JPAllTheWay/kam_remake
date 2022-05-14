@@ -431,7 +431,7 @@ begin
 
   zoomAdv := (0.2 + gGameSettings.ScrollSpeed / 20) * aFrameTime / 1000;
 
-  if SCROLL_ACCEL then
+  if FEAT_SCROLL_ACCEL then
   begin
     if fScrollStarted = 0 then
       fScrollStarted := TimeGet;

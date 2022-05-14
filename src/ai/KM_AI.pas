@@ -193,7 +193,7 @@ procedure TKMHandAI.CheckGoals(aAllowResetGoals: Boolean = False);
 
     case aGoal.GoalCondition of
       gcBuildTutorial:     Result := True; //Deprecated
-      //gcTime is disabled as we process messages in Event system now. Return true so players
+      //gcTime is disabled as we process messages in Event system now. Return True so players
       //do not have to wait for all messages to show before they are allowed to win (same in TPR)
       gcTime:              Result := True; //Deprecated
       gcBuildings:         Result := (stats.GetHouseQty(GOAL_BUILDINGS_HOUSES) > 0);
@@ -596,7 +596,7 @@ procedure TKMHandAI.PlaceFirstStorehouse(aLoc: TKMPoint);
     Result := bestDistance < SQR_MAX_DISTANCE;
   end;
 
-  // Place road and return true if it is possible
+  // Place road and return True if it is possible
   function AddRoad(aPoint: TKMPoint): Boolean;
   begin
     Result := gHands[fOwner].CanAddFieldPlan(KMPoint(aPoint.X, aPoint.Y), ftRoad);

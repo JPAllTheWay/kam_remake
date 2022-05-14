@@ -668,7 +668,7 @@ begin
     fSaves[fCount] := aSave;
     Inc(fCount);
 
-    //Set the scanning to false so we could Sort
+    //Set the scanning to False so we could Sort
     fScanning := False;
 
     //Keep the saves sorted

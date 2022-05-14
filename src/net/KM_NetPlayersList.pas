@@ -808,7 +808,7 @@ function TKMNetPlayersList.AllReady: Boolean;
 var
   I: Integer;
 begin
-  Result := true;
+  Result := True;
   for I := 1 to fCount do
     if fNetPlayers[I].Connected and fNetPlayers[I].IsHuman then
       Result := Result and fNetPlayers[I].ReadyToStart and fNetPlayers[I].HasMapOrSave;
@@ -1012,7 +1012,7 @@ begin
 
     //AI/closed players are always ready, spectator ready status is not reset by map change
     if (fNetPlayers[I].PlayerNetType = nptHuman) and (fNetPlayers[I].StartLocation <> LOC_SPECTATE) then
-      fNetPlayers[I].ReadyToStart := false;
+      fNetPlayers[I].ReadyToStart := False;
   end;
 end;
 

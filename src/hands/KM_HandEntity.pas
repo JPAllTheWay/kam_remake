@@ -5,23 +5,23 @@ uses
   KM_Defaults, KM_Points, KM_CommonClasses, KM_HandTypes, KM_Entity, KromOGLUtils;
 
 type
-  { Common class for TKMUnit / TKMHouse / TKMUnitGroup }
+  // Common class for TKMUnit / TKMHouse / TKMUnitGroup
+  // "class abstract" disallows anyone from creating an instance of it (can create only child classes)
   TKMHandEntity = class abstract(TKMEntity)
   private
     fType: TKMHandEntityType;
     fOwner: TKMHandID;
     fAllowAllyToSelect: Boolean; // Allow ally to select entity
-    function GetOwner: TKMHandID;
+    function GetOwner: TKMHandID; inline;
     function GetType: TKMHandEntityType;
   protected
-    function GetPosition: TKMPoint; virtual; abstract;
-    function GetPositionF: TKMPointF; virtual; abstract;
-    procedure SetPositionF(const aPositionF: TKMPointF); virtual; abstract;
+    function GetPositionForDisplayF: TKMPointF; virtual; abstract;
+
     procedure SetOwner(const aOwner: TKMHandID); virtual;
     function GetAllowAllyToSelect: Boolean; virtual;
     procedure SetAllowAllyToSelect(aAllow: Boolean); virtual;
 
-    function IsSelectableImpl: Boolean; virtual;
+    function GetIsSelectable: Boolean; virtual; abstract;
   public
     constructor Create(aType: TKMHandEntityType; aUID: Integer; aOwner: TKMHandID);
     constructor Load(LoadStream: TKMemoryStream); override;
@@ -30,12 +30,11 @@ type
     property EntityType: TKMHandEntityType read GetType;
     property Owner: TKMHandID read GetOwner write SetOwner;
 
-    property Position: TKMPoint read GetPosition;
-    property PositionF: TKMPointF read GetPositionF write SetPositionF;
+    property PositionForDisplayF: TKMPointF read GetPositionForDisplayF;
 
     property AllowAllyToSelect: Boolean read GetAllowAllyToSelect write SetAllowAllyToSelect;
 
-    function IsSelectable: Boolean;
+    property IsSelectable: Boolean read GetIsSelectable;
 
     function IsUnit: Boolean;
     function IsGroup: Boolean;
@@ -168,22 +167,6 @@ begin
 end;
 
 
-function TKMHandEntity.IsSelectableImpl: Boolean;
-begin
-  Result := False;
-end;
-
-
-// We can't check Self = nil in a virtual method, so we use a trick with non-virtual method calling a virtual method
-// example from https://stackoverflow.com/questions/11558077/checking-self-nil-in-virtual-method-with-parameters/11558305#11558305
-function TKMHandEntity.IsSelectable: Boolean;
-begin
-  if Self = nil then Exit(False);
-
-  Result := IsSelectableImpl;
-end;
-
-
 procedure TKMHandEntity.SetOwner(const aOwner: TKMHandID);
 begin
   fOwner := aOwner;
@@ -193,7 +176,7 @@ end;
 function TKMHandEntity.ObjToStringShort(const aSeparator: String = '|'): String;
 begin
   Result := inherited ObjToStringShort(aSeparator) +
-            Format('%sPos = %s', [aSeparator, Position.ToString]);
+            Format('%sPos = %s', [aSeparator, PositionForDisplayF.ToString]);
 end;
 
 
@@ -203,7 +186,7 @@ begin
             Format('%sOwner = %d%sPositionF = %s%sAllowAllyToSel = %s',
                    [aSeparator,
                     Owner, aSeparator,
-                    PositionF.ToString, aSeparator,
+                    PositionForDisplayF.ToString, aSeparator,
                     BoolToStr(AllowAllyToSelect, True)]);
 end;
 
@@ -264,9 +247,9 @@ begin
       ErrorMsg := ErrorMsg + ObjToStringShort(',');
     except
       on E: Exception do
-        ErrorMsg := ErrorMsg + IntToStr(UID) + ' Pos = ' + Position.ToString;
+        ErrorMsg := ErrorMsg + IntToStr(UID) + ' Pos = ' + PositionForDisplayF.ToString;
     end;
-    raise ELocError.Create(ErrorMsg, Position);
+    raise ELocError.Create(ErrorMsg, KMPointRound(PositionForDisplayF));
   end;
 
   Dec(fPointerCount);

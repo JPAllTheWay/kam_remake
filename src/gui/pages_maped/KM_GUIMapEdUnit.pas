@@ -59,7 +59,7 @@ implementation
 uses
   {$IFDEF MSWindows} Windows, {$ENDIF}
   {$IFDEF Unix} LCLType, {$ENDIF}
-  KM_HandsCollection,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
   KM_RenderUI,
   KM_Resource, KM_ResFonts, KM_ResTexts, KM_ResUnits, KM_ResTypes,
   KM_UtilsExt, KM_Terrain,

@@ -13,7 +13,10 @@ uses
 type
   //* Delivery mode
   TKMDeliveryMode = (dmClosed, dmDelivery, dmTakeOut);
+const
+  DELIVERY_MODE_SPRITE: array [TKMDeliveryMode] of Word = (38, 37, 664);
 
+type
   TKMHouse = class;
   TKMHouseEvent = procedure(aHouse: TKMHouse) of object;
   TKMHouseFromEvent = procedure(aHouse: TKMHouse; aFrom: TKMHandID) of object;
@@ -48,43 +51,45 @@ type
   TKMHouseSketch = class(TKMHandEntityPointer<TKMHouse>)
   private
     fType: TKMHouseType; //House type
-    function GetEntrance: TKMPoint;
-    function GetPointBelowEntrance: TKMPoint;
+    fEntrance: TKMPoint;
+    fPointBelowEntrance: TKMPoint;
+    procedure UpdateEntrancePos;
   protected
     fPosition: TKMPoint; //House position on map, kinda virtual thing cos it doesn't match with entrance
-    function GetPosition: TKMPoint; override;
+    procedure SetPosition(const aPosition: TKMPoint); virtual;
     constructor Create; overload;
   public
     constructor Create(aUID: Integer; aHouseType: TKMHouseType; PosX, PosY: Integer; aOwner: TKMHandID); overload;
 
     property HouseType: TKMHouseType read fType;
 
-    property Entrance: TKMPoint read GetEntrance;
-    property PointBelowEntrance: TKMPoint read GetPointBelowEntrance;
+    property Position: TKMPoint read fPosition;
+    property Entrance: TKMPoint read fEntrance;
+    property PointBelowEntrance: TKMPoint read fPointBelowEntrance;
 
     function ObjToStringShort(const aSeparator: String = '|'): String; override;
 
     function IsEmpty: Boolean;
   end;
 
-  //Editable Version of TKMHouseSketch
-  //We do not want to allow edit TKMHouse fields, but need to do that for some sketches
+  // Editable Version of TKMHouseSketch
+  // We do not want to allow edit TKMHouse fields, but need to do that for some sketches
   TKMHouseSketchEdit = class(TKMHouseSketch)
   private
     fEditable: Boolean;
   protected
     function GetInstance: TKMHouse; override;
-    function GetPositionF: TKMPointF; override;
-    procedure SetPositionF(const aPositionF: TKMPointF); override;
+    function GetIsSelectable: Boolean; override;
+    function GetPositionForDisplayF: TKMPointF; override;
   public
     constructor Create;
 
     procedure Clear;
-    procedure CopyTo(var aHouseSketch: TKMHouseSketchEdit);
+    procedure CopyTo(aHouseSketch: TKMHouseSketchEdit);
 
     procedure SetHouseUID(aUID: Integer);
     procedure SetHouseType(aHouseType: TKMHouseType);
-    procedure SetPosition(aPosition: TKMPoint);
+    procedure SetPosition(const aPosition: TKMPoint); override;
 
     class var DummyHouseSketch: TKMHouseSketchEdit;
   end;
@@ -114,7 +119,7 @@ type
     //Count of the resources we have ordered for the input (used for ware distribution)
     fResourceDeliveryCount: array[1..4] of Word; // = fResourceIn + Demands count
     fResourceOut: array [1..4] of Byte; //Resource count in output
-    fResourceOrder: array [1..4] of Word; //If HousePlaceOrders=true then here are production orders
+    fResourceOrder: array [1..4] of Word; //If HousePlaceOrders=True then here are production orders
     fResourceOutPool: array[0..19] of Byte;
     fLastOrderProduced: Byte;
 //    fResOrderDesired: array [1..4] of Single;
@@ -171,10 +176,10 @@ type
     property ResDeliveryCnt[aIndex: Integer]: Word read GetResourceDeliveryCount write SetResourceDeliveryCount;
 
     function GetInstance: TKMHouse; override;
-    function GetPositionF: TKMPointF; override;
-    procedure SetPositionF(const aPositionF: TKMPointF); override;
+    function GetPositionForDisplayF: TKMPointF; override;
+    function GetPositionF: TKMPointF; inline;
 
-    function IsSelectableImpl: Boolean; override;
+    function GetIsSelectable: Boolean; override;
 
     procedure MakeSound; virtual; //Swine/stables make extra sounds
   public
@@ -196,7 +201,7 @@ type
     procedure Demolish(aFrom: TKMHandID; IsSilent: Boolean = False); virtual;
     property BuildingProgress: Word read fBuildingProgress;
 
-    procedure SetPosition(const aPos: TKMPoint); //Used only by map editor
+    procedure UpdatePosition(const aPos: TKMPoint); //Used only by map editor
     procedure OwnerUpdate(aOwner: TKMHandID; aMoveToNewOwner: Boolean = False);
 
     function GetClosestCell(const aPos: TKMPoint): TKMPoint;
@@ -209,6 +214,8 @@ type
     function HitTest(X, Y: Integer): Boolean;
     property BuildingRepair: Boolean read fBuildingRepair write SetBuildingRepair;
     property PlacedOverRoad: Boolean read fPlacedOverRoad write fPlacedOverRoad;
+
+    property PositionF: TKMPointF read GetPositionF;
 
     property DeliveryMode: TKMDeliveryMode read fDeliveryMode;
     property NewDeliveryMode: TKMDeliveryMode read fNewDeliveryMode write SetNewDeliveryMode;
@@ -255,7 +262,7 @@ type
     procedure UpdateDamage;
 
     function IsStone: Boolean;
-    function IsComplete: Boolean;
+    function IsComplete: Boolean; inline;
     function IsDamaged: Boolean;
     property IsDestroyed: Boolean read fIsDestroyed;
     property GetDamage: Word read fDamage;
@@ -330,6 +337,7 @@ implementation
 uses
   // Do not add KM_Game dependancy! Entities should be isolated as much as possible
   TypInfo, SysUtils, Math, KromUtils,
+  KM_Entity,
   KM_GameParams, KM_Terrain, KM_RenderPool, KM_RenderAux, KM_Sound,
   KM_Hand, KM_HandsCollection, KM_HandLogistics, KM_HandTypes,
   KM_Units, KM_UnitWarrior, KM_HouseWoodcutters,
@@ -341,9 +349,9 @@ uses
   KM_ResTileset;
 
 const
-  //Delay, In ticks, from user click on DeliveryMode btn, to tick, when mode will be really set.
-  //Made to prevent serf's taking/losing deliveries only because player clicks throught modes.
-  //No hurry, let's wait a bit for player to be sure, what mode he needs
+  // Delay, in ticks, from user click on DeliveryMode btn, to tick, when mode will be really set.
+  // Made to prevent serf's taking/losing deliveries only because player clicks throught modes.
+  // No hurry, let's wait a bit for player to be sure, what mode he needs
   UPDATE_DELIVERY_MODE_DELAY = 10;
 
 
@@ -360,29 +368,31 @@ begin
 
   inherited Create(etHouse, aUID, aOwner);
 
-  fPosition   := KMPoint (PosX, PosY);
-  fType       := aHouseType;
+  fType     := aHouseType;
+  fPosition := KMPoint (PosX, PosY);
+  UpdateEntrancePos;
 end;
 
 
 {Return Entrance of the house, which is different than house position sometimes}
-function TKMHouseSketch.GetEntrance: TKMPoint;
+procedure TKMHouseSketch.UpdateEntrancePos;
 begin
-  Result.X := Position.X + gResHouses[fType].EntranceOffsetX;
-  Result.Y := Position.Y;
-  Assert((Result.X > 0) and (Result.Y > 0));
+  if IsEmpty then Exit;
+  
+  fEntrance.X := fPosition.X + gResHouses[fType].EntranceOffsetX;
+  fEntrance.Y := fPosition.Y;
+  Assert((fEntrance.X > 0) and (fEntrance.Y > 0));
+
+  fPointBelowEntrance := KMPointBelow(fEntrance);
 end;
 
 
-function TKMHouseSketch.GetPointBelowEntrance: TKMPoint;
+procedure TKMHouseSketch.SetPosition(const aPosition: TKMPoint);
 begin
-  Result := KMPointBelow(Entrance);
-end;
+  fPosition.X := aPosition.X;
+  fPosition.Y := aPosition.Y;
 
-
-function TKMHouseSketch.GetPosition: TKMPoint;
-begin
-  Result := fPosition;
+  UpdateEntrancePos;
 end;
 
 
@@ -424,7 +434,7 @@ begin
 end;
 
 
-procedure TKMHouseSketchEdit.CopyTo(var aHouseSketch: TKMHouseSketchEdit);
+procedure TKMHouseSketchEdit.CopyTo(aHouseSketch: TKMHouseSketchEdit);
 begin
   aHouseSketch.SetUID(UID);
   aHouseSketch.SetHouseType(HouseType);
@@ -446,10 +456,11 @@ begin
 end;
 
 
-procedure TKMHouseSketchEdit.SetPosition(aPosition: TKMPoint);
+procedure TKMHouseSketchEdit.SetPosition(const aPosition: TKMPoint);
 begin
-  if fEditable then
-    fPosition := aPosition;
+  if not fEditable then Exit;
+
+  inherited;
 end;
 
 
@@ -460,17 +471,17 @@ begin
 end;
 
 
-function TKMHouseSketchEdit.GetPositionF: TKMPointF;
+function TKMHouseSketchEdit.GetIsSelectable: Boolean;
 begin
-  //Not used. Make compiler happy
-  raise Exception.Create('Can''t get positionF of TKMHouseSketchEdit');
+  Result := False;
 end;
 
 
-procedure TKMHouseSketchEdit.SetPositionF(const aPositionF: TKMPointF);
+function TKMHouseSketchEdit.GetPositionForDisplayF: TKMPointF;
 begin
+  Assert(False, 'Should not get positionF of TKMHouseSketchEdit');
   //Not used. Make compiler happy
-  raise Exception.Create('Can''t set positionF of TKMHouseSketchEdit');
+  Result := Entrance.ToFloat;
 end;
 
 
@@ -547,6 +558,7 @@ begin
   LoadStream.CheckMarker('House');
   LoadStream.Read(fType, SizeOf(fType));
   LoadStream.Read(fPosition);
+  UpdateEntrancePos;
   LoadStream.Read(fBuildState, SizeOf(fBuildState));
   LoadStream.Read(fBuildSupplyWood);
   LoadStream.Read(fBuildSupplyStone);
@@ -592,7 +604,7 @@ end;
 
 procedure TKMHouse.SyncLoad;
 begin
-  fWorker := TKMUnit( gHands.GetUnitByUID( Cardinal(fWorker) ) );
+  fWorker := TKMUnit(gHands.GetUnitByUID(Integer(fWorker)));
   CurrentAction.SyncLoad;
 end;
 
@@ -600,7 +612,7 @@ end;
 destructor TKMHouse.Destroy;
 begin
   FreeAndNil(CurrentAction);
-  gHands.CleanUpUnitPointer( TKMUnit(fWorker) );
+  gHands.CleanUpUnitPointer(TKMUnit(fWorker));
 
   inherited;
 end;
@@ -751,7 +763,7 @@ end;
 
 //Used by MapEditor
 //Set house to new position
-procedure TKMHouse.SetPosition(const aPos: TKMPoint);
+procedure TKMHouse.UpdatePosition(const aPos: TKMPoint);
 var
   wasOnSnow, isRallyPointSet: Boolean;
 begin
@@ -767,9 +779,9 @@ begin
     if (Self is TKMHouseWFlagPoint) then
       isRallyPointSet := TKMHouseWFlagPoint(Self).IsFlagPointSet;
 
-    gTerrain.RemRoad(GetEntrance);
-    fPosition.X := aPos.X - gResHouses[fType].EntranceOffsetX;
-    fPosition.Y := aPos.Y;
+    gTerrain.RemRoad(Entrance);
+
+    SetPosition(KMPoint(aPos.X - gResHouses[fType].EntranceOffsetX, aPos.Y));
 
     //Update rally/cutting point position for houses with flag point after change fPosition
     if (Self is TKMHouseWFlagPoint) then
@@ -873,17 +885,17 @@ end;
 
 procedure TKMHouse.SetNextDeliveryMode;
 begin
-  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 3 - 1) mod 3)); //We use opposite order for legacy support
+  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 3 - 1) mod 3)); // We use opposite order for legacy support
 end;
 
 
 procedure TKMHouse.SetPrevDeliveryMode;
 begin
-  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 1) mod 3)); //We use opposite order for legacy support
+  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 1) mod 3)); // We use opposite order for legacy support
 end;
 
 
-//Set delivery mdoe immidiately
+// Set delivery mdoe immidiately
 procedure TKMHouse.SetDeliveryModeInstantly(aValue: TKMDeliveryMode);
 begin
   fNewDeliveryMode := aValue;
@@ -909,7 +921,7 @@ begin
 end;
 
 
-function TKMHouse.IsSelectableImpl: Boolean;
+function TKMHouse.GetIsSelectable: Boolean;
 begin
   Result := not IsDestroyed;
 end;
@@ -920,10 +932,10 @@ begin
   Result := 0;
   case HouseType of
     htQuarry:       Result := TX_MSG_STONE_DEPLETED;
-    htCoalMine:    Result := TX_MSG_COAL_DEPLETED;
-    htIronMine:    Result := TX_MSG_IRON_DEPLETED;
-    htGoldMine:    Result := TX_MSG_GOLD_DEPLETED;
-    htWoodcutters: if TKMHouseWoodcutters(Self).WoodcutterMode = wmPlant then
+    htCoalMine:     Result := TX_MSG_COAL_DEPLETED;
+    htIronMine:     Result := TX_MSG_IRON_DEPLETED;
+    htGoldMine:     Result := TX_MSG_GOLD_DEPLETED;
+    htWoodcutters:  if TKMHouseWoodcutters(Self).WoodcutterMode = wmPlant then
                       Result := TX_MSG_WOODCUTTER_PLANT_DEPLETED
                     else
                       Result := TX_MSG_WOODCUTTER_DEPLETED;
@@ -1120,9 +1132,9 @@ begin
 end;
 
 
-procedure TKMHouse.SetPositionF(const aPositionF: TKMPointF);
+function TKMHouse.GetPositionForDisplayF: TKMPointF;
 begin
-  raise Exception.Create('Can''t set PositionF for House');
+  Result := Entrance.ToFloat;
 end;
 
 
@@ -1945,15 +1957,15 @@ begin
     htSchool:        if (work = haWork5)and(step = 28) then gSoundPlayer.Play(sfxSchoolDing, fPosition); //Ding as the clock strikes 12
     htMill:          if (work = haWork2)and(step = 0) then gSoundPlayer.Play(sfxMill, fPosition);
     htCoalMine:      if (work = haWork1)and(step = 5) then gSoundPlayer.Play(sfxcoalDown, fPosition)
-                      else if (work = haWork1)and(step = 24) then gSoundPlayer.Play(sfxCoalMineThud, fPosition,true,0.8)
+                      else if (work = haWork1)and(step = 24) then gSoundPlayer.Play(sfxCoalMineThud, fPosition,True,0.8)
                       else if (work = haWork2)and(step = 7) then gSoundPlayer.Play(sfxmine, fPosition)
                       else if (work = haWork5)and(step = 1) then gSoundPlayer.Play(sfxcoalDown, fPosition);
     htIronMine:      if (work = haWork2)and(step = 7) then gSoundPlayer.Play(sfxmine, fPosition);
     htGoldMine:      if (work = haWork2)and(step = 5) then gSoundPlayer.Play(sfxmine, fPosition);
     htSawmill:       if (work = haWork2)and(step = 1) then gSoundPlayer.Play(sfxsaw, fPosition);
     htVineyard:      if (work = haWork2)and(step in [1,7,13,19]) then gSoundPlayer.Play(sfxwineStep, fPosition)
-                      else if (work = haWork5)and(step = 14) then gSoundPlayer.Play(sfxwineDrain, fPosition,true,1.5)
-                      else if (work = haWork1)and(step = 10) then gSoundPlayer.Play(sfxwineDrain, fPosition,true,1.5);
+                      else if (work = haWork5)and(step = 14) then gSoundPlayer.Play(sfxwineDrain, fPosition,True,1.5)
+                      else if (work = haWork1)and(step = 10) then gSoundPlayer.Play(sfxwineDrain, fPosition,True,1.5);
     htBakery:        if (work = haWork3)and(step in [6,25]) then gSoundPlayer.Play(sfxBakerSlap, fPosition);
     htQuarry:         if (work = haWork2)and(step in [4,13]) then gSoundPlayer.Play(sfxQuarryClink, fPosition)
                       else if (work = haWork5)and(step in [4,13,22]) then gSoundPlayer.Play(sfxQuarryClink, fPosition);
@@ -1977,7 +1989,7 @@ begin
     htArmorWorkshop: if (work = haWork2)and(step in [3,13,23]) then gSoundPlayer.Play(sfxsaw, fPosition)
                       else if (work = haWork3)and(step in [17,28]) then gSoundPlayer.Play(sfxCarpenterHammer, fPosition)
                       else if (work = haWork4)and(step in [10,20]) then gSoundPlayer.Play(sfxCarpenterHammer, fPosition);
-    htTannery:       if (work = haWork2)and(step = 5) then gSoundPlayer.Play(sfxLeather, fPosition,true,0.8);
+    htTannery:       if (work = haWork2)and(step = 5) then gSoundPlayer.Play(sfxLeather, fPosition,True,0.8);
     htButchers:      if (work = haWork2)and(step in [8,16,24]) then gSoundPlayer.Play(sfxButcherCut, fPosition)
                       else if (work = haWork3)and(step in [9,21]) then gSoundPlayer.Play(sfxSausageString, fPosition);
     htSwine:         if ((work = haWork2)and(step in [10,20]))or((work = haWork3)and(step = 1)) then gSoundPlayer.Play(sfxButcherCut, fPosition);
@@ -2386,10 +2398,12 @@ begin
   Result := not KMSamePoint(fFlagPoint, PointBelowEntrance);
 end;
 
+
 procedure TKMHouseWFlagPoint.SetFlagPoint(aFlagPoint: TKMPoint);
 begin
   fFlagPoint := GetValidPoint(aFlagPoint);
 end;
+
 
 procedure TKMHouseWFlagPoint.ValidateFlagPoint;
 begin

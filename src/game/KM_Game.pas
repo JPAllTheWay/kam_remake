@@ -36,12 +36,12 @@ type
     fScripting: TKMScripting;
     fOnDestroy: TEvent;
 
-    fIsExiting: Boolean; //Set this to true on Exit and unit/house pointers will be released without cross-checking
+    fIsExiting: Boolean; //Set this to True on Exit and unit/house pointers will be released without cross-checking
     fIsPaused: Boolean;
     fSpeedActual: Single; //Actual speedup value, used to play the game
     fSpeedMultiplier: Word; //How many ticks are compressed into one
     fWaitingForNetwork: Boolean; //Indicates that we are waiting for other players commands in MP
-    fAdvanceFrame: Boolean; //Replay variable to advance 1 frame, afterwards set to false
+    fAdvanceFrame: Boolean; //Replay variable to advance 1 frame, afterwards set to False
     fLockedMutex: Boolean;
     fIgnoreConsistencyCheckErrors: Boolean; // User can ignore all consistency check errors while watching SP replay
 
@@ -60,8 +60,6 @@ type
     fCampaignName: TKMCampaignId;  //Is this a game part of some campaign
     fSpeedGIP: Single; //GameSpeed, recorded to GIP, could be requested by scripts
     fSpeedChangeAllowed: Boolean; //Is game speed change allowed?
-
-    fUIDTracker: TKMGameUIDTracker;       //Units-Houses tracker, to issue unique IDs
 
     //Saved to local data
     fLastReplayTickLocal: Cardinal; // stored / loaded in the .sloc file, if available
@@ -113,6 +111,8 @@ type
     procedure GameMPDisconnect(const aData: UnicodeString);
     procedure OtherPlayerDisconnected(aDefeatedPlayerHandId: Integer);
     function GetActiveHandIDs: TKMByteSet;
+
+    procedure VisibleLayersWereSet;
 
     procedure RecalcMapCRC;
 
@@ -217,7 +217,7 @@ type
     procedure DebugControlsUpdated(Sender: TObject; aSenderTag: Integer);
 
     property MapTxtInfo: TKMMapTxtInfo read fMapTxtInfo;
-    procedure ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal; aHandIndex: TKMHandID);
+    procedure ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer; aHandIndex: TKMHandID);
     procedure ShowMessageLocal(aKind: TKMMessageKind; const aText: UnicodeString; const aLoc: TKMPoint);
 
     procedure OverlayUpdate;
@@ -254,7 +254,6 @@ type
 
     property LockedMutex: Boolean read fLockedMutex write fLockedMutex;
 
-    function GetNewUID: Integer;
     function GetNormalSpeed: Single;
     function GetToggledNormalSpeed: Single;
     procedure StepOneFrame;
@@ -350,7 +349,8 @@ begin
   if gMain <> nil then
     gMain.FormMain.SuppressAltForMenu := True;
 
-  fParams := TKMGameParams.Create(aGameMode, RecalcMapCRC, fSetGameTickEvent, fSetGameTickFracEvent, fSetGameModeEvent, fSetMissionFileSP, fSetBlockPointer);
+  fParams := TKMGameParams.Create(aGameMode, RecalcMapCRC, VisibleLayersWereSet, fSetGameTickEvent, fSetGameTickFracEvent,
+                                  fSetGameModeEvent, fSetMissionFileSP, fSetBlockPointer);
 
   fSaveWorkerThreadHolder := aSaveWorkerThreadHolder;
   fBaseSaveWorkerThreadHolder := aBaseSaveWorkerThreadHolder;
@@ -359,7 +359,7 @@ begin
   fOnDestroy := aOnDestroy;
 
   fAdvanceFrame := False;
-  fUIDTracker   := TKMGameUIDTracker.Create;
+  gUIDTracker := TKMGameUIDTracker.Create;
   GameResult   := grCancel;
   fDoHold    := False;
   fSkipReplayEndCheck := False;
@@ -487,7 +487,7 @@ begin
     FreeAndNil(fGameInputProcess);
 
   FreeAndNil(fOptions);
-  FreeAndNil(fUIDTracker);
+  FreeAndNil(gUIDTracker);
   FreeAndNil(fTextMission);
 
   //When leaving the game we should always reset the cursor in case the user had beacon or linking selected
@@ -1321,7 +1321,7 @@ end;
 
 procedure TKMGame.RequestHold(Msg: TKMGameResultMsg);
 begin
-  fDoHold := true;
+  fDoHold := True;
   fDoHoldState := Msg;
 end;
 
@@ -1345,7 +1345,7 @@ begin
     Exit;
 
   if (aHandIndex = gMySpectator.HandID)
-    and not gGameSettings.VideoOn then // Don't play victory sound if videos are on
+  and not gGameSettings.Video.Enabled then // Don't play victory sound if videos are on
     gSoundPlayer.Play(sfxnVictory, 1, True); //Fade music
 
   if fParams.IsMultiplayerGame then
@@ -1378,7 +1378,7 @@ procedure TKMGame.PlayerDefeat(aPlayerIndex: TKMHandID; aShowDefeatMessage: Bool
 
   procedure PlayDefeatSound;
   begin
-    if not gGameSettings.VideoOn then // Don't play defeat sound if videos are on
+    if not gGameSettings.Video.Enabled then // Don't play defeat sound if videos are on
       gSoundPlayer.Play(sfxnDefeat, 1, True); //Fade music
   end;
 
@@ -1668,8 +1668,8 @@ begin
   gPerfLogs.SectionEnter(psFrameFullC);
   {$ENDIF}
   try
-    //How far in the past should we render? (0.0=Current tick, 1.0=Previous tick)
-    if gGameSettings.InterpolatedRender then
+    // How far in the past should we render? (0.0=Current tick, 1.0=Previous tick)
+    if gGameSettings.GFX.InterpolatedRender then
     begin
       tickLag := TimeSince(fLastUpdateState) / gMain.GameTickInterval;
       tickLag := 1.0 - tickLag;
@@ -1821,7 +1821,7 @@ begin
 end;
 
 
-procedure TKMGame.ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal; aHandIndex: TKMHandID);
+procedure TKMGame.ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer; aHandIndex: TKMHandID);
 begin
   //Once you have lost no messages can be received
   if gHands[aHandIndex].AI.HasLost then Exit;
@@ -1934,12 +1934,6 @@ begin
     gSoundPlayer.Play(sfxnPeacetime, 1, True); //Fades music
     gScriptEvents.ProcPeacetimeEnd;
   end;
-end;
-
-
-function TKMGame.GetNewUID: Integer;
-begin
-  Result := fUIDTracker.GetNewUID;
 end;
 
 
@@ -2279,7 +2273,7 @@ begin
   if not isMulti then
     aBodyStream.WriteW(fParams.MissionFileRelSP);
 
-  fUIDTracker.Save(aBodyStream); //Units-Houses ID tracker
+  gUIDTracker.Save(aBodyStream); //Units-Houses ID tracker
   aBodyStream.Write(GetKaMSeed); //Include the random seed in the save file to ensure consistency in replays
 
   if not isMulti then
@@ -2634,7 +2628,7 @@ begin
       fSetMissionFileSP(missionFileSP);
     end;
 
-    fUIDTracker.Load(bodyStream);
+    gUIDTracker.Load(bodyStream);
     bodyStream.Read(loadedSeed);
 
     if not saveIsMultiplayer then
@@ -3363,6 +3357,12 @@ end;
 procedure TKMGame.UserAction(aActionType: TKMUserActionType);
 begin
   fLastTimeUserAction := Max(fLastTimeUserAction, TimeGet);
+end;
+
+
+procedure TKMGame.VisibleLayersWereSet;
+begin
+  gTerrain.UpdateRenderHeight;
 end;
 
 

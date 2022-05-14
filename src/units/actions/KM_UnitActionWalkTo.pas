@@ -39,7 +39,7 @@ type
     fDoExchange: Boolean; //Command to make exchange maneuver with other unit, should use MakeExchange when vertex use needs to be set
     fInteractionCount, fLastSideStepNodePos: Integer;
     fInteractionStatus: TKMInteractionStatus;
-    fAvoidLockedAsMovementCost: Boolean; //Avoid locked as 'movement cost' if true and means 'as unwalkable' if false
+    fAvoidLockedAsMovementCost: Boolean; //Avoid locked as 'movement cost' if True and means 'as unwalkable' if False
     function AssembleTheRoute: Boolean;
     function CanWalkToTarget(const aFrom: TKMPoint; aPass: TKMTerrainPassability): Boolean;
     function CheckForNewDestination: TKMDestinationCheck;
@@ -112,7 +112,10 @@ type
 implementation
 uses
   TypInfo,
-  KM_RenderAux, KM_Game, KM_GameParams, KM_HandsCollection, KM_Terrain, KM_ResUnits, KM_UnitGroup,
+  KM_Entity,
+  KM_RenderAux, KM_Game, KM_GameParams,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Terrain, KM_ResUnits, KM_UnitGroup,
   KM_UnitActionGoInOut, KM_UnitActionStay, KM_UnitTaskBuild, KM_PathFinding,
   KM_UnitWarrior, KM_Log, KM_Resource, KM_CommonClassesExt,
   KM_CommonExceptions;
@@ -150,7 +153,7 @@ constructor TKMUnitActionWalkTo.Create( aUnit: TKMUnit;
                                         aSilent: Boolean = False);
 var
   errorStr: String;
-  RouteWasBuilt: Boolean; //Check if route was built, otherwise return nil
+  routeWasBuilt: Boolean; //Check if route was built, otherwise return nil
 begin
   inherited Create(aUnit, aActionType, False);
 
@@ -214,10 +217,10 @@ begin
     fPass := GetEffectivePassability; //Units are allowed to step off roads when they are pushed
   end;
 
-  RouteWasBuilt := AssembleTheRoute;
+  routeWasBuilt := AssembleTheRoute;
 
   //If route fails to build that's a serious issue, (consumes CPU) Can*** should mean that never happens
-  if not RouteWasBuilt // Means it will exit in Execute
+  if not routeWasBuilt // Means it will exit in Execute
     and not aSilent then // do not log this error in silent mode (we could expect route could not be build in some cases (f.e. warrior reRoute when attack house)
     //NoFlush logging here because this log is not much important
   begin
@@ -303,8 +306,8 @@ end;
 procedure TKMUnitActionWalkTo.SyncLoad;
 begin
   inherited;
-  fTargetUnit   := gHands.GetUnitByUID(cardinal(fTargetUnit));
-  fTargetHouse  := gHands.GetHouseByUID(cardinal(fTargetHouse));
+  fTargetUnit   := gHands.GetUnitByUID(Integer(fTargetUnit));
+  fTargetHouse  := gHands.GetHouseByUID(Integer(fTargetHouse));
 end;
 
 
@@ -327,7 +330,7 @@ begin
     DecVertex;
 
   if fUnit <> nil then
-    fUnit.IsExchanging := false;
+    fUnit.IsExchanging := False;
 
   gHands.CleanUpUnitPointer(fTargetUnit);
   gHands.CleanUpHousePointer(fTargetHouse);
@@ -342,7 +345,7 @@ begin
 end;
 
 
-// Returns true only when unit is stuck for some reason
+// Returns True only when unit is stuck for some reason
 function TKMUnitActionWalkTo.CanAbandonExternal: Boolean;
 begin
   Result := (not fDoExchange) //Other unit could have set this
@@ -382,7 +385,7 @@ begin
   begin
     Explanation := 'We were forced to exchange places';
     ExplanationLogAdd;
-    fDoExchange := true;
+    fDoExchange := True;
     if KMLengthDiag(aForcedExchangePos, NodeList[NodePos+1]) >= 1.5 then
       NodeList.Insert(NodePos+1, fUnit.Position); //We must back-track if we cannot continue our route from the new tile
     NodeList.Insert(NodePos+1, aForcedExchangePos);
@@ -455,8 +458,8 @@ end;
 function TKMUnitActionWalkTo.AssembleTheRoute: Boolean;
 var
   I: Integer;
-  NodeList2: TKMPointList;
-  AvoidLocked: TKMPathAvoidLocked;
+  nodeList2: TKMPointList;
+  avoidLocked: TKMPathAvoidLocked;
 begin
   //Build a piece of route to return to nearest road piece connected to destination road network
   if (fPass = tpWalkRoad)
@@ -466,40 +469,40 @@ begin
     if CanWalkToTarget(fWalkFrom, tpWalk) then
       gGame.Pathfinding.Route_ReturnToWalkable(fWalkFrom, fWalkTo, wcRoad, gTerrain.GetRoadConnectID(fWalkTo), [tpWalk], NodeList);
 
-  AvoidLocked := palNoAvoid;
+  avoidLocked := palNoAvoid;
   if (fUnit is TKMUnitWarrior)
     and (TKMUnitWarrior(fUnit).Task <> nil)
     and (TKMUnitWarrior(fUnit).Task.TaskType = uttAttackHouse) then
   begin
     if fAvoidLockedAsMovementCost then
-      AvoidLocked := palAvoidByMovementCost
+      avoidLocked := palAvoidByMovementCost
     else
-      AvoidLocked := palAvoidAsUnwalkable;
+      avoidLocked := palAvoidAsUnwalkable;
   end;
 
   //Build a route A*
   if NodeList.Count = 0 then //Build a route from scratch
   begin
     if CanWalkToTarget(fWalkFrom, fPass) then
-      gGame.Pathfinding.Route_Make(fWalkFrom, fWalkTo, [fPass], fDistance, fTargetHouse, NodeList, AvoidLocked) //Try to make the route with fPass
+      gGame.Pathfinding.Route_Make(fWalkFrom, fWalkTo, [fPass], fDistance, fTargetHouse, NodeList, avoidLocked) //Try to make the route with fPass
   end
   else //Append route to existing part
   begin
-    NodeList2 := TKMPointList.Create;
+    nodeList2 := TKMPointList.Create;
     try
       //Make a route
       if CanWalkToTarget(NodeList[NodeList.Count-1], fPass) then
-        gGame.Pathfinding.Route_Make(NodeList.Last, fWalkTo, [fPass], fDistance, fTargetHouse, NodeList2, AvoidLocked); //Try to make the route with fPass
+        gGame.Pathfinding.Route_Make(NodeList.Last, fWalkTo, [fPass], fDistance, fTargetHouse, nodeList2, avoidLocked); //Try to make the route with fPass
 
       //If this part of the route fails, the whole route has failed
       //At minimum Route_Make returns Count = 1 (fWalkTo)
-      if NodeList2.Count > 0 then
-        for I := 1 to NodeList2.Count - 1 do
-          NodeList.Add(NodeList2[I])
+      if nodeList2.Count > 0 then
+        for I := 1 to nodeList2.Count - 1 do
+          NodeList.Add(nodeList2[I])
       else
-        NodeList.Clear; //Clear NodeList so we return false
+        NodeList.Clear; //Clear NodeList so we return False
     finally
-      NodeList2.Free;
+      nodeList2.Free;
     end;
   end;
 
@@ -534,21 +537,21 @@ end;
 function TKMUnitActionWalkTo.CheckAllTilesAroundHouseLocked: Boolean;
 var
   I: Integer;
-  CellsAround: TKMPointDirList;
+  cellsAround: TKMPointDirList;
 begin
   Result := (fTargetHouse <> nil) and not fTargetHouse.IsDestroyed;
   if not Result then
     Exit;
 
-  CellsAround := TKMPointDirList.Create;
+  cellsAround := TKMPointDirList.Create;
   try
-    fTargetHouse.GetListOfCellsAround(CellsAround, fPass);
+    fTargetHouse.GetListOfCellsAround(cellsAround, fPass);
 
-    for I := 0 to CellsAround.Count - 1 do
-      if not gTerrain.TileIsLocked(CellsAround[I].Loc) then
+    for I := 0 to cellsAround.Count - 1 do
+      if not gTerrain.TileIsLocked(cellsAround[I].Loc) then
         Exit(False);
   finally
-    CellsAround.Free;
+    cellsAround.Free;
   end;
 end;
 
@@ -560,8 +563,8 @@ end;
 function TKMUnitActionWalkTo.CheckForObstacle(aDir: TKMDirection): TKMObstacleCheck;
 var
   T: TKMPoint;
-  DistNext: Single;
-  AllTilesAroundLocked: Boolean;
+  distNext: Single;
+  allTilesAroundLocked: Boolean;
   U: TKMUnit;
   animStep: Integer;
 begin
@@ -571,9 +574,9 @@ begin
 
   if (fUnit is TKMUnitWorker) then
   begin
-    DistNext := gHands.DistanceToEnemyTowers(T, fUnit.Owner);
-    if (DistNext <= RANGE_WATCHTOWER_MAX)
-      and (DistNext < gHands.DistanceToEnemyTowers(fUnit.Position, fUnit.Owner)) then
+    distNext := gHands.DistanceToEnemyTowers(T, fUnit.Owner);
+    if (distNext <= RANGE_WATCHTOWER_MAX)
+      and (distNext < gHands.DistanceToEnemyTowers(fUnit.Position, fUnit.Owner)) then
     begin
       //Cancel the plan if we cant approach it
       if TKMUnitWorker(fUnit).Task is TKMTaskBuild then
@@ -618,9 +621,9 @@ begin
   begin
     if CanWalkToTarget(fUnit.Position, GetEffectivePassability) then
     begin
-      AllTilesAroundLocked := CheckAllTilesAroundHouseLocked;
+      allTilesAroundLocked := CheckAllTilesAroundHouseLocked;
 
-      if AllTilesAroundLocked then
+      if allTilesAroundLocked then
         // Keep on walking. Some spot may free up.
         // Also, "greedy" warriors look and feel better.
         Exit(ocNoObstacle)
@@ -646,7 +649,7 @@ begin
 end;
 
 
-{ Walk is complete when one of the following is true:
+{ Walk is complete when one of the following is True:
   - We reached last node en route irregardless of walkTarget (position, house, unit)
   - We were walking to spot and required range is reached
   - We were walking to house and required range to house is reached
@@ -792,9 +795,9 @@ begin
 
             Explanation := 'Unit in the way is walking in the opposite direction. Performing an exchange';
             ExplanationLogAdd;
-            fDoExchange := true;
+            fDoExchange := True;
             //They both will exchange next tick
-            Result := true; //Means exit DoUnitInteraction
+            Result := True; //Means exit DoUnitInteraction
           end
           else //Otherwise try to force the unit to exchange IF they are in the waiting phase
             if TKMUnitActionWalkTo(aOpponent.Action).fInteractionStatus = kisWaiting then
@@ -804,9 +807,9 @@ begin
 
               Explanation := 'Unit in the way is in waiting phase. Forcing an exchange';
               ExplanationLogAdd;
-              fDoExchange := true;
+              fDoExchange := True;
               //They both will exchange next tick
-              Result := true; //Means exit DoUnitInteraction
+              Result := True; //Means exit DoUnitInteraction
             end;
         end;
       end;
@@ -852,7 +855,7 @@ var
   altOpponent: TKMUnit;
 begin
   //If there is a unit on one of the tiles either side of target that wants to swap, do so
-  Result := false;
+  Result := False;
   if aHighestInteractionCount >= DODGE_TIMEOUT then
   //UnitsHitTest (used twice here) is fairly CPU intensive, so don't run it every time
   if CheckInteractionFreq(aHighestInteractionCount,DODGE_TIMEOUT,DODGE_FREQ) then
@@ -890,7 +893,7 @@ begin
 
                 Explanation:='Unit on tile next to target tile wants to swap. Performing an exchange';
                 ExplanationLogAdd;
-                fDoExchange := true;
+                fDoExchange := True;
                 ChangeStepTo(tempPos);
                 //They both will exchange next tick
                 //Means exit DoUnitInteraction
@@ -962,7 +965,7 @@ var
   sideStepTest: TKMPoint;
   found: Boolean;
 begin
-  Result := False; //Should only return true if a sidestep was taken (for use in CheckForObstacle)
+  Result := False; //Should only return True if a sidestep was taken (for use in CheckForObstacle)
   if (aHighestInteractionCount < SIDESTEP_TIMEOUT) or fDoExchange then exit;
   if KMSamePoint(aPosition, fWalkTo) then Exit; //Someone stays right on target, no point in side-stepping
   if not CheckInteractionFreq(aHighestInteractionCount, SIDESTEP_TIMEOUT, SIDESTEP_FREQ) then Exit; //FindSideStepPosition is CPU intensive, so don't run it every time
@@ -973,7 +976,7 @@ begin
   else
     found := gTerrain.FindSideStepPosition(fUnit.Position, aPosition, NodeList[NodePos+2], GetEffectivePassability, sideStepTest, NodePos - fLastSideStepNodePos < 2);
 
-  if not found then Exit; //It could be 0,0 if all tiles were blocked (return false)
+  if not found then Exit; //It could be 0,0 if all tiles were blocked (return False)
 
   //Otherwise the sidestep is valid so modify our route to go via this tile
   Explanation := 'Sidestepping to a tile next to target';
@@ -986,9 +989,9 @@ end;
 
 //States whether we are allowed to run time consuming tests
 //  1. We must have been stuck for more than aTimeout
-//  2. We must only return true every aFreq ticks.
+//  2. We must only return True every aFreq ticks.
 //For example: say we are checking whether we can use the solution Avoid. aTimeout = 10, aFreq = 20.
-//Therefore we return true on these ticks: 10, 30, 50, 70....
+//Therefore we return True on these ticks: 10, 30, 50, 70....
 //You could sum this up in words as: After 10 ticks, check the solution, then every 20 ticks
 //after that, check it again. I hope that makes sense, please rewrite it in a more obvious way.
 //Read the memo at the top of this file explaining what TIMEOUT and FREQ mean.
@@ -1010,7 +1013,7 @@ var
   opponent: TKMUnit;
   highestInteractionCount: integer;
 begin
-  Result := True; //false = interaction yet unsolved, stay and wait.
+  Result := True; //False = interaction yet unsolved, stay and wait.
   if not DO_UNIT_INTERACTION then Exit;
 
   //If there's a unit using this vertex to walk diagonally then we must wait, they will be finished after this step
@@ -1056,7 +1059,7 @@ begin
 
   if fDestBlocked then fInteractionStatus := kisWaiting;
 
-  //INTERACTION SOLUTIONS: Split into different sections or "solutions". If true returned it means exit.
+  //INTERACTION SOLUTIONS: Split into different sections or "solutions". If True returned it means exit.
 
   //If we are asking someone to move away then just wait until they are gone
   if IntCheckIfPushing(opponent) then exit;
@@ -1147,7 +1150,7 @@ var
 begin
   Result := arActContinues;
   StepDone := False;
-  fDoesWalking := False; // Set it to false at start of update
+  fDoesWalking := False; // Set it to False at start of update
 
   // Happens whe e.g. Serf stays in front of Store and gets Deliver task
   if KMSamePoint(fWalkFrom, fWalkTo) then
@@ -1258,7 +1261,7 @@ begin
       end;
 
     //Perform exchange
-    //Both exchanging units have fDoExchange:=true assigned by 1st unit, hence 2nd should not try doing UnitInteraction!
+    //Both exchanging units have fDoExchange:=True assigned by 1st unit, hence 2nd should not try doing UnitInteraction!
     if fDoExchange then
     begin
        //If this is a diagonal exchange we must make sure someone (other than the other unit) is not crossing our path
@@ -1275,8 +1278,8 @@ begin
         gTerrain.UnitSwap(fUnit.PositionPrev,fUnit.PositionNext,fUnit);
 
       fInteractionStatus := kisNone;
-      fDoExchange := false;
-      fUnit.IsExchanging := true; //So unit knows that it must slide
+      fDoExchange := False;
+      fUnit.IsExchanging := True; //So unit knows that it must slide
       fInteractionCount := 0;
       if KMStepIsDiag(fUnit.PositionPrev, fUnit.PositionNext) then IncVertex; //Occupy the vertex
     end else
@@ -1317,13 +1320,14 @@ begin
 
   Inc(fUnit.AnimStep);
   StepDone := False; //We are not actually done because now we have just taken another step
-  fDoesWalking := True; //Now it's definitely true that unit did walked one step
+  fDoesWalking := True; //Now it's definitely True that unit did walked one step
 end;
 
 
 procedure TKMUnitActionWalkTo.Save(SaveStream: TKMemoryStream);
 begin
   inherited;
+
   SaveStream.PlaceMarker('UnitActionWalkTo');
   SaveStream.Write(fWalkFrom);
   SaveStream.Write(fWalkTo);

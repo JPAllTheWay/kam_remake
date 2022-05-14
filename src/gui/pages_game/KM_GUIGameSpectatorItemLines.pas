@@ -120,6 +120,7 @@ type
 
 implementation
 uses
+  KM_Entity,
   KM_InterfaceGame, KM_Resource,
   KM_UnitGroup, KM_HouseTownHall,
   KM_ResUnits, KM_ResTypes;

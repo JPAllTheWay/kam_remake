@@ -95,27 +95,24 @@ var
   SKIP_LOG_TEMP_COMMANDS:Boolean = True;
   BLOCK_GAME_ON_PAUSE   :Boolean = not DEBUG_CFG; // Should we block game input, viewport scrolling etc on game pause?
 
-  //Implemented
-  FEAT_SETTINGS_IN_MYDOC:Boolean = True; //Save settings in the C:\Users\Username\My Documents\My Games\GAME_TITLE\ folder
-  DO_UNIT_INTERACTION   :Boolean = True; //Debug for unit interaction
-  DO_WEIGHT_ROUTES      :Boolean = True; //Add additional cost to tiles in A* if they are occupied by other units (IsUnit=1)
-  CUSTOM_RANDOM         :Boolean = True; //Use our custom random number generator or the built in "Random()"
-  USE_WALKING_DISTANCE  :Boolean = True; //Use the walking distance for deciding place to mine rather than direct distance
-  RANDOM_TARGETS        :Boolean = True; //Archers use random targets instead of closest
-  DISPLAY_CHARTS_RESULT :Boolean = True; //Show charts in game results screen
-  HUNGARIAN_GROUP_ORDER :Boolean = True; //Use Hungarian algorithm to reorder warrior groups when walking
-  AI_GEN_NAVMESH        :Boolean = True; //Generate navmesh for AI to plan attacks/defenses
-  AI_GEN_INFLUENCE_MAPS :Boolean = True; //Generate influence maps for AI to plan attacks/defenses
-  ALLOW_SNOW_HOUSES     :Boolean = True; //Allow to enable snow on houses in the game options or debug menu
-  //Not fully implemented yet
-  USE_CCL_WALKCONNECT   :Boolean = False; //Use CCL instead of FloodFill for walk-connect (CCL is generaly worse. It's a bit slower, counts 1 tile areas and needs more AreaIDs to work / makes sparsed IDs)
-  DYNAMIC_FOG_OF_WAR    :Boolean = False; //Whenever dynamic fog of war is enabled or not
-  SHOW_DISMISS_GROUP_BTN:Boolean = DEBUG_CFG; //The button to kill group
-  CHECK_8087CW          :Boolean = False; //Check that 8087CW (FPU flags) are set correctly each frame, in case some lib/API changed them
-  SCROLL_ACCEL          :Boolean = False; //Acceleration for viewport scrolling
-  ALLOW_INTERPOLATED_RENDER :Boolean = True; //Allow to interpolate positions/animations in render between game ticks
-  ALLOW_INTERPOLATED_ANIMS    :Boolean = True; //Allow to use interpolate animations, which are loaded from .rxa sprites atlases pack
-  PATHFINDER_TO_USE     :Byte = 1;        //Use TKMPathfindingAStarNew
+  // Implemented
+  FEAT_SETTINGS_IN_MYDOC  :Boolean = True; // Save settings in the C:\Users\Username\My Documents\My Games\GAME_TITLE\ folder
+  DO_UNIT_INTERACTION     :Boolean = True; // Debug for unit interaction
+  DO_WEIGHT_ROUTES        :Boolean = True; // Add additional cost to tiles in A* if they are occupied by other units (IsUnit=1)
+  CUSTOM_RANDOM           :Boolean = True; // Use our custom random number generator or the built in "Random()"
+  USE_WALKING_DISTANCE    :Boolean = True; // Use the walking distance for deciding place to mine rather than direct distance
+  RANDOM_TARGETS          :Boolean = True; // Archers use random targets instead of closest
+  DISPLAY_CHARTS_RESULT   :Boolean = True; // Show charts in game results screen
+  HUNGARIAN_GROUP_ORDER   :Boolean = True; // Use Hungarian algorithm to reorder warrior groups when walking
+  AI_GEN_NAVMESH          :Boolean = True; // Generate navmesh for AI to plan attacks/defenses
+  AI_GEN_INFLUENCE_MAPS   :Boolean = True; // Generate influence maps for AI to plan attacks/defenses
+  // Not fully implemented yet
+  FEAT_CCL_WALKCONNECT    :Boolean = False; // Use CCL instead of FloodFill for walk-connect (CCL is generaly worse. It's a bit slower, counts 1 tile areas and needs more AreaIDs to work / makes sparsed IDs)
+  FEAT_DYNAMIC_FOG_OF_WAR :Boolean = False; // Whenever dynamic fog of war is enabled or not
+  FEAT_DISMISS_GROUP_BTN  :Boolean = DEBUG_CFG; // The button to kill group
+  CHECK_8087CW            :Boolean = False; // Check that 8087CW (FPU flags) are set correctly each frame, in case some lib/API changed them
+  FEAT_SCROLL_ACCEL       :Boolean = False; // Acceleration for viewport scrolling
+  PATHFINDER_TO_USE       :Byte = 1;       // Use TKMPathfindingAStarNew
 
   ENABLE_VIDEOS_UNDER_WINE: Boolean = DEBUG_CFG; //Do we enable videos under wine
 
@@ -617,7 +614,7 @@ type
 
 
 const
-  UID_NONE: Integer = -1; //Would be better to have it 0. But now it's -1 for backwards compatibility
+  UID_NONE: Integer = -1; // Would be better to have it 0. But now it's -1 for backwards compatibility
 
 
 {Units}
@@ -763,7 +760,8 @@ const
 
 
 const
-  FISH_COUNT_ACT: array [1..5] of TKMUnitActionType = (uaWalk, uaWork, uaSpec, uaDie, uaWork1);
+  FISH_CNT_DEFAULT = 10;
+  FISH_CNT_MAX = 255;
 
 
 type

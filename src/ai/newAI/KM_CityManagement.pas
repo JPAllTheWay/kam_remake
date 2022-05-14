@@ -675,7 +675,7 @@ begin
     begin
       for I := 0 to Houses.Count - 1 do
       begin
-        Houses[I].BuildingRepair := false;
+        Houses[I].BuildingRepair := False;
         if (Houses[I].HouseType = htWatchTower) AND (Houses[I].DeliveryMode = dmDelivery) then
           Houses[I].SetDeliveryModeInstantly(dmClosed);
       end;

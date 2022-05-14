@@ -80,13 +80,13 @@ begin
                     end;
     utFarmer:      case ActionType of
                       uaWork:  if Step = 8 then gSoundPlayer.Play(sfxCornCut,fUnit.PositionF);
-                      uaWork1: if Step = 0 then gSoundPlayer.Play(sfxCornSow,fUnit.PositionF,true,0.6);
+                      uaWork1: if Step = 0 then gSoundPlayer.Play(sfxCornSow,fUnit.PositionF,True,0.6);
                     end;
     utStonemason: if ActionType = uaWork then
-                      if Step = 3 then gSoundPlayer.Play(sfxMinestone,fUnit.PositionF,true,1.4);
+                      if Step = 3 then gSoundPlayer.Play(sfxMinestone,fUnit.PositionF,True,1.4);
     utWoodCutter:  case ActionType of
-                      uaWork: if (fUnit.AnimStep mod Cycle = 3) and (fUnit.Direction <> dirN) then gSoundPlayer.Play(sfxChopTree, fUnit.PositionF,true)
-                      else     if (fUnit.AnimStep mod Cycle = 0) and (fUnit.Direction =  dirN) then gSoundPlayer.Play(sfxWoodcutterDig, fUnit.PositionF,true);
+                      uaWork: if (fUnit.AnimStep mod Cycle = 3) and (fUnit.Direction <> dirN) then gSoundPlayer.Play(sfxChopTree, fUnit.PositionF,True)
+                      else     if (fUnit.AnimStep mod Cycle = 0) and (fUnit.Direction =  dirN) then gSoundPlayer.Play(sfxWoodcutterDig, fUnit.PositionF,True);
                     end;
   end;
 end;

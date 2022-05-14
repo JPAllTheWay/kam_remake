@@ -58,7 +58,8 @@ type
 implementation
 uses
   Math, TypInfo,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_Entity,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_UnitWarrior, KM_HouseInn,
   KM_UnitTaskBuild, KM_Log, KM_RenderAux;
 
@@ -137,9 +138,9 @@ end;
 procedure TKMTaskDeliver.SyncLoad;
 begin
   inherited;
-  fFrom    := gHands.GetHouseByUID(Cardinal(fFrom));
-  fToHouse := gHands.GetHouseByUID(Cardinal(fToHouse));
-  fToUnit  := gHands.GetUnitByUID(Cardinal(fToUnit));
+  fFrom    := gHands.GetHouseByUID(Integer(fFrom));
+  fToHouse := gHands.GetHouseByUID(Integer(fToHouse));
+  fToUnit  := gHands.GetUnitByUID(Integer(fToUnit));
 end;
 
 

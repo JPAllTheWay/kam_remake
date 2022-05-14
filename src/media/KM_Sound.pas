@@ -157,7 +157,7 @@ begin
     gLog.AddNoTime('OpenAL warning. OpenAL could not be initialized.');
     //MessageDlg works better than Application.MessageBox or others, it stays on top and pauses here until the user clicks ok.
     MessageDlg('OpenAL could not be initialized. Please refer to Readme.html for solution', mtWarning, [mbOk], 0);
-    fIsSoundInitialized := false;
+    fIsSoundInitialized := False;
     Exit;
   end;
 
@@ -386,7 +386,7 @@ begin
       fLastMessageNoticeTime := TimeGet;
   end;
 
-  Play(aSoundID, KMPOINTF_ZERO, false, aVolume); // Redirect
+  Play(aSoundID, KMPOINTF_ZERO, False, aVolume); // Redirect
 end;
 
 
@@ -507,7 +507,7 @@ begin
   if aFadeMusic and (fVolume > 0) and not fMusicIsFaded then
   begin
     if Assigned(fOnFadeMusic) then fOnFadeMusic;
-    fMusicIsFaded := true;
+    fMusicIsFaded := True;
   end;
 
   //Stop previously playing sound and release buffer

@@ -156,6 +156,7 @@ var
 
 implementation
 uses
+  KM_Entity,
   KM_RenderAux, KM_RenderGameAux, KM_HandsCollection, KM_Game, KM_GameSettings, KM_Sound, KM_Resource, KM_ResUnits,
   KM_ResMapElements, KM_AIFields, KM_TerrainPainter, KM_Cursor,
   KM_Hand, KM_UnitGroup, KM_CommonUtils,
@@ -730,7 +731,7 @@ begin
     id := 260 + Wood - 1;
     cornerX := Loc.X + supply[1, Wood].MoveX / CELL_SIZE_PX - 1;
     cornerY := Loc.Y + (supply[1, Wood].MoveY + rx.Size[id].Y) / CELL_SIZE_PX - 1
-                     - gTerrain.Land^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                     - gTerrain.LandExt^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
     fRenderList.AddSprite(rxHouses, id, cornerX, cornerY);
   end;
 
@@ -739,7 +740,7 @@ begin
     id := 267 + Stone - 1;
     cornerX := Loc.X + supply[2, Stone].MoveX / CELL_SIZE_PX - 1;
     cornerY := Loc.Y + (supply[2, Stone].MoveY + rx.Size[id].Y) / CELL_SIZE_PX - 1
-                     - gTerrain.Land^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                     - gTerrain.LandExt^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
     fRenderList.AddSprite(rxHouses, id, cornerX, cornerY);
   end;
 end;
@@ -772,7 +773,7 @@ var
   function CornerY(aPic: Integer): Single;
   begin
     Result := aLoc.Y + (R.Pivot[aPic].Y + R.Size[aPic].Y) / CELL_SIZE_PX - 1
-                     - gTerrain.Land^[aLoc.Y + 1, aLoc.X].RenderHeight / CELL_HEIGHT_DIV;
+                     - gTerrain.LandExt^[aLoc.Y + 1, aLoc.X].RenderHeight / CELL_HEIGHT_DIV;
   end;
 
 begin
@@ -795,7 +796,7 @@ begin
   if (aWoodStep = 1) and (aStoneStep = 1) then
   begin
     // Snow only happens on fully built houses
-    if gGameSettings.AllowSnowHouses
+    if gGameSettings.GFX.AllowSnowHouses
       and (aSnowStep > 0)
       and (picSnow <> 0) then
     begin
@@ -863,7 +864,7 @@ begin
 
       cornerX := Loc.X + (R.Pivot[Id].X + A.MoveX) / CELL_SIZE_PX - 1;
       cornerY := Loc.Y + (R.Pivot[Id].Y + A.MoveY + R.Size[Id].Y) / CELL_SIZE_PX - 1
-                       - gTerrain.Land^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                       - gTerrain.LandExt^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
 
       if DoImmediateRender then
         RenderSprite(rxHouses, Id, cornerX, cornerY, FlagColor, DoHighlight, HighlightColor)
@@ -888,7 +889,7 @@ var
 
     CornerX := Loc.X + R.Pivot[aId].X / CELL_SIZE_PX - 1;
     CornerY := Loc.Y + (R.Pivot[aId].Y + R.Size[aId].Y) / CELL_SIZE_PX - 1
-                     - gTerrain.Land^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                     - gTerrain.LandExt^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
     if DoImmediateRender then
     begin
       RenderSprite(rxHouses, aId, CornerX, CornerY, $0, DoHighlight, HighlightColor)
@@ -966,7 +967,7 @@ begin
     R := fRXData[rxHouses];
     cornerX := Loc.X + (R.Pivot[Id].X + MARKET_WARES_OFF_X) / CELL_SIZE_PX - 1;
     cornerY := Loc.Y + (R.Pivot[Id].Y + MARKET_WARES_OFF_Y + R.Size[Id].Y) / CELL_SIZE_PX - 1
-                     - gTerrain.Land^[Loc.Y+1,Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                     - gTerrain.LandExt^[Loc.Y+1,Loc.X].RenderHeight / CELL_HEIGHT_DIV;
     fRenderList.AddSprite(rxHouses, Id, cornerX, cornerY);
   end;
 end;
@@ -987,7 +988,7 @@ begin
 
   cornerX := Loc.X + (A.MoveX + R.Pivot[Id].X) / CELL_SIZE_PX - 1;
   cornerY := Loc.Y + (A.MoveY + R.Pivot[Id].Y + R.Size[Id].Y) / CELL_SIZE_PX - 1
-                   - gTerrain.Land^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                   - gTerrain.LandExt^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
   fRenderList.AddSprite(aRX, Id, cornerX, cornerY);
 end;
 
@@ -1080,7 +1081,7 @@ begin
   // Eaters need to interpolate land height the same as the inn otherwise they are rendered at the wrong place
   cornerX := Loc.X + OffX + R.Pivot[id].X / CELL_SIZE_PX - 1;
   cornerY := Loc.Y + OffY + (R.Pivot[id].Y + R.Size[id].Y) / CELL_SIZE_PX - 1
-                   - gTerrain.Land^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
+                   - gTerrain.LandExt^[Loc.Y + 1, Loc.X].RenderHeight / CELL_HEIGHT_DIV;
 
   fRenderList.AddSprite(rxUnits, id, cornerX, cornerY, FlagColor);
 end;
@@ -1181,7 +1182,7 @@ end;
 procedure TRenderPool.AddUnitWithDefaultArm(aUnit: TKMUnitType; aUID: Integer; aAct: TKMUnitActionType; aDir: TKMDirection; StepId: Integer; pX,pY: Single; FlagColor: TColor4; DoImmediateRender: Boolean = False; DoHignlight: Boolean = False; HighlightColor: TColor4 = 0);
 begin
   if aUnit = utFish then
-    aAct := FISH_COUNT_ACT[5]; // In map editor always render 5 fish
+    aAct := TKMUnitFish.GetFishActionType(FISH_CNT_DEFAULT); // In map editor always render default fish
 
   AddUnit(aUnit, aUID, aAct, aDir, StepId, 0.0, pX, pY, FlagColor, True, DoImmediateRender, DoHignlight, HighlightColor);
   if gRes.Units[aUnit].SupportsAction(uaWalkArm) then
@@ -1455,7 +1456,7 @@ begin
     begin
       X := loc.X + fHouseOutline[I].X - 3;
       Y := loc.Y + fHouseOutline[I].Y - 4;
-      glVertex2f(X, Y - Land^[Y+1, X+1].RenderHeight / CELL_HEIGHT_DIV);
+      glVertex2f(X, Y - LandExt^[Y+1, X+1].RenderHeight / CELL_HEIGHT_DIV);
     end;
   glEnd;
 end;

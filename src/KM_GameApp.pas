@@ -200,7 +200,7 @@ begin
     gRandomCheckLogger := TKMRandomCheckLogger.Create;
 
   gRes := TKMResource.Create(aOnLoadingStep, aOnLoadingText);
-  gRes.LoadMainResources(gGameSettings.Locale, gGameSettings.LoadFullFonts);
+  gRes.LoadMainResources(gGameSettings.Locale, gGameSettings.GFX.LoadFullFonts);
 
   {$IFDEF USE_MAD_EXCEPT}gExceptions.LoadTranslation;{$ENDIF}
 
@@ -210,8 +210,8 @@ begin
     //pauses here until the user clicks ok.
     MessageDlg(gResTexts[TX_GAME_ERROR_OLD_OPENGL] + EolW + EolW + gResTexts[TX_GAME_ERROR_OLD_OPENGL_2], mtWarning, [mbOk], 0);
 
-  gSoundPlayer  := TKMSoundPlayer.Create(gGameSettings.SoundFXVolume);
-  gMusic        := TKMMusicLib.Create(gGameSettings.MusicVolume);
+  gSoundPlayer  := TKMSoundPlayer.Create(gGameSettings.SFX.SoundFXVolume);
+  gMusic        := TKMMusicLib.Create(gGameSettings.SFX.MusicVolume);
   gSoundPlayer.OnRequestFade   := gMusic.Fade;
   gSoundPlayer.OnRequestUnfade := gMusic.Unfade;
 
@@ -222,10 +222,10 @@ begin
   InitMainMenu(aScreenX, aScreenY);
 
   // Start the Music playback as soon as loading is complete
-  if not NoMusic and not gGameSettings.MusicOff then
+  if not NoMusic and gGameSettings.SFX.MusicEnabled then
     gMusic.PlayMenuTrack;
 
-  gMusic.ToggleShuffle(gGameSettings.ShuffleOn); //Determine track order
+  gMusic.ToggleShuffle(gGameSettings.SFX.ShuffleOn); //Determine track order
 
   fSaveWorkerThreadHolder := TKMWorkerThreadHolder.Create('SaveWorker');
   fAutoSaveWorkerThreadHolder := TKMWorkerThreadHolder.Create('AutoSaveWorker');
@@ -329,14 +329,14 @@ begin
   //Recreate resources that use Locale info
   gRes.LoadLocaleResources(gGameSettings.Locale);
   //Fonts might need reloading too
-  gRes.LoadLocaleFonts(gGameSettings.Locale, gGameSettings.LoadFullFonts);
+  gRes.LoadLocaleFonts(gGameSettings.Locale, gGameSettings.GFX.LoadFullFonts);
 
   //Force reload game resources, if they during loading process,
   //as that could cause an error in the loading thread
   //(did not figure it out why. Its easier just to reload game resources in that rare case)
   {$IFDEF LOAD_GAME_RES_ASYNC}
   if gGameSettings.AsyncGameResLoader and not gRes.Sprites.GameResLoadCompleted then
-    gRes.LoadGameResources(gGameSettings.AlphaShadows, True);
+    gRes.LoadGameResources(gGameSettings.GFX.AlphaShadows, True);
   {$ENDIF}
 
   {$IFDEF USE_MAD_EXCEPT}gExceptions.LoadTranslation;{$ENDIF}
@@ -357,7 +357,7 @@ begin
   {$IFDEF LOAD_GAME_RES_ASYNC}
   //Load game resources asychronously (by other thread)
   if gGameSettings.AsyncGameResLoader then
-    gRes.LoadGameResources(gGameSettings.AlphaShadows, True);
+    gRes.LoadGameResources(gGameSettings.GFX.AlphaShadows, True);
   {$ENDIF}
 end;
 
@@ -528,7 +528,7 @@ begin
 
   GameLoadingStep(gResTexts[TX_MENU_LOADING_DEFINITIONS]);
   gRes.OnLoadingText := GameLoadingStep;
-  gRes.LoadGameResources(gGameSettings.AlphaShadows);
+  gRes.LoadGameResources(gGameSettings.GFX.AlphaShadows);
 
   GameLoadingStep(gResTexts[TX_MENU_LOADING_INITIALIZING]);
 
@@ -1206,7 +1206,7 @@ begin
     else
       fMainMenuInterface.Paint;
 
-    gRender.RenderBrightness(gGameSettings.Brightness);
+    gRender.RenderBrightness(gGameSettings.GFX.Brightness);
   {$IFDEF PERFLOG}
   finally
     gPerfLogs.SectionLeave(psFrameFullG);
@@ -1370,7 +1370,7 @@ begin
   if fGlobalTickCount mod 10 = 0 then
   begin
     // Music
-    if not gGameSettings.MusicOff and gMusic.IsEnded then
+    if gGameSettings.SFX.MusicEnabled and gMusic.IsEnded then
       gMusic.PlayNextTrack; //Feed new music track
 
     //StatusBar

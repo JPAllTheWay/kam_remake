@@ -235,7 +235,7 @@ type
     property PacketsStatsStartTime: Cardinal read fPacketsStatsStartTime;
     procedure ResetPacketsStats;
 
-    procedure UpdateState(aTick: cardinal);
+    procedure UpdateState(aGlobalTickCount: cardinal);
     procedure UpdateStateIdle;
     procedure FPSMeasurement(aFPS: Cardinal);
 
@@ -889,7 +889,7 @@ begin
   if (fSelectGameKind = ngkSave) and (MyNetPlayer.StartLocation = 0) then
   begin
     PostLocalMessage(gResTexts[TX_LOBBY_ERROR_SELECT_PLAYER], csSystem);
-    Result := false;
+    Result := False;
     Exit;
   end;
 
@@ -904,7 +904,7 @@ begin
   else
   begin
     PostLocalMessage(gResTexts[TX_LOBBY_ERROR_NO_MAP], csSystem);
-    Result := false;
+    Result := False;
   end;
 end;
 
@@ -1298,7 +1298,7 @@ begin
   //Stop the previous connection without calling Self.Disconnect as that frees everything
   fNetClient.Disconnect;
   tempMyIndex := fMyIndex;
-  Join(fServerAddress,fServerPort,fMyNickname,fRoomToJoin, true); //Join the same server/room as before in reconnecting mode
+  Join(fServerAddress,fServerPort,fMyNickname,fRoomToJoin, True); //Join the same server/room as before in reconnecting mode
   fMyIndex := tempMyIndex; //Join overwrites it, but we must remember it
 end;
 
@@ -1496,7 +1496,7 @@ begin
 end;
 
 
-function TKMNetworking.CalculateGameCRC:Cardinal;
+function TKMNetworking.CalculateGameCRC: Cardinal;
 begin
   //CRC checks are done on the data we already loaded, not the files on HDD which can change.
   Result := gRes.GetDATCRC;
@@ -2210,7 +2210,7 @@ begin
 
       mkReadyToPlay:
               begin
-                fNetPlayers[fNetPlayers.ServerToLocal(aSenderIndex)].ReadyToPlay := true;
+                fNetPlayers[fNetPlayers.ServerToLocal(aSenderIndex)].ReadyToPlay := True;
                 if Assigned(OnReadyToPlay) then OnReadyToPlay;
                 if IsHost then TryPlayGame;
               end;
@@ -2674,7 +2674,7 @@ begin
 end;
 
 
-procedure TKMNetworking.UpdateState(aTick: cardinal);
+procedure TKMNetworking.UpdateState(aGlobalTickCount: cardinal);
 begin
   // Reconnection delay
   if (fReconnectRequested <> 0) and (TimeSince(fReconnectRequested) > RECONNECT_PAUSE) then DoReconnection;

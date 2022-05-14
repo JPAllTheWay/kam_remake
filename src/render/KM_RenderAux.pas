@@ -105,10 +105,10 @@ begin
   TRender.BindTexture(0); // We have to reset texture to default (0), because it could be bind to any other texture (atlas)
   glBegin(GL_QUADS);
     with gTerrain do
-    glkQuad(pX-1,pY-1-Land^[pY  ,pX  ].RenderHeight/CELL_HEIGHT_DIV,
-            pX  ,pY-1-Land^[pY  ,pX+1].RenderHeight/CELL_HEIGHT_DIV,
-            pX  ,pY-  Land^[pY+1,pX+1].RenderHeight/CELL_HEIGHT_DIV,
-            pX-1,pY-  Land^[pY+1,pX  ].RenderHeight/CELL_HEIGHT_DIV);
+    glkQuad(pX-1,pY-1-LandExt^[pY  ,pX  ].RenderHeight/CELL_HEIGHT_DIV,
+            pX  ,pY-1-LandExt^[pY  ,pX+1].RenderHeight/CELL_HEIGHT_DIV,
+            pX  ,pY-  LandExt^[pY+1,pX+1].RenderHeight/CELL_HEIGHT_DIV,
+            pX-1,pY-  LandExt^[pY+1,pX  ].RenderHeight/CELL_HEIGHT_DIV);
   glEnd;
 end;
 
@@ -643,7 +643,7 @@ begin
     for K := aRect.Left to aRect.Right + 1 do
     begin
       glColor4f(0.8, 1, 0.6, 1);
-      glVertex2d(K - 1, I - 1 - gTerrain.Land^[I, K].RenderHeight / CELL_HEIGHT_DIV);
+      glVertex2d(K - 1, I - 1 - gTerrain.LandExt^[I, K].RenderHeight / CELL_HEIGHT_DIV);
     end;
     glEnd;
   end;
@@ -656,7 +656,7 @@ begin
     begin
       //glColor4f(gTerrain.Land^[I,K].Height/100,0,0,1.2-sqrt(sqr(I-MapYc)+sqr(K-MapXc))/10);
       glColor4f(Byte(gTerrain.Fences[I,K].Kind = fncHousePlan), Byte(gTerrain.Fences[I,K].Kind = fncHousePlan), 0, 1);
-      glVertex2d(K - 1, I - 1 - gTerrain.Land^[I, K].RenderHeight / CELL_HEIGHT_DIV);
+      glVertex2d(K - 1, I - 1 - gTerrain.LandExt^[I, K].RenderHeight / CELL_HEIGHT_DIV);
     end;
     glEnd;
   glPopAttrib;
@@ -676,10 +676,10 @@ begin
   glColor4ubv(@Col);
   glBegin(GL_LINE_LOOP);
     with gTerrain do begin
-      glVertex2f(P.X-1 + aInset, P.Y-1 + aInset - Land^[P.Y  ,P.X  ].RenderHeight/CELL_HEIGHT_DIV);
-      glVertex2f(P.X   - aInset, P.Y-1 + aInset - Land^[P.Y  ,P.X+1].RenderHeight/CELL_HEIGHT_DIV);
-      glVertex2f(P.X   - aInset, P.Y   - aInset - Land^[P.Y+1,P.X+1].RenderHeight/CELL_HEIGHT_DIV);
-      glVertex2f(P.X-1 + aInset, P.Y   - aInset - Land^[P.Y+1,P.X  ].RenderHeight/CELL_HEIGHT_DIV);
+      glVertex2f(P.X-1 + aInset, P.Y-1 + aInset - LandExt^[P.Y  ,P.X  ].RenderHeight/CELL_HEIGHT_DIV);
+      glVertex2f(P.X   - aInset, P.Y-1 + aInset - LandExt^[P.Y  ,P.X+1].RenderHeight/CELL_HEIGHT_DIV);
+      glVertex2f(P.X   - aInset, P.Y   - aInset - LandExt^[P.Y+1,P.X+1].RenderHeight/CELL_HEIGHT_DIV);
+      glVertex2f(P.X-1 + aInset, P.Y   - aInset - LandExt^[P.Y+1,P.X  ].RenderHeight/CELL_HEIGHT_DIV);
     end;
   glEnd;
 end;

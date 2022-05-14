@@ -30,7 +30,8 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_Hand,
+  KM_Entity,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_ResTypes;
 
 
@@ -88,7 +89,7 @@ end;
 procedure TKMTaskDismiss.SyncLoad;
 begin
   inherited;
-  fSchool := gHands[fUnit.Owner].Houses.GetHouseByUID(Cardinal(fSchool));
+  fSchool := gHands[fUnit.Owner].Houses.GetHouseByUID(Integer(fSchool));
 end;
 
 

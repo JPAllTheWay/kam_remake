@@ -100,7 +100,7 @@ implementation
 uses
   SysUtils, Math,
   KM_Game, KM_GameParams,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandEntity, KM_HandTypes,
   {$IFDEF DEBUG_Supervisor}
     KM_RenderAux,
   {$ENDIF}

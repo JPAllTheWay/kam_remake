@@ -55,7 +55,7 @@ type
     FTrackList: TStringList;
     FVideoList: TList<TKMVideoFile>;
 
-    function TryGetPathFile(const aPath: string; var aFileName: string): Boolean;
+    function TryGetPathFile(const aPathRelative: string; var aFileName: string): Boolean;
     procedure SetTrackByLocale;
     function GetState: TVLCPlayerState;
 
@@ -96,7 +96,10 @@ var
 
 implementation
 uses
-  KM_Render, KM_RenderTypes, KM_RenderUI, dglOpenGL, KM_ResLocales, KM_GameApp, KM_GameSettings, KM_Music, KM_Sound;
+  KM_Render, KM_RenderTypes, KM_RenderUI, dglOpenGL, KM_ResLocales,
+  KM_GameApp, KM_GameSettings,
+  KM_Music, KM_Sound,
+  KM_Defaults;
 
 const
   FADE_MUSIC_TIME   = 500; // Music fade time, in ms
@@ -194,11 +197,10 @@ begin
   if Self = nil then Exit;
   if not fPlayerEnabled then Exit;
 {$IFDEF VIDEOS}
-  if not gGameSettings.VideoOn then
-    Exit;
+  if not gGameSettings.Video.Enabled then Exit;
 
-  if TryGetPathFile(aCampaignPath + aVideoName, path) or
-    TryGetPathFile(VIDEOFILE_PATH + aVideoName, path) then
+  if TryGetPathFile(ExtractRelativePath(ExeDir, aCampaignPath) + aVideoName, path)
+  or TryGetPathFile(VIDEOFILE_PATH + aVideoName, path) then
     AddVideoToList(path);
 {$ENDIF}
 end;
@@ -214,14 +216,14 @@ begin
   if Self = nil then Exit;
   if not fPlayerEnabled then Exit;
 {$IFDEF VIDEOS}
-  if not gGameSettings.VideoOn then
-    Exit;
+  if not gGameSettings.Video.Enabled then Exit;
+
   missionPath := ExtractFilePath(aMissionFile);
   fileName := ExtractFileName(ChangeFileExt(aMissionFile, '')) + '.' + aVideoName;
 
-  if TryGetPathFile(missionPath + fileName, path) or
-    TryGetPathFile(missionPath + aVideoName, path) or
-    TryGetPathFile(VIDEOFILE_PATH + aVideoName, path) then
+  if TryGetPathFile(missionPath + fileName, path)
+  or TryGetPathFile(missionPath + aVideoName, path)
+  or TryGetPathFile(VIDEOFILE_PATH + aVideoName, path) then
     AddVideoToList(path);
 {$ENDIF}
 end;
@@ -236,10 +238,10 @@ begin
   if Self = nil then Exit;
   if not fPlayerEnabled then Exit;
 {$IFDEF VIDEOS}
-  if not gGameSettings.VideoOn then
-    Exit;
-  if TryGetPathFile(aVideoName, path) or
-    TryGetPathFile(VIDEOFILE_PATH + aVideoName, path) then
+  if not gGameSettings.Video.Enabled then Exit;
+
+  if TryGetPathFile(aVideoName, path)
+  or TryGetPathFile(VIDEOFILE_PATH + aVideoName, path) then
     AddVideoToList(path, aKind);
 {$ENDIF}
 end;
@@ -297,13 +299,11 @@ begin
     Exit;
 
   case GetState of
-    vlcpsPlaying:
-      begin
-        FTime := libvlc_media_player_get_time(FMediaPlayer);
-        FLenght := libvlc_media_player_get_length(FMediaPlayer);
-      end;
-    vlcpsEnded:
-        Stop;
+    vlcpsPlaying: begin
+                    FTime := libvlc_media_player_get_time(FMediaPlayer);
+                    FLenght := libvlc_media_player_get_length(FMediaPlayer);
+                  end;
+    vlcpsEnded:   Stop;
   end;
 {$ENDIF}
 end;
@@ -311,8 +311,25 @@ end;
 
 procedure TKMVideoPlayer.Paint;
 {$IFDEF VIDEOS}
+
+  procedure FitToScreen(out aWidth, aHeight: Integer);
+  var
+    aspectRatio: Single;
+  begin
+    aspectRatio := FWidth / FHeight;
+    if aspectRatio > FScreenWidth / FScreenHeight then
+    begin
+      aWidth := FScreenWidth;
+      aHeight := Round(FScreenWidth / aspectRatio);
+    end
+    else
+    begin
+      aWidth := Round(FScreenHeight * aspectRatio);
+      aHeight := FScreenHeight;
+    end;
+  end;
+
 var
-  aspectRatio: Single;
   width, height: Integer;
 {$ENDIF}
 begin
@@ -327,24 +344,17 @@ begin
     FCriticalSection.Leave;
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    if gGameSettings.VideoStretch then
-    begin
-      aspectRatio := FWidth / FHeight;
-      if aspectRatio > FScreenWidth / FScreenHeight then
-      begin
-        width := FScreenWidth;
-        height := Round(FScreenWidth / aspectRatio);
-      end
-      else
-      begin
-        width := Round(FScreenHeight * aspectRatio);
-        height := FScreenHeight;
-      end;
-    end
+    if gGameSettings.Video.VideoStretch then
+      FitToScreen(width, height)
     else
     begin
-      width := FWidth;
-      height := FHeight;
+      if (FWidth < FScreenWidth) and (FHeight < FScreenHeight) then
+      begin
+        width := FWidth;
+        height := FHeight;
+      end
+      else
+        FitToScreen(width, height);
     end;
 
     TKMRenderUI.WriteTexture((FScreenWidth - width) div 2, (FScreenHeight - height) div 2, width, height, FTexture, $FFFFFFFF);
@@ -516,7 +526,7 @@ begin
       //libvlc_media_player_set_hwnd(FMediaPlayer, Pointer(FPanel.Handle));
       libvlc_media_player_play(FMediaPlayer);
       SetTrackByLocale;
-      libvlc_audio_set_volume(FMediaPlayer, Round(gGameSettings.VideoVolume * 100));
+      libvlc_audio_set_volume(FMediaPlayer, Round(gGameSettings.Video.VideoVolume * 100));
     end
     else
       Stop;
@@ -612,7 +622,7 @@ end;
 
 
 {$IFDEF VIDEOS}
-function TKMVideoPlayer.TryGetPathFile(const aPath: string; var aFileName: string): Boolean;
+function TKMVideoPlayer.TryGetPathFile(const aPathRelative: string; var aFileName: string): Boolean;
 var
   I: Integer;
   searchRec: TSearchRec;
@@ -626,8 +636,8 @@ begin
   Result := False;
   aFileName := '';
 
-  path := ExtractFilePath(aPath);
-  if not DirectoryExists(ExtractFilePath(ParamStr(0)) + path) then
+  path := ExtractFilePath(aPathRelative);
+  if not DirectoryExists(ExeDir + path) then
     Exit;
 
   localePostfixes := TStringList.Create;
@@ -637,7 +647,7 @@ begin
     localePostfixes.Add('.' + UnicodeString(gResLocales.DefaultLocale));
     localePostfixes.Add('');
 
-    fileName := ExtractFileName(aPath);
+    fileName := ExtractFileName(aPathRelative);
     for I := 0 to localePostfixes.Count - 1 do
     begin
       try

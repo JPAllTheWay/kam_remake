@@ -30,6 +30,7 @@ type
     fBlockPointerOperations: Boolean;
 
     fOnRecalcMapCRC: TEvent;
+    fOnSetVisibleLayers: TEvent;
 
     // Do not saved fields
     // fMissionFullFilePath is not saved, so its only available when player start game, f.e. in the MapEditor
@@ -47,8 +48,9 @@ type
     procedure SetBlockPointer(aBlockPointer: Boolean);
     function GetMapFullCRC: Cardinal;
     function GetMapSimpleCRC: Cardinal;
+    procedure SetVisibleLayers(const aValue: TKMMapVisibleLayerSet);
   public
-    constructor Create(aGameMode: TKMGameMode; aOnRecalcMapCRC: TEvent; out aSetGameTickEvent: TCardinalEvent;
+    constructor Create(aGameMode: TKMGameMode; aOnRecalcMapCRC, aOnSetVisibleLayers: TEvent; out aSetGameTickEvent: TCardinalEvent;
                        out aSetGameTickFracEvent: TSingleEvent; out aSetGameModeEvent: TKMGameModeSetEvent;
                        out aSetMissionFileSP: TUnicodeStringEvent; out aSetBlockPointer: TBooleanEvent);
     destructor Destroy; override;
@@ -57,7 +59,7 @@ type
     property MissionMode: TKMissionMode read fMissionMode write fMissionMode;
     property Tick: Cardinal read fTick;
     property TickFrac: Single read fTickFrac;
-    property VisibleLayers: TKMMapVisibleLayerSet read fVisibleLayers write fVisibleLayers;
+    property VisibleLayers: TKMMapVisibleLayerSet read fVisibleLayers write SetVisibleLayers;
 
     property Name: UnicodeString read fName write fName;
     property MapSimpleCRC: Cardinal read GetMapSimpleCRC write fMapSimpleCRC;
@@ -110,13 +112,15 @@ uses
 
 
 { TKMGameParams }
-constructor TKMGameParams.Create(aGameMode: TKMGameMode; aOnRecalcMapCRC: TEvent; out aSetGameTickEvent: TCardinalEvent;
-                                 out aSetGameTickFracEvent: TSingleEvent; out aSetGameModeEvent: TKMGameModeSetEvent;
-                                 out aSetMissionFileSP: TUnicodeStringEvent; out aSetBlockPointer: TBooleanEvent);
+constructor TKMGameParams.Create(aGameMode: TKMGameMode; aOnRecalcMapCRC, aOnSetVisibleLayers: TEvent;
+                                 out aSetGameTickEvent: TCardinalEvent; out aSetGameTickFracEvent: TSingleEvent;
+                                 out aSetGameModeEvent: TKMGameModeSetEvent; out aSetMissionFileSP: TUnicodeStringEvent;
+                                 out aSetBlockPointer: TBooleanEvent);
 begin
   inherited Create;
 
   fOnRecalcMapCRC := aOnRecalcMapCRC;
+  fOnSetVisibleLayers := aOnSetVisibleLayers;
 
   fVisibleLayers := [mlObjects, mlHouses, mlUnits, mlOverlays];
 
@@ -155,7 +159,7 @@ end;
 
 function TKMGameParams.GetDynamicFOW: Boolean;
 begin
-  if Self = nil then Exit(DYNAMIC_FOG_OF_WAR);
+  if Self = nil then Exit(FEAT_DYNAMIC_FOG_OF_WAR);
   
   Result := fDynamicFOW;
 end;
@@ -229,6 +233,15 @@ end;
 procedure TKMGameParams.SetTickFrac(aGameTickFrac: Single);
 begin
   fTickFrac := aGameTickFrac;
+end;
+
+
+procedure TKMGameParams.SetVisibleLayers(const aValue: TKMMapVisibleLayerSet);
+begin
+  fVisibleLayers := aValue;
+
+  if Assigned(fOnSetVisibleLayers) then
+    fOnSetVisibleLayers;
 end;
 
 

@@ -83,6 +83,7 @@ type
 
 const
   MAPED_GROUP_MAX_CNT = 200; // Max number of units in group
+  UNIT_REMOVE_TAG = 255; // Tag id for remove unit button
 
 implementation
 

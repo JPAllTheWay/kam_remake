@@ -23,6 +23,7 @@ type
 
 implementation
 uses
+  KM_Entity,
   KM_HandsCollection, KM_Game;
 
 
@@ -48,7 +49,7 @@ end;
 procedure TKMTaskSelfTrain.SyncLoad;
 begin
   inherited;
-  fSchool := TKMHouseSchool(gHands.GetHouseByUID(Cardinal(fSchool)));
+  fSchool := TKMHouseSchool(gHands.GetHouseByUID(Integer(fSchool)));
 end;
 
 

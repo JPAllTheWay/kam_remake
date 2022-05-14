@@ -39,18 +39,18 @@ type
 
     fBalanceText: UnicodeString;
 
-    procedure RecruitSoldiers();
-    procedure CheckGroupsState();
-    procedure CheckAttack();
+    procedure RecruitSoldiers;
+    procedure CheckGroupsState;
+    procedure CheckAttack;
     procedure SetAttackRequest(aAttackRequest: TKMAttackRequest);
 
-    function CombineBalanceStrings(): UnicodeString;
+    function CombineBalanceStrings: UnicodeString;
   public
     constructor Create(aPlayer: TKMHandID; aSetup: TKMHandAISetup);
     destructor Destroy; override;
     procedure Save(SaveStream: TKMemoryStream);
     procedure Load(LoadStream: TKMemoryStream);
-    procedure SyncLoad();
+    procedure SyncLoad;
 
     property AttackNew: TKMArmyAttackNew read fAttackNew;
     property Defence: TKMArmyDefence read fDefence write fDefence;
@@ -59,18 +59,20 @@ type
 
     property ArmyVectorFieldScanHouses: TKMHouseTypeSet read fArmyVectorFieldScanHouses write fArmyVectorFieldScanHouses;
 
-    procedure AfterMissionInit();
+    procedure AfterMissionInit;
     procedure UpdateState(aTick: Cardinal);
     procedure OwnerUpdate(aPlayer: TKMHandID);
     procedure WarriorEquipped(aGroup: TKMUnitGroup);
 
-    procedure Paint();
+    procedure Paint;
   end;
 
 
 implementation
 uses
-  KM_Game, KM_GameParams, KM_Hand, KM_HandsCollection, KM_Terrain,
+  KM_Game, KM_GameParams,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Terrain,
   KM_HouseBarracks,
   KM_CommonUtils,
   KM_DevPerfLog, KM_DevPerfLogTypes,
@@ -96,7 +98,7 @@ begin
 end;
 
 
-destructor TKMArmyManagement.Destroy();
+destructor TKMArmyManagement.Destroy;
 begin
   fAttackNew.Free;
   fDefence.Free;
@@ -162,17 +164,17 @@ begin
 end;
 
 
-procedure TKMArmyManagement.SyncLoad();
+procedure TKMArmyManagement.SyncLoad;
 begin
-  fAttackNew.SyncLoad();
-  fDefence.SyncLoad();
+  fAttackNew.SyncLoad;
+  fDefence.SyncLoad;
 end;
 
 
-procedure TKMArmyManagement.AfterMissionInit();
+procedure TKMArmyManagement.AfterMissionInit;
 begin
-  fAttackNew.AfterMissionInit();
-  fDefence.AfterMissionInit();
+  fAttackNew.AfterMissionInit;
+  fDefence.AfterMissionInit;
 end;
 
 
@@ -194,16 +196,16 @@ begin
 end;
 
 
-procedure TKMArmyManagement.RecruitSoldiers();
+procedure TKMArmyManagement.RecruitSoldiers;
   function CanEquipIron: Boolean;
   begin
     Result := not (fSetup.ArmyType = atLeather)
-              AND (fSetup.UnlimitedEquip or gGame.CheckTime(fLastEquippedTimeIron + fSetup.EquipRateIron));
+              and (fSetup.UnlimitedEquip or gGame.CheckTime(fLastEquippedTimeIron + fSetup.EquipRateIron));
   end;
   function CanEquipLeather: Boolean;
   begin
     Result := not (fSetup.ArmyType = atIron)
-              AND (fSetup.UnlimitedEquip or gGame.CheckTime(fLastEquippedTimeLeather + fSetup.EquipRateLeather));
+              and (fSetup.UnlimitedEquip or gGame.CheckTime(fLastEquippedTimeLeather + fSetup.EquipRateLeather));
   end;
 var
   H: TKMHouse;
@@ -216,10 +218,10 @@ var
 begin
   // Peace time; Max soldiers limit reached; cannot equip; no Barracks
   if gGame.IsPeaceTime
-    OR ((fSetup.MaxSoldiers <> -1) AND (gHands[fOwner].Stats.GetArmyCount >= fSetup.MaxSoldiers))
-    OR (not CanEquipIron AND not CanEquipLeather)
-    OR (gHands[fOwner].Stats.GetHouseQty(htBarracks) = 0)
-    OR (fDefence.Count = 0) then
+  or ((fSetup.MaxSoldiers <> -1) and (gHands[fOwner].Stats.GetArmyCount >= fSetup.MaxSoldiers))
+  or (not CanEquipIron and not CanEquipLeather)
+  or (gHands[fOwner].Stats.GetHouseQty(htBarracks) = 0)
+  or (fDefence.Count = 0) then
     Exit;
 
   // Take required warriors from CityManagement (-> implemented consideration of required units + save time)
@@ -253,7 +255,7 @@ begin
       repeat
         GT := TKMGroupType(GROUP_TYPE_MIN_OFF + KaMRandom(4, 'TKMArmyManagement.RecruitSoldiers')); //Pick random from overall count
         Inc(L);
-      until (GroupReq[GT] > 0) OR (L > 9); // Limit number of attempts to guarantee it doesn't loop forever
+      until (GroupReq[GT] > 0) or (L > 9); // Limit number of attempts to guarantee it doesn't loop forever
 
       if (GroupReq[GT] = 0) then
         Continue; // Don't train
@@ -263,15 +265,17 @@ begin
         UT := AI_TROOP_TRAIN_ORDER[GT, L];
         if (UT <> utNone) then
         begin
-          if CanEquipIron AND (UT in WARRIORS_IRON) then
+          if CanEquipIron and (UT in WARRIORS_IRON) then
             pEquippedTime := @fLastEquippedTimeIron
-          else if CanEquipLeather AND not (UT in WARRIORS_IRON) then
+          else
+          if CanEquipLeather and not (UT in WARRIORS_IRON) then
             pEquippedTime := @fLastEquippedTimeLeather
           else
             Continue;
+
           while Barracks[K].CanEquip(UT)
-            AND (GroupReq[GT] > 0)
-            AND (  ( fSetup.MaxSoldiers = -1 ) OR ( gHands[fOwner].Stats.GetArmyCount < fSetup.MaxSoldiers )  ) do
+          and (GroupReq[GT] > 0)
+          and ((fSetup.MaxSoldiers = -1) or (gHands[fOwner].Stats.GetArmyCount < fSetup.MaxSoldiers)) do
           begin
             Barracks[K].Equip(UT, 1);
             Dec(GroupReq[GT]);
@@ -284,7 +288,7 @@ end;
 
 
 //Check army food level and positioning
-procedure TKMArmyManagement.CheckGroupsState();
+procedure TKMArmyManagement.CheckGroupsState;
 var
   K: Integer;
   Group: TKMUnitGroup;
@@ -326,7 +330,7 @@ begin
 end;
 
 
-procedure TKMArmyManagement.CheckAttack();
+procedure TKMArmyManagement.CheckAttack;
 type
   TKMAvailableGroups = record
     Count: Word;
@@ -432,8 +436,8 @@ type
     //Find target
     case aTarget of
       attClosestUnit:                  TargetUnit := gHands.GetClosestUnit(aGroup.Position, fOwner, atEnemy);
-      attClosestBuildingFromArmy:      TargetHouse := gHands.GetClosestHouse(aGroup.Position, fOwner, atEnemy, TARGET_HOUSES, false);
-      attClosestBuildingFromStartPos:  TargetHouse := gHands.GetClosestHouse(fSetup.StartPosition, fOwner, atEnemy, TARGET_HOUSES, false);
+      attClosestBuildingFromArmy:      TargetHouse := gHands.GetClosestHouse(aGroup.Position, fOwner, atEnemy, TARGET_HOUSES, False);
+      attClosestBuildingFromStartPos:  TargetHouse := gHands.GetClosestHouse(fSetup.StartPosition, fOwner, atEnemy, TARGET_HOUSES, False);
       attCustomPosition:
       begin
         TargetHouse := gHands.HousesHitTest(aCustomPos.X, aCustomPos.Y);
@@ -463,7 +467,7 @@ type
       fDefence.ReleaseGroup(aAG.GroupArr[K]);
 
     fAttackNew.AddGroups(aAG.GroupArr);
-    //fAttackNew.AddGroups( fDefence.ReleaseAllGroups() );
+    //fAttackNew.AddGroups( fDefence.ReleaseAllGroups );
   end;
 const
   MIN_DEF_RATIO = 1.2;
@@ -481,7 +485,7 @@ begin
   begin
     fAttackRequest.Active := False;
     // Check defences and comparison of strength
-    DefRatio := fDefence.DefenceStatus();
+    DefRatio := fDefence.DefenceStatus;
     with fAttackRequest do
     begin
       // Exit if AI has NOT enough soldiers for defences in the FFA mode
@@ -549,10 +553,10 @@ begin
     begin
       if not gGame.IsPeaceTime then
       begin
-        CheckAttack();
-        RecruitSoldiers();
+        CheckAttack;
+        RecruitSoldiers;
       end;
-      CheckGroupsState();
+      CheckGroupsState;
       fAttackNew.UpdateState(aTick);
       fDefence.UpdateState(aTick);
     end;
@@ -564,7 +568,7 @@ begin
 end;
 
 
-function TKMArmyManagement.CombineBalanceStrings(): UnicodeString;
+function TKMArmyManagement.CombineBalanceStrings: UnicodeString;
 begin
   Result := fBalanceText;
   fAttackNew.LogStatus(Result);
@@ -572,10 +576,10 @@ begin
 end;
 
 
-procedure TKMArmyManagement.Paint();
+procedure TKMArmyManagement.Paint;
 begin
-  fAttackNew.Paint();
-  fDefence.Paint();
+  fAttackNew.Paint;
+  fDefence.Paint;
 end;
 
 

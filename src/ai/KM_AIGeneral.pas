@@ -51,8 +51,9 @@ type
 implementation
 uses
   Classes, Math,
+  KM_Entity,
   KM_Game, KM_GameParams,
-  KM_Hand, KM_HandsCollection, KM_HandTypes,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
   KM_Terrain, KM_AIFields,
   KM_Houses, KM_HouseBarracks,
   KM_ResHouses, KM_CommonUtils, KM_DevPerfLog, KM_DevPerfLogTypes,
@@ -61,7 +62,7 @@ uses
 
 
 const
-  //For compatibility with KaM these must be false. We can add a !REMAKE_AI command later
+  //For compatibility with KaM these must be False. We can add a !REMAKE_AI command later
   //to make them more "intelligent", but for now these are required for the campaigns to be playable.
 
   //On the other hand, no need to reproduce KaM's flaws, so fill closest defence
@@ -170,7 +171,7 @@ begin
   fDefencePositions.SyncLoad;
 
   for uid in fUnitsEquipOrdered.Keys do
-    fUnitsEquipOrdered[uid] := TKMUnitWarrior(gHands.GetUnitByUID(Cardinal(uid)));
+    fUnitsEquipOrdered[uid] := TKMUnitWarrior(gHands.GetUnitByUID(Integer(uid)));
 end;
 
 
@@ -673,8 +674,8 @@ begin
   //Find target
   case aTarget of
     attClosestUnit:                  TargetUnit := gHands.GetClosestUnit(aGroup.Position, fOwner, atEnemy);
-    attClosestBuildingFromArmy:      TargetHouse := gHands.GetClosestHouse(aGroup.Position, fOwner, atEnemy, TARGET_HOUSES, false);
-    attClosestBuildingFromStartPos:  TargetHouse := gHands.GetClosestHouse(fSetup.StartPosition, fOwner, atEnemy, TARGET_HOUSES, false);
+    attClosestBuildingFromArmy:      TargetHouse := gHands.GetClosestHouse(aGroup.Position, fOwner, atEnemy, TARGET_HOUSES, False);
+    attClosestBuildingFromStartPos:  TargetHouse := gHands.GetClosestHouse(fSetup.StartPosition, fOwner, atEnemy, TARGET_HOUSES, False);
     attCustomPosition:               begin
                                         TargetHouse := gHands.HousesHitTest(aCustomPos.X, aCustomPos.Y);
                                         if (TargetHouse <> nil) and

@@ -6,7 +6,8 @@ uses
 
 type
   TKMUnitVisualState = record
-    PosF: TKMPointF;
+  public
+    PositionF: TKMPointF; // Precise unit position
     Dir: TKMDirection;
     SlideX, SlideY: Single;
     Action: TKMUnitActionType;
@@ -45,12 +46,14 @@ uses
 procedure TKMUnitVisualState.SetFromUnit(aUnit: TObject);
 var
   U: TKMUnit;
+  slide: TKMPointF;
 begin
   U := TKMUnit(aUnit);
-  PosF := U.PositionF;
+  PositionF := U.PositionF;
   Dir := U.Direction;
-  SlideX := U.GetSlide(axX);
-  SlideY := U.GetSlide(axY);
+  slide := U.GetSlides;
+  SlideX := slide.X;
+  SlideY := slide.Y;
   AnimStep := U.AnimStep;
   AnimFraction := 0.0;
 
@@ -95,7 +98,7 @@ begin
   // Special case for a unit who just started exiting the house
   // In that case fPrev slide was not calculated with door slide consideration
   // and thus fPrev.Slide would be 0 in the most cases (or in all cases)
-  // That will make unit 'jump' from fPrev.PosF to fCurr.PosF + fCurr.Slide, which looks very bad
+  // That will make unit 'jump' from fPrev.PositionF to fCurr.PositionF + fCurr.Slide, which looks very bad
   if not fPrev.IsActGoInOutStarted
     and fCurr.IsActGoInOutStarted
     and (fPrev.InHouseType <> htNone) then
@@ -105,7 +108,7 @@ begin
     prevSlideY := prevSlideY + gResHouses[fPrev.InHouseType].GetDoorwayOffset(axY);
   end;
 
-  Result.PosF := KMLerp(fCurr.PosF, fPrev.PosF, aLag);
+  Result.PositionF := KMLerp(fCurr.PositionF, fPrev.PositionF, aLag);
   Result.SlideX := KromUtils.Lerp(fCurr.SlideX, prevSlideX, aLag);
   Result.SlideY := KromUtils.Lerp(fCurr.SlideY, prevSlideY, aLag);
   //If there's no lag, use the current state
@@ -119,13 +122,13 @@ begin
   else
   begin
     //Are we moving?
-    if fCurr.PosF <> fPrev.PosF then
+    if fCurr.PositionF <> fPrev.PositionF then
     begin
       //Always interpolate the animation if the unit is moving
       Result.AnimFraction := 1.0 - aLag;
 
       //If we were still and just started moving
-      if fPrevPrev.PosF = fPrev.PosF then
+      if fPrevPrev.PositionF = fPrev.PositionF then
       begin
         //Since the unit starts moving without warning we need to backwards interpolate
         Result.Dir := fCurr.Dir;

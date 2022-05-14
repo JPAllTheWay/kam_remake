@@ -165,7 +165,7 @@ type
 implementation
 uses
   KM_System,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_ResTexts, KM_Game, KM_GameParams, KM_Cursor,
   KM_Resource, KM_ResHouses, KM_TerrainDeposits, KM_ResKeys, KM_GameApp,
   KM_AIDefensePos, KM_RenderUI, KM_ResFonts, KM_CommonClasses, KM_UnitWarrior,
@@ -367,7 +367,7 @@ begin
   fGuiMessage.Free;
   fGuiUnit.Free;
 
-  SHOW_TERRAIN_WIRES := false; //Don't show it in-game if they left it on in MapEd
+  SHOW_TERRAIN_WIRES := False; //Don't show it in-game if they left it on in MapEd
   SHOW_TERRAIN_PASS := 0; //Don't show it in-game if they left it on in MapEd
   inherited;
 end;
@@ -1302,7 +1302,7 @@ var
 begin
   newPos := aHouse.Position <> aPos;
 
-  aHouse.SetPosition(aPos);
+  aHouse.UpdatePosition(aPos);
 
   if newPos then
     gGame.MapEditor.History.MakeCheckpoint(caHouses, Format(gResTexts[TX_MAPED_HISTORY_CHPOINT_MOVE_SMTH],

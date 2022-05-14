@@ -53,7 +53,9 @@ type
 implementation
 uses
   SysUtils, Types, Math,
-  KM_Game, KM_GameParams, KM_Terrain,
+  KM_Entity,
+  KM_Game, KM_GameParams, KM_GameUIDTracker, KM_Terrain,
+  KM_HandTypes, KM_HandEntity,
   KM_HouseInn, KM_HouseMarket, KM_HouseBarracks, KM_HouseSchool, KM_HouseStore, KM_HouseArmorWorkshop, KM_HouseSwineStable,
   KM_HouseTownHall, KM_HouseWoodcutters,
   KM_Resource,
@@ -93,15 +95,15 @@ end;
 
 function TKMHousesCollection.AddToCollection(aHouseType: TKMHouseType; aPosX, aPosY: Integer; aOwner: TKMHandID; aHBS: TKMHouseBuildState): TKMHouse;
 var
-  uid: Cardinal;
+  uid: Integer;
 begin
-  uid := gGame.GetNewUID;
+  uid := gUIDTracker.GetNewUID;
 
   case aHouseType of
     htSwine,
     htStables:       Result := TKMHouseSwineStable.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htInn:           Result := TKMHouseInn.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
-    htMarket:   Result := TKMHouseMarket.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
+    htMarket:        Result := TKMHouseMarket.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htSchool:        Result := TKMHouseSchool.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htBarracks:      Result := TKMHouseBarracks.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htTownHall:      Result := TKMHouseTownHall.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
@@ -386,7 +388,7 @@ begin
       htSwine,
       htStables:       H := TKMHouseSwineStable.Load(LoadStream);
       htInn:           H := TKMHouseInn.Load(LoadStream);
-      htMarket:   H := TKMHouseMarket.Load(LoadStream);
+      htMarket:        H := TKMHouseMarket.Load(LoadStream);
       htSchool:        H := TKMHouseSchool.Load(LoadStream);
       htBarracks:      H := TKMHouseBarracks.Load(LoadStream);
       htStore:         H := TKMHouseStore.Load(LoadStream);

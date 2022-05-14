@@ -79,7 +79,7 @@ type
   end;
 
 
-  TKMUnit =  class abstract(TKMHandEntityPointer<TKMUnit>)
+  TKMUnit = class abstract(TKMHandEntityPointer<TKMUnit>)
   protected //Accessible for child classes
     fType: TKMUnitType;
     fTask: TKMUnitTask;
@@ -135,10 +135,9 @@ type
     function GetInHouse: TKMHouse;
   protected
     function GetInstance: TKMUnit; override;
-    function GetPosition: TKMPoint; override;
-    function GetPositionF: TKMPointF; override;
-    procedure SetPositionF(const aPositionF: TKMPointF); override;
-    function IsSelectableImpl: Boolean; override;
+    function GetPositionForDisplayF: TKMPointF; override;
+    procedure SetPositionF(const aPositionF: TKMPointF);
+    function GetIsSelectable: Boolean; override;
   public
     AnimStep: Integer;
     IsExchanging: Boolean; //Current walk is an exchange, used for sliding
@@ -167,9 +166,11 @@ type
 
     procedure CloseUnit(aRemoveTileUsage: Boolean = True); virtual;
 
+    property PositionF: TKMPointF read fPositionF write SetPositionF;
+    property Position: TKMPoint read fPositionRound;
     property PositionPrev: TKMPoint read fPositionPrev;
     property PositionNext: TKMPoint read fPositionNext write SetPositionNext;
-    procedure SetUnitPosition(aPos: TKMPoint);
+    procedure SetUnitPosition(const aPos: TKMPoint);
 
     property Direction: TKMDirection read fDirection write SetDirection;
     property CurrentHitPoints: Byte read fHitPoints;
@@ -181,7 +182,7 @@ type
     procedure SetActionStay(aTimeToStay: Integer; aAction: TKMUnitActionType; aStayStill: Boolean = True; aStillFrame: Byte = 0; aStep: Integer = 0);
     procedure SetActionStorm(aRow: Integer);
     procedure SetActionSteer;
-    procedure SetActionLockedStay(aTimeToStay: Integer; aAction: TKMUnitActionType; aStayStill: Boolean=true; aStillFrame: Byte = 0; aStep: Integer = 0);
+    procedure SetActionLockedStay(aTimeToStay: Integer; aAction: TKMUnitActionType; aStayStill: Boolean=True; aStillFrame: Byte = 0; aStep: Integer = 0);
 
     procedure SetActionWalk(const aLocB: TKMPoint; aActionType: TKMUnitActionType; aDistance: Single; aTargetUnit: TKMUnit;
                             aTargetHouse: TKMHouse; aAvoidLockedByMovementCost: Boolean = True);
@@ -246,6 +247,7 @@ type
     procedure Walk(const aFrom, aTo: TKMPoint);
     function GetActivityText: UnicodeString; virtual;
     function GetSlide(aCheck: TKMCheckAxis): Single;
+    function GetSlides: TKMPointF;
     function PathfindingShouldAvoid: Boolean; virtual;
 
     function ObjToString(const aSeparator: String = '|'): String; override;
@@ -334,21 +336,38 @@ type
   end;
 
 
-  //Animals
+  // Animals
   TKMUnitAnimal = class(TKMUnit)
-  private
-    fFishCount: Byte; //1-5
   protected
-    function IsSelectableImpl: Boolean; override;
+    function GetIsSelectable: Boolean; override;
+    function GetPaintActionType(aAct: TKMUnitActionType): TKMUnitActionType; virtual;
   public
     constructor Create(aID: Cardinal; aUnitType: TKMUnitType; const aLoc: TKMPointDir; aOwner: TKMHandID); overload;
-    constructor Load(LoadStream: TKMemoryStream); override;
-    property FishCount: byte read fFishCount;
-    function ReduceFish: Boolean;
+
     function IsAnimal: Boolean; override;
-    procedure Save(SaveStream: TKMemoryStream); override;
+
     function UpdateState: Boolean; override;
     procedure Paint(aTickLag: Single); override;
+  end;
+
+
+  TKMUnitFish = class(TKMUnitAnimal)
+  private
+    fFishCount: Byte; //1-255
+  protected
+    function GetPaintActionType(aAct: TKMUnitActionType): TKMUnitActionType; override;
+  public
+    constructor Create(aID: Cardinal; const aLoc: TKMPointDir; aOwner: TKMHandID); overload;
+    constructor Load(LoadStream: TKMemoryStream); override;
+
+    property FishCount: byte read fFishCount;
+    function ReduceFish: Boolean;
+
+    procedure Save(SaveStream: TKMemoryStream); override;
+
+    procedure Paint(aTickLag: Single); override;
+
+    class function GetFishActionType(aFishCount: Integer): TKMUnitActionType;
   end;
 
 const
@@ -358,6 +377,7 @@ const
 implementation
 uses
   TypInfo,
+  KM_Entity,
   KM_Game, KM_GameParams, KM_RenderPool, KM_RenderAux, KM_ResTexts,
   KM_HandsCollection, KM_UnitWarrior, KM_Resource, KM_ResUnits,
   KM_Hand, KM_MapEdTypes,
@@ -384,6 +404,16 @@ uses
   KM_GameTypes,
   KM_HandTypes,
   KM_CommonExceptions;
+
+
+//Pixel positions (waypoints) for sliding around other units. Uses a lookup to save on-the-fly calculations.
+//Follows a sort of a bell curve (normal distribution) shape for realistic acceleration/deceleration.
+//I tweaked it by hand to look similar to KaM.
+//1st row for straight, 2nd for diagonal sliding
+const
+  SLIDE_LOOKUP: array[1..2, 0..Round(CELL_SIZE_PX * 1.42)] of Byte = ( //1.42 instead of 1.41 because we want to round up just in case (it was causing a crash because Round(40*sqrt(2)) = 57 but Round(40*1.41) = 56)
+    (0,0,0,0,0,0,1,1,2,2,3,3,4,5,6,7,7,8,8,9,9,9,9,8,8,7,7,6,5,4,3,3,2,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+    (0,0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,3,3,4,4,4,5,5,5,6,6,6,7,7,7,7,6,6,6,5,5,5,4,4,4,3,3,2,2,2,1,1,1,1,0,0,0,0,0,0,0,0,0));
 
 
 { TKMCivilUnit }
@@ -469,8 +499,8 @@ begin
   V := fVisual.GetLerp(aTickLag);
   act := V.Action;
 
-  xPaintPos := V.PosF.X + UNIT_OFF_X + V.SlideX;
-  yPaintPos := V.PosF.Y + UNIT_OFF_Y + V.SlideY;
+  xPaintPos := V.PositionF.X + UNIT_OFF_X + V.SlideX;
+  yPaintPos := V.PositionF.Y + UNIT_OFF_Y + V.SlideY;
 
   ID := UID * Byte(not (act in [uaDie, uaEat]));
 
@@ -822,19 +852,19 @@ begin
   V := fVisual.GetLerp(aTickLag);
   act := V.Action;
 
-  xPaintPos := V.PosF.X + UNIT_OFF_X + V.SlideX;
-  yPaintPos := V.PosF.Y + UNIT_OFF_Y + V.SlideY;
+  xPaintPos := V.PositionF.X + UNIT_OFF_X + V.SlideX;
+  yPaintPos := V.PositionF.Y + UNIT_OFF_Y + V.SlideY;
 
   ID := UID * Byte(not (act in [uaDie, uaEat]));
 
-  gRenderPool.AddUnit(UnitType, ID, act, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor, true);
+  gRenderPool.AddUnit(UnitType, ID, act, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor, True);
 
   if fTask is TKMTaskDie then Exit; //Do not show unnecessary arms
 
   if Carry <> wtNone then
     gRenderPool.AddUnitCarry(Carry, ID, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor)
   else
-    gRenderPool.AddUnit(UnitType, ID, uaWalkArm, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor, false);
+    gRenderPool.AddUnit(UnitType, ID, uaWalkArm, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor, False);
 
   if fThought <> thNone then
     gRenderPool.AddUnitThought(fType, act, V.Dir, fThought, xPaintPos, yPaintPos);
@@ -970,12 +1000,12 @@ begin
   if fAction = nil then Exit;
   V := fVisual.GetLerp(aTickLag);
 
-  xPaintPos := V.PosF.X + UNIT_OFF_X + V.SlideX;
-  yPaintPos := V.PosF.Y + UNIT_OFF_Y + V.SlideY;
+  xPaintPos := V.PositionF.X + UNIT_OFF_X + V.SlideX;
+  yPaintPos := V.PositionF.Y + UNIT_OFF_Y + V.SlideY;
 
   ID := UID * Byte(not (V.Action in [uaDie, uaEat]));
 
-  gRenderPool.AddUnit(UnitType, ID, V.Action, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor, true);
+  gRenderPool.AddUnit(UnitType, ID, V.Action, V.Dir, V.AnimStep, V.AnimFraction, xPaintPos, yPaintPos, gHands[Owner].GameFlagColor, True);
 
   if fThought <> thNone then
     gRenderPool.AddUnitThought(fType, V.Action, V.Dir, fThought, xPaintPos, yPaintPos);
@@ -1006,10 +1036,6 @@ end;
 constructor TKMUnitAnimal.Create(aID: Cardinal; aUnitType: TKMUnitType; const aLoc: TKMPointDir; aOwner: TKMHandID);
 begin
   inherited Create(aID, aUnitType, aLoc, aOwner, nil);
-
-  //Always start with 5 fish in the group
-  if aUnitType = utFish then
-    fFishCount := 5;
 end;
 
 
@@ -1019,39 +1045,9 @@ begin
 end;
 
 
-function TKMUnitAnimal.IsSelectableImpl: Boolean;
+function TKMUnitAnimal.GetIsSelectable: Boolean;
 begin
   Result := False;
-end;
-
-
-constructor TKMUnitAnimal.Load(LoadStream: TKMemoryStream);
-begin
-  inherited;
-
-  LoadStream.CheckMarker('UnitAnimal');
-  LoadStream.Read(fFishCount);
-end;
-
-
-function TKMUnitAnimal.ReduceFish: Boolean;
-begin
-  Result := fType = utFish;
-  if not Result then Exit;
-
-  if fFishCount > 1 then
-    Dec(fFishCount)
-  else
-    Kill(HAND_NONE, True, False);
-end;
-
-
-procedure TKMUnitAnimal.Save(SaveStream: TKMemoryStream);
-begin
-  inherited;
-
-  SaveStream.PlaceMarker('UnitAnimal');
-  SaveStream.Write(fFishCount);
 end;
 
 
@@ -1101,26 +1097,28 @@ begin
 end;
 
 
+function TKMUnitAnimal.GetPaintActionType(aAct: TKMUnitActionType): TKMUnitActionType;
+begin
+  Result := aAct;
+end;
+
+
 //For fish the action is the number of fish in the group
 procedure TKMUnitAnimal.Paint(aTickLag: Single);
 var
   V: TKMUnitVisualState;
   act: TKMUnitActionType;
-  xPaintPos, yPaintPos: single;
+  xPaintPos, yPaintPos: Single;
 begin
   inherited;
+
   if fAction = nil then exit;
   V := fVisual.GetLerp(aTickLag);
 
-  Assert((fType <> utFish) or (InRange(fFishCount, 1, 5)));
+  act := GetPaintActionType(V.Action);
 
-  if fType = utFish then
-    act := FISH_COUNT_ACT[fFishCount]
-  else
-    act := V.Action;
-
-  xPaintPos := V.PosF.X + UNIT_OFF_X + V.SlideX;
-  yPaintPos := V.PosF.Y + UNIT_OFF_Y + V.SlideY;
+  xPaintPos := V.PositionF.X + UNIT_OFF_X + V.SlideX;
+  yPaintPos := V.PositionF.Y + UNIT_OFF_Y + V.SlideY;
 
   //Make fish/watersnakes more visible in the MapEd
   if (gGameParams.Mode = gmMapEd) and (fType in [utFish, utWatersnake, utSeastar]) then
@@ -1134,13 +1132,81 @@ begin
 end;
 
 
+{ TKMUnitFish }
+constructor TKMUnitFish.Create(aID: Cardinal; const aLoc: TKMPointDir; aOwner: TKMHandID);
+begin
+  inherited Create(aID, utFish, aLoc, aOwner);
+
+  // Always start with 10 fish in the group
+  fFishCount := FISH_CNT_DEFAULT;
+end;
+
+
+constructor TKMUnitFish.Load(LoadStream: TKMemoryStream);
+begin
+  inherited;
+
+  LoadStream.CheckMarker('UnitFish');
+  LoadStream.Read(fFishCount);
+end;
+
+
+class function TKMUnitFish.GetFishActionType(aFishCount: Integer): TKMUnitActionType;
+begin
+  Result := uaUnknown;
+
+  if aFishCount > 8 then
+    Result := uaWork1
+  else
+    case aFishCount of
+      1,2: Result := uaWalk;
+      3,4: Result := uaWork;
+      5,6: Result := uaSpec;
+      7,8: Result := uaDie;
+    end;
+end;
+
+
+function TKMUnitFish.GetPaintActionType(aAct: TKMUnitActionType): TKMUnitActionType;
+begin
+  Result := GetFishActionType(fFishCount);
+end;
+
+
+function TKMUnitFish.ReduceFish: Boolean;
+begin
+  Result := fType = utFish;
+  if not Result then Exit;
+
+  if fFishCount > 2 then
+    fFishCount := EnsureRange(fFishCount - 2, 0, FISH_CNT_MAX)
+  else
+    Kill(HAND_NONE, True, False);
+end;
+
+
+procedure TKMUnitFish.Save(SaveStream: TKMemoryStream);
+begin
+  inherited;
+
+  SaveStream.PlaceMarker('UnitFish');
+  SaveStream.Write(fFishCount);
+end;
+
+
+procedure TKMUnitFish.Paint(aTickLag: Single);
+begin
+  inherited;
+end;
+
+
 { TKMUnit }
 constructor TKMUnit.Create(aID: Cardinal; aUnitType: TKMUnitType; const aLoc: TKMPointDir; aOwner: TKMHandID; aInHouse: TKMHouse);
 begin
   inherited Create(etUnit, aID, aOwner);
   fTicker       := aID; //Units update states will be spread more evenly that way
-  fIsDead       := false;
-  fKillASAP     := false;
+  fIsDead       := False;
+  fKillASAP     := False;
   fThought      := thNone;
   fHome         := nil;
   fInHouse      := nil;
@@ -1298,8 +1364,8 @@ begin
   if fAction <> nil then
     fAction.SyncLoad;
 
-  fHome := gHands.GetHouseByUID(cardinal(fHome));
-  fInHouse := gHands.GetHouseByUID(cardinal(fInHouse));
+  fHome := gHands.GetHouseByUID(Integer(fHome));
+  fInHouse := gHands.GetHouseByUID(Integer(fInHouse));
 
   //Create last so it can initialise with loaded (and sync-loaded) values
   fVisual := TKMUnitVisual.Create(Self);
@@ -1490,7 +1556,7 @@ begin
 end;
 
 
-procedure TKMUnit.SetUnitPosition(aPos: TKMPoint);
+procedure TKMUnit.SetUnitPosition(const aPos: TKMPoint);
 var
   newPos: Boolean;
 begin
@@ -1622,19 +1688,13 @@ begin
 end;
 
 
-function TKMUnit.GetPosition: TKMPoint;
-begin
-  Result := fPositionRound;
-end;
-
-
 procedure TKMUnit.SetPositionF(const aPositionF: TKMPointF);
 begin
   fPositionF := aPositionF;
 end;
 
 
-function TKMUnit.GetPositionF: TKMPointF;
+function TKMUnit.GetPositionForDisplayF: TKMPointF;
 begin
   Result := fPositionF;
 end;
@@ -2078,7 +2138,7 @@ begin
 end;
 
 
-//Return true if the unit has to be killed due to lack of space
+//Return True if the unit has to be killed due to lack of space
 function TKMUnit.UpdateVisibility: Boolean;
 var
   newCurrPosition: TKMPoint;
@@ -2222,42 +2282,72 @@ end;
 
 
 function TKMUnit.GetSlide(aCheck: TKMCheckAxis): Single;
-//Pixel positions (waypoints) for sliding around other units. Uses a lookup to save on-the-fly calculations.
-//Follows a sort of a bell curve (normal distribution) shape for realistic acceleration/deceleration.
-//I tweaked it by hand to look similar to KaM.
-//1st row for straight, 2nd for diagonal sliding
-const
-  SlideLookup: array[1..2, 0..Round(CELL_SIZE_PX * 1.42)] of byte = ( //1.42 instead of 1.41 because we want to round up just in case (it was causing a crash because Round(40*sqrt(2)) = 57 but Round(40*1.41) = 56)
-    (0,0,0,0,0,0,1,1,2,2,3,3,4,5,6,7,7,8,8,9,9,9,9,8,8,7,7,6,5,4,3,3,2,2,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
-    (0,0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,3,3,4,4,4,5,5,5,6,6,6,7,7,7,7,6,6,6,5,5,5,4,4,4,3,3,2,2,2,1,1,1,1,0,0,0,0,0,0,0,0,0));
 var
-  dY, dX, pixelPos, lookupDiagonal: shortint;
+  dY, dX, pixelPos, lookupDiagonal: ShortInt;
 begin
   Result := 0;
 
-  //When going into a house, units "slide" towards the door when it is not on center
+  // When going into a house, units "slide" towards the door when it is not on center
   if Action is TKMUnitActionGoInOut then
-    Result := Result+TKMUnitActionGoInOut(Action).GetDoorwaySlide(aCheck);
+    Result := Result + TKMUnitActionGoInOut(Action).GetDoorwaySlide(aCheck);
 
-  if (not IsExchanging) or not (Action.ActName in [uanWalkTo, uanGoInOut]) then exit;
+  if not IsExchanging or not (Action.ActName in [uanWalkTo, uanGoInOut]) then Exit;
 
-  //Uses Y because a walk in the Y means a slide in the X
-  dX := sign(PositionNext.X - fPositionF.X);
-  dY := sign(PositionNext.Y - fPositionF.Y);
-  if (aCheck = axX) and (dY = 0) then exit; //Unit is not shifted
-  if (aCheck = axY) and (dX = 0) then exit;
+  // Uses Y because a walk in the Y means a slide in the X
+  dX := Sign(PositionNext.X - fPositionF.X);
+  dY := Sign(PositionNext.Y - fPositionF.Y);
 
-  lookupDiagonal := abs(dX) + abs(dY); //which gives us swith: 1-straight, 2-diagonal.
+  if (aCheck = axX) and (dY = 0) then Exit; // Unit is not shifted
+  if (aCheck = axY) and (dX = 0) then Exit;
 
-  if aCheck = axX then
-  begin
-    pixelPos := Round(abs(fPositionF.Y-PositionPrev.Y)*CELL_SIZE_PX*sqrt(lookupDiagonal)); //Diagonal movement *sqrt(2)
-    Result := Result+(dY*SlideLookup[lookupDiagonal,pixelPos])/CELL_SIZE_PX;
+  lookupDiagonal := Abs(dX) + Abs(dY); // Which gives us swith: 1-straight, 2-diagonal.
+
+  case aCheck of
+    axX:  begin
+            pixelPos := Round(Abs(fPositionF.Y - PositionPrev.Y) * CELL_SIZE_PX * Sqrt(lookupDiagonal)); //Diagonal movement *sqrt(2)
+            Result := Result + (dY * SLIDE_LOOKUP[lookupDiagonal, pixelPos]) / CELL_SIZE_PX;
+          end;
+    axY:  begin
+            pixelPos := Round(Abs(fPositionF.X - PositionPrev.X) * CELL_SIZE_PX * Sqrt(lookupDiagonal)); //Diagonal movement *sqrt(2)
+            Result := Result - (dX * SLIDE_LOOKUP[lookupDiagonal, pixelPos]) / CELL_SIZE_PX;
+          end;
   end;
-  if aCheck = axY then
+end;
+
+
+function TKMUnit.GetSlides: TKMPointF;
+var
+  dY, dX, pixelPos, lookupDiagonal: ShortInt;
+  tmp: Single;
+begin
+  // When going into a house, units "slide" towards the door when it is not on center
+  if Action is TKMUnitActionGoInOut then
+    Result := TKMUnitActionGoInOut(Action).GetDoorwaySlides
+  else
+    Result := KMPointF(0, 0);
+
+  if not IsExchanging or not (Action.ActName in [uanWalkTo, uanGoInOut]) then Exit;
+
+  // Uses Y because a walk in the Y means a slide in the X
+  dX := Sign(PositionNext.X - fPositionF.X);
+  dY := Sign(PositionNext.Y - fPositionF.Y);
+
+  if (dX = 0) and (dY = 0) then Exit; // Unit is not shifted
+
+  lookupDiagonal := Abs(dX) + Abs(dY); // Which gives us swith: 1-straight, 2-diagonal.
+
+  tmp := CELL_SIZE_PX * Sqrt(lookupDiagonal); // Diagonal movement *sqrt(2)
+
+  if dY <> 0 then
   begin
-    pixelPos := Round(abs(fPositionF.X-PositionPrev.X)*CELL_SIZE_PX*sqrt(lookupDiagonal)); //Diagonal movement *sqrt(2)
-    Result := Result-(dX*SlideLookup[lookupDiagonal,pixelPos])/CELL_SIZE_PX;
+    pixelPos := Round(Abs(fPositionF.Y - PositionPrev.Y) * tmp);
+    Result.X := Result.X + (dY * SLIDE_LOOKUP[lookupDiagonal, pixelPos]) / CELL_SIZE_PX;
+  end;
+
+  if dX <> 0 then
+  begin
+    pixelPos := Round(Abs(fPositionF.X - PositionPrev.X) * tmp);
+    Result.Y := Result.Y - (dX * SLIDE_LOOKUP[lookupDiagonal, pixelPos]) / CELL_SIZE_PX;
   end;
 end;
 
@@ -2305,7 +2395,7 @@ begin
 end;
 
 
-function TKMUnit.IsSelectableImpl: Boolean;
+function TKMUnit.GetIsSelectable: Boolean;
 begin
   Result := not IsDeadOrDying;
 end;
@@ -2487,7 +2577,7 @@ begin
 
   UpdateThoughts;
   UpdateHitPoints;
-  if UpdateVisibility then Exit; //incase units home was destroyed. Returns true if the unit was killed due to lack of space
+  if UpdateVisibility then Exit; //incase units home was destroyed. Returns True if the unit was killed due to lack of space
 
   //Shortcut to kill unit in place if it's on an unwalkable tile. We use fNextPosition rather than fCurrPosition
   //because once we have taken a step from a tile we no longer care about it. (fNextPosition matches up with IsUnit in terrain)
@@ -2570,7 +2660,7 @@ begin
     fTask.Paint;
 
   if SHOW_POINTER_DOTS then
-    gRenderAux.UnitPointers(fPositionF.X + 0.5 + GetSlide(axX), fPositionF.Y + 1   + GetSlide(axY), PointerCount);
+    gRenderAux.UnitPointers(fPositionF.X + 0.5 + GetSlide(axX), fPositionF.Y + 1 + GetSlide(axY), PointerCount);
 
   if SHOW_TILE_UNIT then
     gRenderAux.CircleOnTerrain(fPositionF.X - 0.5 + GetSlide(axX), fPositionF.Y - 0.5 + GetSlide(axY), 0.35, GetRandomColorWSeed(UID));
@@ -2614,7 +2704,7 @@ end;
 
 procedure TKMUnitTask.SyncLoad;
 begin
-  fUnit := gHands.GetUnitByUID(cardinal(fUnit));
+  fUnit := gHands.GetUnitByUID(Integer(fUnit));
 end;
 
 
@@ -2716,7 +2806,7 @@ end;
 
 procedure TKMUnitAction.SyncLoad;
 begin
-  fUnit := gHands.GetUnitByUID(cardinal(fUnit));
+  fUnit := gHands.GetUnitByUID(Integer(fUnit));
 end;
 
 

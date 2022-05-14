@@ -195,7 +195,7 @@ begin
                               fUnit.PositionF.Y + dy*Math.min(distance, Abs(walkY)));
 
   Inc(fUnit.AnimStep);
-  StepDone := false; //We are not actually done because now we have just taken another step
+  StepDone := False; //We are not actually done because now we have just taken another step
   Result := arActContinues;
 end;
 

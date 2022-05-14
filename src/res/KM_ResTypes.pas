@@ -271,6 +271,16 @@ type
     );
 
 const
+  EXPORT_SPRITE_ATLASES_LIST: set of TRXType = [
+    rxTrees,
+    rxHouses,
+    rxUnits,
+    rxGui,
+    rxGuiMain,
+    rxCustom,
+    rxTiles
+  ];
+
   //Colors to paint beneath player color areas (flags)
   //The blacker/whighter - the more contrast player color will be
   FLAG_COLOR_DARK = $FF101010;   //Dark-grey (Black)

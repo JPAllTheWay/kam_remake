@@ -126,7 +126,10 @@ var
 implementation
 uses
   Types, TypInfo,
-  KM_Game, KM_GameParams, KM_HandsCollection, KM_Terrain, KM_AIFields,
+  KM_Entity,
+  KM_Game, KM_GameParams,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Terrain, KM_AIFields,
   KM_NavMesh, KM_RenderAux,
   {$IFDEF DEBUG_NewAI}
     KM_CommonUtils,
@@ -209,10 +212,10 @@ end;
 
 procedure TKMCombatGroup.SyncLoad();
 begin
-  fGroup := gHands.GetGroupByUID( Cardinal(fGroup) );
-  fTargetHouse := gHands.GetHouseByUID( Cardinal(fTargetHouse) );
-  fTargetGroup := gHands.GetGroupByUID( Cardinal(fTargetGroup) );
-  fTargetUnit := gHands.GetUnitByUID( Cardinal(fTargetUnit) );
+  fGroup := gHands.GetGroupByUID(Integer(fGroup));
+  fTargetHouse := gHands.GetHouseByUID(Integer(fTargetHouse));
+  fTargetGroup := gHands.GetGroupByUID(Integer(fTargetGroup));
+  fTargetUnit := gHands.GetUnitByUID(Integer(fTargetUnit));
 end;
 
 

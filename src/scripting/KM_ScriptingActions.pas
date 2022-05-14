@@ -239,9 +239,10 @@ type
 implementation
 uses
   TypInfo,
+  KM_Entity,
   KM_AI, KM_AIDefensePos,
   KM_Game, KM_GameParams, KM_GameTypes, KM_FogOfWar,
-  KM_HandsCollection, KM_HandLogistics, KM_HandConstructions,
+  KM_HandsCollection, KM_HandLogistics, KM_HandConstructions, KM_HandEntity,
   KM_HouseBarracks, KM_HouseSchool, KM_HouseStore, KM_HouseMarket, KM_HouseTownHall,
   KM_UnitWarrior,
   KM_UnitGroupTypes,
@@ -436,10 +437,10 @@ end;
 
 
 //* Version: 5057
-//* Set specified player(s) victorious, and all team members of those player(s) if the 2nd parameter TeamVictory is set to true.
+//* Set specified player(s) victorious, and all team members of those player(s) if the 2nd parameter TeamVictory is set to True.
 //* All players who were not set to victorious are set to defeated.
 //* aVictors: Array of player IDs
-//Sets all player IDs in aVictors to victorious, and all their team members if aTeamVictory is true.
+//Sets all player IDs in aVictors to victorious, and all their team members if aTeamVictory is True.
 //All other players are set to defeated.
 procedure TKMScriptActions.PlayerWin(const aVictors: array of Integer; aTeamVictory: Boolean);
 var
@@ -503,7 +504,7 @@ end;
 
 //* Version: 5097
 //* Change whether player1 is allied to player2.
-//* If Compliment is true, then it is set both ways (so also whether player2 is allied to player1)
+//* If Compliment is True, then it is set both ways (so also whether player2 is allied to player1)
 //* aCompliment: Both ways
 procedure TKMScriptActions.PlayerAllianceChange(aHand1, aHand2: Byte; aCompliment, aAllied: Boolean);
 const
@@ -538,7 +539,7 @@ end;
 
 //* Version: 7000+
 //* Change whether player1 is allied to player2.
-//* If Compliment is true, then it is set both ways (so also whether player2 is allied to player1)
+//* If Compliment is True, then it is set both ways (so also whether player2 is allied to player1)
 //* aCompliment: Both ways
 //* aSyncAllyFog: Synchronize allies fogs of war
 procedure TKMScriptActions.PlayerAllianceNFogChange(aHand1, aHand2: Byte; aCompliment, aAllied, aSyncAllyFog: Boolean);
@@ -574,7 +575,7 @@ end;
 
 //* Version: 5165
 //* Add default goals/lost goals for the specified player.
-//* If the parameter buildings is true the goals will be important buildings.
+//* If the parameter buildings is True the goals will be important buildings.
 //* Otherwise it will be troops.
 procedure TKMScriptActions.PlayerAddDefaultGoals(aHand: Byte; aBuildings: Boolean);
 begin
@@ -1356,7 +1357,7 @@ end;
 
 //* Version: 7000+
 //* Remove AI attack by attack UID
-//* Result: true, if attack was succesfully removed, false, if attack was not found
+//* Result: True, if attack was succesfully removed, False, if attack was not found
 function TKMScriptActions.AIAttackRemove(aHand, aAIAttackUID: Integer): Boolean;
 begin
   Result := False;
@@ -1890,7 +1891,7 @@ end;
 
 
 //* Version: 6311
-//* Adds finished field and returns true if field was successfully added
+//* Adds finished field and returns True if field was successfully added
 function TKMScriptActions.GiveField(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -1916,7 +1917,7 @@ end;
 
 
 //* Version: 7000+
-//* Sets field age if tile is corn field, or adds finished field and sets its age if tile is empty, and returns true if this was successfully done
+//* Sets field age if tile is corn field, or adds finished field and sets its age if tile is empty, and returns True if this was successfully done
 //* aStage: 0..6, sets the field growth stage. 0 = empty field; 6 = corn has been cut
 //* aRandomAge: sets FieldAge to random, according to specified stage. Makes fields more realistic
 function TKMScriptActions.GiveFieldAged(aHand, X, Y: Integer; aStage: Byte; aRandomAge: Boolean): Boolean;
@@ -1946,7 +1947,7 @@ end;
 
 
 //* Version: 6311
-//* Adds finished road and returns true if road was successfully added
+//* Adds finished road and returns True if road was successfully added
 function TKMScriptActions.GiveRoad(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -2094,7 +2095,7 @@ end;
 
 
 //* Version: 6311
-//* Adds finished winefield and returns true if winefield was successfully added
+//* Adds finished winefield and returns True if winefield was successfully added
 function TKMScriptActions.GiveWineField(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -2120,7 +2121,7 @@ end;
 
 
 //* Version: 7000+
-//* Sets winefield age if tile is winefield, or adds finished winefield and sets its age if tile is empty, and returns true if this was successfully done
+//* Sets winefield age if tile is winefield, or adds finished winefield and sets its age if tile is empty, and returns True if this was successfully done
 //* aStage: 0..3, sets the field growth stage. 0 = new fruits; 3 = grapes are ready to be harvested; according to WINE_STAGES_COUNT
 //* aRandomAge: sets FieldAge to random, according to specified stage. Makes fields more realistic
 function TKMScriptActions.GiveWineFieldAged(aHand, X, Y: Integer; aStage: Byte; aRandomAge: Boolean): Boolean;
@@ -3741,7 +3742,7 @@ end;
 //* Version: 6587
 //* Sets the tile type and rotation at the specified XY coordinates.
 //* Tile IDs can be seen by hovering over the tiles on the terrain tiles tab in the map editor.
-//* Returns true if the change succeeded or false if it failed.
+//* Returns True if the change succeeded or False if it failed.
 //* The change will fail if it would cause a unit to become stuck or a house/field to be damaged
 //* aType: Tile type (0..255)
 //* aRotation: Tile rotation (0..3)
@@ -3882,7 +3883,7 @@ begin
     for I := Low(aTilesS) to High(aTilesS) do
     begin
       arrElem := StrSplitA(ReplaceStr(String(aTilesS[I]), ' ', ''), ',');
-      parserError := false;
+      parserError := False;
 
       //checking params count, if count is invalid we cannot proceed
       if (Length(arrElem) <> 6) then
@@ -3895,7 +3896,7 @@ begin
         else
         begin
           LogStr(Format('Actions.MapTilesArraySetS: Parameter X = [%s] in line [%s] is not a valid integer.', [arrElem[0], aTilesS[I]]));
-          parserError := true;
+          parserError := True;
         end;
         //checking Y, if Y <= 0 we cannot proceed
         if ((TryStrToInt(string(PChar(arrElem[1])), parsedValue)) and (parsedValue > 0)) then
@@ -3903,7 +3904,7 @@ begin
         else
         begin
           LogStr(Format('Actions.MapTilesArraySetS: Parameter Y = [%s] in line [%s] is not a valid integer.', [arrElem[1], aTilesS[I]]));
-          parserError := true;
+          parserError := True;
         end;
 
         //if X and Y are correctly defined we can proceed with terrain changes
@@ -3987,7 +3988,7 @@ end;
 
 //* Version: 6587
 //* Sets the height of the terrain at the top left corner (vertex) of the tile at the specified XY coordinates.
-//* Returns true if the change succeeded or false if it failed.
+//* Returns True if the change succeeded or False if it failed.
 //* The change will fail if it would cause a unit to become stuck or a house to be damaged
 //* Height: Height (0..100)
 function TKMScriptActions.MapTileHeightSet(X, Y, Height: Integer): Boolean;
@@ -4012,7 +4013,7 @@ end;
 //* Sets the terrain object on the tile at the specified XY coordinates.
 //* Object IDs can be seen in the map editor on the objects tab.
 //* Object 61 is "block walking". To set no object, use object type 255.
-//* Returns true if the change succeeded or false if it failed.
+//* Returns True if the change succeeded or False if it failed.
 //* The change will fail if it would cause a unit to become stuck or a house/field to be damaged
 //* Obj: Object type (0..255)
 function TKMScriptActions.MapTileObjectSet(X, Y, Obj: Integer): Boolean;
@@ -4261,7 +4262,7 @@ end;
 
 //* Version: 5057
 //* Adds a road plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddRoad(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -4301,7 +4302,7 @@ end;
 
 //* Version: 5057
 //* Adds a corn field plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddField(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -4327,7 +4328,7 @@ end;
 
 //* Version: 5057
 //* Adds a wine field plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddWinefield(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -4407,7 +4408,7 @@ end;
 
 //* Version: 5345
 //* Removes house, road or field plans from the specified tile for the specified player
-//* Returns true if the plan was successfully removed or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully removed or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanRemove(aHand, X, Y: Integer): Boolean;
 var
   housePlan: TKMHousePlan;
@@ -4441,7 +4442,7 @@ end;
 
 //* Version: 5057
 //* Adds a road plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddHouse(aHand, aHouseType, X, Y: Integer): Boolean;
 begin
   Result := False;
@@ -4468,7 +4469,7 @@ end;
 
 //* Version: 14000
 //* Adds a road plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddHouseEx(aHand: Integer; aHouseType: TKMHouseType; X, Y: Integer): Boolean;
 begin
   Result := False;
@@ -4607,7 +4608,7 @@ end;
 //* Version: 5057
 //* Makes the specified unit face a certain direction.
 //* Note: Only works on idle units so as not to interfere with game logic and cause crashes.
-//* Returns true on success or false on failure.
+//* Returns True on success or False on failure.
 function TKMScriptActions.UnitDirectionSet(aUnitID, aDirection: Integer): Boolean;
 var
   U: TKMUnit;
@@ -4636,7 +4637,7 @@ end;
 //* Version: 14000
 //* Makes the specified unit face a certain direction.
 //* Note: Only works on idle units so as not to interfere with game logic and cause crashes.
-//* Returns true on success or false on failure.
+//* Returns True on success or False on failure.
 function TKMScriptActions.UnitDirectionSetEx(aUnitID: Integer; aDirection: TKMDirection): Boolean;
 var
   U: TKMUnit;
@@ -4731,7 +4732,7 @@ end;
 //* Version: 5057
 //* Order the specified unit to walk somewhere.
 //* Note: Only works on idle units so as not to interfere with game logic and cause crashes.
-//* Returns true on success or false on failure.
+//* Returns True on success or False on failure.
 function TKMScriptActions.UnitOrderWalk(aUnitID: Integer; X, Y: Integer): Boolean;
 var
   U: TKMUnit;
@@ -4869,7 +4870,7 @@ end;
 
 //* Version: 5993
 //* Sets whether the specified group will alert the player when they become hungry
-//* (true to disable hunger messages, false to enable them)
+//* (True to disable hunger messages, False to enable them)
 procedure TKMScriptActions.GroupDisableHungryMessage(aGroupID: Integer; aDisable: Boolean);
 var
   G: TKMUnitGroup;
@@ -4954,6 +4955,7 @@ begin
       G := fIDCache.GetGroup(aGroupID);
       H := fIDCache.GetHouse(aHouseID);
       if (G <> nil)
+        and G.CanTakeOrders
         and (H <> nil)
         and not H.IsDestroyed then
         G.OrderAttackHouse(H, True);
@@ -4981,7 +4983,7 @@ begin
       U := fIDCache.GetUnit(aUnitID);
 
       //Player can not attack animals
-      if (G <> nil) and (U <> nil) and (U.Owner <> HAND_ANIMAL) then
+      if (G <> nil) and (U <> nil) and (U.Owner <> HAND_ANIMAL) and G.CanTakeOrders then
         G.OrderAttackUnit(U, True);
     end
     else
@@ -5003,7 +5005,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) then
+      if (G <> nil) and G.CanTakeOrders then
         G.OrderFood(True);
     end
     else
@@ -5025,7 +5027,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) then
+      if (G <> nil) and G.CanTakeOrders then
         G.OrderHalt(True);
     end
     else
@@ -5048,7 +5050,7 @@ begin
     begin
       G := fIDCache.GetGroup(aGroupID);
       G2 := fIDCache.GetGroup(aDestGroupID);
-      if (G <> nil) and (G2 <> nil) and (G.Owner = G2.Owner) then  //Check group owners to prevent "DNA Modifications" ;D
+      if (G <> nil) and G.CanTakeOrders and (G2 <> nil) and (G.Owner = G2.Owner) then  //Check group owners to prevent "DNA Modifications" ;D
         G.OrderLinkTo(G2, True);
     end
     else
@@ -5072,7 +5074,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) then
+      if (G <> nil) and G.CanTakeOrders then
       begin
         G2 := G.OrderSplit;
         if G2 <> nil then
@@ -5104,6 +5106,7 @@ begin
       G := fIDCache.GetGroup(aGroupID);
       U := fIDCache.GetUnit(aUnitID);
       if (G <> nil)
+      and G.CanTakeOrders
       and (U <> nil)
       and (U is TKMUnitWarrior)
       and (G.HasMember(TKMUnitWarrior(U))) then
@@ -5132,7 +5135,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) and (G.GroupType = gtMelee) then
+      if (G <> nil) and (G.GroupType = gtMelee) and G.CanTakeOrders then
         G.OrderStorm(True);
     end
     else
@@ -5156,7 +5159,7 @@ begin
       and (TKMDirection(aDirection + 1) in [dirN..dirNW]) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) and G.CanWalkTo(KMPoint(X,Y), 0) then
+      if (G <> nil) and G.CanTakeOrders and G.CanWalkTo(KMPoint(X,Y), 0) then
         G.OrderWalk(KMPoint(X,Y), True, wtokScript, TKMDirection(aDirection+1));
     end
     else
@@ -5180,7 +5183,7 @@ begin
       and (aDirection in [dirN..dirNW]) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) and G.CanWalkTo(KMPoint(X,Y), 0) then
+      if (G <> nil) and G.CanTakeOrders and G.CanWalkTo(KMPoint(X,Y), 0) then
         G.OrderWalk(KMPoint(X,Y), True, wtokScript, aDirection);
     end
     else

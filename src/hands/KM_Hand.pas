@@ -192,17 +192,17 @@ type
 
     function TrainUnit(aUnitType: TKMUnitType; aInHouse: TKMHouse): TKMUnit;
 
-    function GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Cardinal): TKMHouse; overload;
-    function GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Cardinal;
+    function GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Integer): TKMHouse; overload;
+    function GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Integer;
                                    out aHouseSketch: TKMHouseSketchEdit;
                                    aSketchTypesSet: TKMHouseSketchTypeSet = [hstHouse]): TKMHouse; overload;
-    function GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Cardinal;
+    function GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Integer;
                                    out aHouseSketch: TKMHouseSketchEdit;
                                    aSketchTypesSet: TKMHouseSketchTypeSet;
                                    aVerifySketch: TAnonHouseSketchBoolFn;
                                    aVerifySketchBoolParam: Boolean): TKMHouse; overload;
-    function GetNextUnitWSameType(aUnitType: TKMUnitType; aStartFromUID: Cardinal): TKMUnit;
-    function GetNextGroupWSameType(aUnitType: TKMUnitType; aStartFromUID: Cardinal): TKMUnitGroup;
+    function GetNextUnitWSameType(aUnitType: TKMUnitType; aStartFromUID: Integer): TKMUnit;
+    function GetNextGroupWSameType(aUnitType: TKMUnitType; aStartFromUID: Integer): TKMUnitGroup;
 
     function CanAddFieldPlan(const aLoc: TKMPoint; aFieldType: TKMFieldType): Boolean;
     function CanAddFakeFieldPlan(const aLoc: TKMPoint; aFieldType: TKMFieldType): Boolean;
@@ -260,7 +260,7 @@ type
 
   TKMHandAnimals = class(TKMHandCommon)
   public
-    function GetFishInWaterBody(aWaterID: Byte; FindHighestCount: Boolean = True): TKMUnitAnimal;
+    function GetFishInWaterBody(aWaterID: Byte; FindHighestCount: Boolean = True): TKMUnitFish;
   end;
 
   function GetStatsUpdatePeriod: Integer;
@@ -269,6 +269,7 @@ type
 implementation
 uses
   Classes, SysUtils, KromUtils, Math, TypInfo,
+  KM_Entity,
   KM_Cursor, KM_Game, KM_GameParams, KM_Terrain,
   KM_HandsCollection, KM_Sound, KM_AIFields, KM_MapEdTypes,
   KM_Resource, KM_ResSound, KM_ResTexts, KM_ResMapElements, KM_ScriptingEvents, KM_ResUnits, KM_ResPalettes,
@@ -693,13 +694,13 @@ begin
 end;
 
 
-function TKMHand.GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Cardinal): TKMHouse;
+function TKMHand.GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Integer): TKMHouse;
 begin
   Result := GetNextHouseWSameType(aHouseType, aStartFromUID, TKMHouseSketchEdit.DummyHouseSketch);
 end;
 
 
-function TKMHand.GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Cardinal;
+function TKMHand.GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Integer;
                                        out aHouseSketch: TKMHouseSketchEdit;
                                        aSketchTypesSet: TKMHouseSketchTypeSet = [hstHouse]): TKMHouse;
 begin
@@ -707,7 +708,7 @@ begin
 end;
 
 
-function TKMHand.GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Cardinal;
+function TKMHand.GetNextHouseWSameType(aHouseType: TKMHouseType; aStartFromUID: Integer;
                                        out aHouseSketch: TKMHouseSketchEdit;
                                        aSketchTypesSet: TKMHouseSketchTypeSet;
                                        aVerifySketch: TAnonHouseSketchBoolFn;
@@ -839,7 +840,7 @@ begin
 end;
 
 
-function TKMHand.GetNextUnitWSameType(aUnitType: TKMUnitType; aStartFromUID: Cardinal): TKMUnit;
+function TKMHand.GetNextUnitWSameType(aUnitType: TKMUnitType; aStartFromUID: Integer): TKMUnit;
 var
   I: Integer;
   U, firstU, lastU: TKMUnit;
@@ -855,31 +856,27 @@ begin
   begin
     U := fUnits[I];
     if (U = nil)
-      or U.IsDeadOrDying
-      or (U.UnitType <> aUnitType)
-      or not U.Visible then
+    or U.IsDeadOrDying
+    or (U.UnitType <> aUnitType)
+    or not U.Visible then
       Continue;
 
-    //Just find any first house
+    // Just find any first unit
     if (aStartFromUID = 0) then
-    begin
-      Result := U;
-      Break;
-    end;
+      Exit(U);
 
     lastU := U;
 
     if U.UID = aStartFromUID then
-      found := True                // Mark that we found our unit
+      found := True               // Mark that we found our unit
     else if found then
-    begin
-      Result := U;                 // Save the next unit after Found to Result and Break
-      Break;
-    end else if firstU = nil then
-      firstU := U;                 // Save 1st unit in list in case our unit is the last one
+      Exit(U)                     // Save the next unit after Found to Result and Break
+    else
+    if firstU = nil then
+      firstU := U;                // Save 1st unit in list in case our unit is the last one
   end;
 
-  if (Result = nil) and found then   // Found should be always True here
+  if found then          // Found should be always True here
   begin
     if firstU = nil then //Could happen, when we have only 1 unit with that type...
       Result := lastU
@@ -889,7 +886,7 @@ begin
 end;
 
 
-function TKMHand.GetNextGroupWSameType(aUnitType: TKMUnitType; aStartFromUID: Cardinal): TKMUnitGroup;
+function TKMHand.GetNextGroupWSameType(aUnitType: TKMUnitType; aStartFromUID: Integer): TKMUnitGroup;
 var
   I: Integer;
   group, firstG, lastG: TKMUnitGroup;
@@ -2178,7 +2175,7 @@ end;
 
 
 procedure TKMHand.AddFirstStorehouse(aEntrance: TKMPoint);
-  // Place road and return true if it is possible
+  // Place road and return True if it is possible
   function AddRoad(aPoint: TKMPoint): Boolean;
   begin
     Result := CanAddFieldPlan(KMPoint(aPoint.X, aPoint.Y), ftRoad);
@@ -2274,7 +2271,7 @@ end;
 
 
 { TKMHandAnimals }
-function TKMHandAnimals.GetFishInWaterBody(aWaterID: Byte; FindHighestCount: Boolean = True): TKMUnitAnimal;
+function TKMHandAnimals.GetFishInWaterBody(aWaterID: Byte; FindHighestCount: Boolean = True): TKMUnitFish;
 var
   I, highestGroupCount: Integer;
   U: TKMUnit;
@@ -2289,11 +2286,11 @@ begin
 
     if (U <> nil)
     and (U.UnitType = utFish)
-    and (not U.IsDeadOrDying) //Fish are killed when they are caught or become stuck
+    and not U.IsDeadOrDying //Fish are killed when they are caught or become stuck
     and (gTerrain.Land^[U.Position.Y, U.Position.X].WalkConnect[wcFish] = aWaterID)
-    and (TKMUnitAnimal(U).FishCount > highestGroupCount) then
+    and (TKMUnitFish(U).FishCount > highestGroupCount) then
     begin
-      Result := TKMUnitAnimal(U);
+      Result := TKMUnitFish(U);
       //This is for time saving when we don't actually care which group is returned
       if not FindHighestCount then Exit;
       highestGroupCount := Result.FishCount;

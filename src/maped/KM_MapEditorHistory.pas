@@ -32,6 +32,7 @@ type
                           const aPaintedTile: TKMPainterTile;
                           const aMapEdTile: TKMMapEdTerrainTile): TKMUndoTile;
     procedure RestoreTileFromUndo(var aTile: TKMTerrainTile;
+                                  var aTileExt: TKMTerrainTileExt;
                                   var aPaintedTile: TKMPainterTile;
                                   var aMapEdTile: TKMMapEdTerrainTile;
                                   aUndoTile: TKMUndoTile;
@@ -149,7 +150,7 @@ type
 implementation
 uses
   Math,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_Units, KM_UnitsCollection,
   KM_GameParams, KM_GameSettings,
   KM_Game, KM_CommonUtils, KM_Resource, KM_HouseTownhall, KM_HouseBarracks, KM_HouseStore,
@@ -242,8 +243,9 @@ begin
 end;
 
 
-procedure TKMCheckpointTerrain.RestoreTileFromUndo(var aTile: TKMTerrainTile; var aPaintedTile: TKMPainterTile;
-                                                   var aMapEdTile: TKMMapEdTerrainTile; aUndoTile: TKMUndoTile; aUnderHouse: Boolean);
+procedure TKMCheckpointTerrain.RestoreTileFromUndo(var aTile: TKMTerrainTile; var aTileExt: TKMTerrainTileExt;
+                                                   var aPaintedTile: TKMPainterTile; var aMapEdTile: TKMMapEdTerrainTile;
+                                                   aUndoTile: TKMUndoTile; aUnderHouse: Boolean);
 var
   L: Integer;
 begin
@@ -252,6 +254,7 @@ begin
 
   aTile.LayersCnt               := aUndoTile.LayersCnt;
   aTile.Height                  := aUndoTile.Height;
+  aTileExt.RenderHeight         := aTile.GetRenderHeight;
   aTile.Obj                     := aUndoTile.Obj;
   aTile.IsCustom                := aUndoTile.IsCustom;
   aTile.BlendingLvl             := aUndoTile.BlendingLvl;
@@ -284,6 +287,7 @@ begin
   for I := 0 to gTerrain.MapY-1 do
   for K := 0 to gTerrain.MapX-1 do
     RestoreTileFromUndo(gTerrain.MainLand^[I+1,K+1],
+                        gTerrain.LandExt^[I+1,K+1],
                         gGame.TerrainPainter.MainLandTerKind[I+1,K+1],
                         gGame.MapEditor.MainLandMapEd^[I+1,K+1],
                         fData[I,K], gHands.HousesHitTest(K+1,I+1) <> nil);
@@ -467,6 +471,7 @@ end;
 
 { TKMCheckpointHouses }
 constructor TKMCheckpointHouses.Create(const aCaption: string);
+
   procedure AddHouse(aHouse: TKMHouse; var aCount: Integer);
   var
     I: Integer;
@@ -500,7 +505,7 @@ constructor TKMCheckpointHouses.Create(const aCaption: string);
                       for WT := WARFARE_MIN to WARFARE_MAX do
                         fHouses[aCount].WaresIn[Ord(WT) - Ord(WARFARE_MIN) + 1] := TKMHouseBarracks(aHouse).CheckResIn(WT);
                     end;
-      htMarket:;
+      htMarket:     ;
       else          begin
                       for I := 1 to 4 do
                         if spec.ResInput[I] <> wtNone then
@@ -583,7 +588,7 @@ begin
                       for WT := WARFARE_MIN to WARFARE_MAX do
                         TKMHouseBarracks(H).ResAddToIn(WT, fHouses[I].WaresIn[Ord(WT) - Ord(WARFARE_MIN) + 1]);
                     end;
-      htMarket:;
+      htMarket:     ;
       else          begin
                       for K := 1 to 4 do
                         if spec.ResInput[K] <> wtNone then

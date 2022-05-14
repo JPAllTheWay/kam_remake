@@ -9,7 +9,7 @@ type
   TKMGoal = packed record
     GoalType: TKMGoalType; //Victory, survive, neither
     GoalCondition: TKMGoalCondition; //Buildings, troops, time passing
-    GoalStatus: TKMGoalStatus; //Must this condition be true or false (same as alive or dead) for victory/surival to occur?
+    GoalStatus: TKMGoalStatus; //Must this condition be True or False (same as alive or dead) for victory/surival to occur?
     GoalTime: Cardinal; //Only used with gaTime. Amount of time (in game ticks) that must pass before this goal is complete
     MessageToShow: Integer; //Message to be shown when the goal is completed
     MessageHasShown: Boolean; //Whether we have shown this message yet

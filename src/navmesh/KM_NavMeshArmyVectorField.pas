@@ -116,7 +116,7 @@ type
       fDbgVector: TDebugArmyVectorField;
     {$ENDIF}
 
-    procedure MakeNewQueue(aClearVectorField: Boolean = true); reintroduce;
+    procedure MakeNewQueue(aClearVectorField: Boolean = True); reintroduce;
     procedure AddPolyToQueue(aFFType: TKMArmyVectorFFType; aIdx: Word);
     procedure InitQueue(const aCluster: pTKMCombatCluster); reintroduce; overload;
     procedure InitQueue(const aGroupsPoly: TKMWordArray; aCnt: Word); reintroduce; overload;
@@ -170,7 +170,8 @@ const
 implementation
 uses
   SysUtils,
-  KM_Hand, KM_HandsCollection, KM_Terrain,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Terrain,
   KM_AIFields, KM_NavMesh, KM_AIParameters,
   {$IFDEF DEBUG_ArmyVectorField}
   DateUtils, KM_CommonUtils,
@@ -531,11 +532,11 @@ begin
       L := 1;
       while (L < fClusters.Clusters[K].GroupsCount) do
       begin
-        GroupCheck := true;
+        GroupCheck := True;
         for M := 0 to L - 1 do
           if (Enemy.Groups[ fClusters.Clusters[K].Groups[L] ] = Enemy.Groups[ fClusters.Clusters[K].Groups[M] ]) then
           begin
-            GroupCheck := false;
+            GroupCheck := False;
             break;
           end;
         if not GroupCheck then
@@ -829,7 +830,7 @@ end;
 
 
 // Prepare new Queue
-procedure TKMArmyVectorField.MakeNewQueue(aClearVectorField: Boolean = true);
+procedure TKMArmyVectorField.MakeNewQueue(aClearVectorField: Boolean = True);
 begin
   // Check length
   fPolygonsCnt := gAIFields.NavMesh.PolygonsCnt;
@@ -899,7 +900,7 @@ end;
 procedure TKMArmyVectorField.InitQueue(const aGroupPoly: Word);
 begin
   if (fVisitedIdx = High(Byte)) then
-    MakeNewQueue(false);
+    MakeNewQueue(False);
   Inc(fVisitedIdx);
   AddPolyToQueue(ffSearch, aGroupPoly);
 end;
@@ -1044,7 +1045,7 @@ procedure TKMArmyVectorField.FindPositions();
     ENEMY_NEARBY_CG_DISTANCE = 12;
     VF_ENEMY_UTH = 10;
     VF_RALLY_UTH = 15;
-    USE_FF_TO_FIND_POSITION = true;
+    USE_FF_TO_FIND_POSITION = True;
   var
     MinDist: Word;
     K, InitIdx, TargetIdx, SoldiersCnt: Integer;
