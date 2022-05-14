@@ -36,6 +36,7 @@ type
     function  IsSaveValidStrictly(aID: Integer): Boolean;
 
     procedure Replays_ListClick(Sender: TObject);
+    procedure Replays_ListDoubleClick(Sender: TObject);
     procedure Replay_TypeChange(Sender: TObject);
     procedure Replays_ScanUpdate(Sender: TObject);
     procedure Replays_ScanTerminate(Sender: TObject);
@@ -132,7 +133,7 @@ begin
   ColumnBox_Replays.ColumnIdForScroll := 2;
   ColumnBox_Replays.OnChange := Replays_ListClick;
   ColumnBox_Replays.OnColumnClick := Replays_Sort;
-  ColumnBox_Replays.OnDoubleClick := Replays_Play;
+  ColumnBox_Replays.OnDoubleClick := Replays_ListDoubleClick;
 
   MinimapView_Replay := TKMMinimapView.Create(fMinimap, Panel_Replays, PAD + 580, 555, 191, 191, True);
   MinimapView_Replay.Anchors := [anLeft, anBottom];
@@ -350,6 +351,13 @@ begin
   finally
     fSaves.Unlock;
   end;
+end;
+
+
+procedure TKMMenuReplays.Replays_ListDoubleClick(Sender: TObject);
+begin
+  if ColumnBox_Replays.ItemIndex = ColumnBox_Replays.MouseOverRow then
+    Replays_Play(Sender);
 end;
 
 

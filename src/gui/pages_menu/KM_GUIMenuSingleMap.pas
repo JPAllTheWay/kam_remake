@@ -46,6 +46,7 @@ type
     procedure ListUpdate;
     procedure ListRefresh(aJumpToSelected: Boolean);
     procedure ListClick(Sender: TObject);
+    procedure ListDoubleClick(Sender: TObject);
     procedure DoOptionsChange(aForceUpdate: Boolean = False);
     procedure OptionsChange(Sender: TObject);
     procedure Update(aForceUpdate: Boolean = False);
@@ -206,7 +207,7 @@ begin
     ColumnBox_Maps.Header.Columns[1].Glyph := MakePic(rxGui, 31);
     ColumnBox_Maps.OnColumnClick := ListSort;
     ColumnBox_Maps.OnChange := ListClick;
-    ColumnBox_Maps.OnDoubleClick := StartClick;
+    ColumnBox_Maps.OnDoubleClick := ListDoubleClick;
 
     Panel_Desc := TKMPanel.Create(Panel_Single, PAD_SIDE, PAD_VERT, half, aParent.Height - PAD_VERT*2);
     Panel_Desc.Anchors := [anTop, anBottom];
@@ -547,6 +548,13 @@ begin
   finally
     fMaps.Unlock;
   end;
+end;
+
+
+procedure TKMMenuSingleMap.ListDoubleClick(Sender: TObject);
+begin
+  if ColumnBox_Maps.ItemIndex = ColumnBox_Maps.MouseOverRow then
+    StartClick(Sender);
 end;
 
 

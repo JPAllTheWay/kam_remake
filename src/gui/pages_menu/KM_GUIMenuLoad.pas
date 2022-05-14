@@ -30,6 +30,7 @@ type
     procedure LoadClick(Sender: TObject);
     procedure Load_Delete_Click(Sender: TObject);
     procedure Load_ListClick(Sender: TObject);
+    procedure Load_ListDoubleClick(Sender: TObject);
     procedure Load_ScanUpdate(Sender: TObject);
     procedure Load_ScanComplete(Sender: TObject);
     procedure Load_SortUpdate(Sender: TObject);
@@ -108,7 +109,7 @@ begin
     ColumnBox_Load.ColumnIdForScroll := 2;
     ColumnBox_Load.OnColumnClick := Load_Sort;
     ColumnBox_Load.OnChange := Load_ListClick;
-    ColumnBox_Load.OnDoubleClick := LoadClick;
+    ColumnBox_Load.OnDoubleClick := Load_ListDoubleClick;
     ColumnBox_Load.ShowHintWhenShort := True;
     ColumnBox_Load.HintBackColor := TKMColor4f.New(87, 72, 37);
 
@@ -243,6 +244,13 @@ begin
   finally
     fSaves.Unlock;
   end;
+end;
+
+
+procedure TKMMenuLoad.Load_ListDoubleClick(Sender: TObject);
+begin
+  if ColumnBox_Load.ItemIndex = ColumnBox_Load.MouseOverRow then
+    LoadClick(Sender);
 end;
 
 
