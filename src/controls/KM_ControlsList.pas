@@ -138,6 +138,7 @@ type
     procedure MouseMove(X,Y: Integer; Shift: TShiftState); override;
     procedure MouseWheel(Sender: TObject; WheelSteps: Integer; var aHandled: Boolean); override;
     property OnChange: TNotifyEvent read fOnChange write fOnChange;
+    property MouseOverRow: Integer read GetMouseOverRow;
 
     procedure Paint; override;
   end;
