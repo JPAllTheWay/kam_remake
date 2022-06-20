@@ -76,7 +76,7 @@ uses
   Math,
   KM_System, 
   KM_Game, KM_GameInputProcess,
-  KM_HandsCollection, KM_Hand, KM_HandSpectator, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandSpectator, KM_HandTypes, KM_HandEntity,
   KM_InterfaceGame, KM_InterfaceTypes,
   KM_RenderUI,
   KM_Resource, KM_ResFonts, KM_ResTexts, KM_ResKeys, KM_ResSound, KM_ResUnits, KM_Pics,
@@ -300,10 +300,10 @@ begin
     Army_HideJoinMenu(nil); // Cannot be joining while in combat/charging
 
   Label_UnitDescription.Hide;
-  Button_Unit_Dismiss.Visible := SHOW_DISMISS_GROUP_BTN and not fAskDismiss and not fJoiningGroups;
+  Button_Unit_Dismiss.Visible := FEAT_DISMISS_GROUP_BTN and not fAskDismiss and not fJoiningGroups;
   Panel_Army.Visible := not fAskDismiss and not fJoiningGroups;
   Panel_Army_JoinGroups.Visible := not fAskDismiss and fJoiningGroups;
-  Panel_Unit_Dismiss.Visible := SHOW_DISMISS_GROUP_BTN and fAskDismiss and not fJoiningGroups;
+  Panel_Unit_Dismiss.Visible := FEAT_DISMISS_GROUP_BTN and fAskDismiss and not fJoiningGroups;
 
   ShowDismissBtn;
 
@@ -443,10 +443,12 @@ begin
 
   if (Sender = Button_Army_RotCW) or (Sender = Button_Army_RotCCW) then
   begin
-    if ssCtrl in Shift then
+    // 180 degrees by Shift
+    if ssShift in Shift then
       rotCnt := 4
     else
-    if RMB_SHIFT_STATES * Shift <> [] then
+    // 90 degrees by RMB
+    if IsRMBInShiftState(Shift) then
       rotCnt := 2
     else
       rotCnt := 1;
@@ -469,20 +471,12 @@ begin
 
   if Sender = Button_Army_ForDown then
   begin
-    // Consider LMB click + Shift as a RMB click
-    if ((ssLeft in Shift) and (ssShift in Shift)) then
-      Shift := [ssRight];
-      
     gGame.GameInputProcess.CmdArmy(gicArmyFormation, group, 0, GetMultiplicator(Shift, RMB_ADD_ROWS_CNT));
     gSoundPlayer.PlayWarrior(group.UnitType, spFormation);
   end;
 
   if Sender = Button_Army_ForUp   then
   begin
-    // Consider LMB click + Shift as a RMB click
-    if ((ssLeft in Shift) and (ssShift in Shift)) then
-      Shift := [ssRight];
-      
     gGame.GameInputProcess.CmdArmy(gicArmyFormation, group, 0, -GetMultiplicator(Shift, RMB_ADD_ROWS_CNT));
     gSoundPlayer.PlayWarrior(group.UnitType, spFormation);
   end;
@@ -550,6 +544,9 @@ procedure TKMGUIGameUnit.KeyDown(Key: Word; Shift: TShiftState; var aHandled: Bo
 begin
   if aHandled then Exit;
 
+  // Hotkey press is equal to click with LMB
+  Include(Shift, ssLeft);
+
   // Standard army shortcuts from KaM
   if Key = gResKeys[kfArmyHalt] then
     if Panel_Army.Visible and Button_Army_Stop.Enabled and not OnSelectingTroopDirection(nil) then
@@ -590,14 +587,14 @@ begin
   if Key = gResKeys[kfArmyAddLine] then
     if Panel_Army.Visible and Button_Army_ForDown.Enabled and not OnSelectingTroopDirection(nil) then
     begin
-      Army_Issue_Order(Button_Army_ForDown, Shift + [ssLeft]); // + ssLeft to emulate click by LMB
+      Army_Issue_Order(Button_Army_ForDown, Shift);
       aHandled := True;
     end;
 
   if Key = gResKeys[kfArmyDelLine] then
     if Panel_Army.Visible and Button_Army_ForUp.Enabled and not OnSelectingTroopDirection(nil) then
     begin
-      Army_Issue_Order(Button_Army_ForUp, Shift + [ssLeft]); // + ssLeft to emulate click by LMB
+      Army_Issue_Order(Button_Army_ForUp, Shift);
       aHandled := True;
     end;
 

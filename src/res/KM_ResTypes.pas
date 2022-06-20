@@ -28,6 +28,7 @@ type
 const
   WARE_MIN = wtTrunk;
   WARE_MAX = wtFish;
+  WARE_MAX_ALL = wtFood;
   WARFARE_MIN = wtWoodenShield;
   WEAPON_MIN = wtWoodenShield;
   WEAPON_MAX = wtCrossbow;
@@ -179,6 +180,7 @@ type
 
     // faMapEdit
     kfMapedExtra,     // Maped Extra's menu
+    kfMapedSaveMap,   // Maped Save map
     kfMapedTerrain,   // Maped Terrain Editing
     kfMapedVillage,   // Maped Village Planning
     kfMapedVisual,    // Maped Visual Scripts
@@ -201,7 +203,9 @@ type
     kfMapedTilesPalette,    // Maped Tiles palette
     kfMapedUnivErasor,      // Maped Universal erasor
     kfMapedPaintBucket,     // Maped Paint bucket
-    kfMapedHistory          // Maped History
+    kfMapedHistory,         // Maped History
+    kfMapedFlatTerrain,     // Maped Flat terrain
+    kfMapedTilesGrid        // Maped Tiles grid
   );
 
   TKMKeyFunctionSet = set of TKMKeyFunction;
@@ -222,7 +226,7 @@ const
 
 type
   // Cursors
-  TKMCursor = (
+  TKMCursorImageType = (
     kmcDefault, kmcInfo, kmcAttack, kmcJoinYes, kmcJoinNo, kmcEdit, kmcDragUp,
     kmcDir0, kmcDir1, kmcDir2, kmcDir3, kmcDir4, kmcDir5, kmcDir6, kmcDir7, kmcDirNA,
     kmcScroll0, kmcScroll1, kmcScroll2, kmcScroll3, kmcScroll4, kmcScroll5, kmcScroll6, kmcScroll7,
@@ -234,7 +238,7 @@ type
 
 const
   // Indexes of cursor images in GUI.RX
-  CURSOR_SPRITE_INDEX: array [TKMCursor] of Word = (
+  CURSOR_SPRITE_INDEX: array [TKMCursorImageType] of Word = (
     1, 452, 457, 460, 450, 453, 449,
     511,  512, 513, 514, 515, 516, 517, 518, 519,
     4, 7, 3, 9, 5, 8, 2, 6,
@@ -243,7 +247,7 @@ const
 type
   TRXUsage = (ruMenu, ruGame, ruCustom); //Where sprites are used
 
-  TSpriteAtlasType = (saBase, saMask);
+  TKMSpriteAtlasType = (saBase, saMask);
 
   TRXInfo = record
     FileName: string; //Used for logging and filenames
@@ -270,6 +274,16 @@ type
     );
 
 const
+  EXPORT_SPRITE_ATLASES_LIST: set of TRXType = [
+    rxTrees,
+    rxHouses,
+    rxUnits,
+    rxGui,
+    rxGuiMain,
+    rxCustom,
+    rxTiles
+  ];
+
   //Colors to paint beneath player color areas (flags)
   //The blacker/whighter - the more contrast player color will be
   FLAG_COLOR_DARK = $FF101010;   //Dark-grey (Black)

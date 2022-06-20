@@ -59,9 +59,12 @@ hun.DeleteMaps=Töröli az összes Térképet és Kampányt?
 ;French
 fre.CreateStartShortcut=Créer un raccourci dans le menu Démarrer
 fre.NoKaM=L'assistant d'installation n'a détecté aucune installation de Knights and Merchants : The Peasants Rebellion.%n%nL'installation sera interrompue.
+fre.SteamFirstRun=La version original de KaM installé depuis steam doit avoir été lancé au moins une fois, de façon à ce que l'installateur KMR puisse le détecter et le vérifier.
 fre.CantUpdate=L'assistant d'installation n'a détecté aucune version existante de KaM Remake à mettre à jour. Veuillez télécharger et utiliser l'installateur complet.%n%nL'installation sera interrompue.
 fre.OpenAL=Voulez-vous que l'assistant d'installation installe OpenAL ? (fortement recommandé) OpenAL est requis pour le fonctionnement audio de KaM Remake.
 fre.ViewReadme=Voir le lisez-moi
+fre.DeleteSaves=Voulez vous vraiment supprimer toutes vos sauvegardes et progrès dans les campagnes également ?
+fre.DeleteMaps=Voulez vous supprimer toutes les cartes et campagnes également ?
 
 ;Czech
 cze.CreateStartShortcut=Vytvořit zástupce v nabídce Start
@@ -100,9 +103,12 @@ ita.ViewReadme=Visualizza il file Readme
 ;Spanish
 spa.CreateStartShortcut=Crea un acceso directo en el menú de inicio
 spa.NoKaM=El asistente de instalación ha detectado que no tienes Knights and Merchants: The Peasants Rebellion instalado. Usted debe tener instalado el juego original para poder jugar el remake de Kam.%n%nLa instalación se interrumpirá
+spa.SteamFirstRun=El KaM original instalado desde Steam debe iniciarse al menos una vez en el sistema para que el instalador de KMR pueda detectarlo y verificarlo.
 spa.CantUpdate=El asistente de instalación no ha podido encontrar la versión Kam Remake para poder actualizar. Por favor, descarga y instala la versión completa.%n%nLa instalación se interrumpirá.
 spa.OpenAL=¿Quieres que el asistente de instalación instale OpenAL? (Muy recomendable) se requiere para el sonido del juego Kam Remake
 spa.ViewReadme=Ver el archivo Readme
+spa.DeleteSaves=¿Quieres eliminar todas tus partidas guardadas y el progreso de todas las campañas también?
+spa.DeleteMaps=¿Quieres eliminar también todos los mapas y campañas?
 
 ;Bulgarian
 bul.CreateStartShortcut=Създай пряк път

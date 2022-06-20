@@ -809,7 +809,7 @@ begin
           FromLoc := TKMUnitActionWalkTo(gHands[fOwner].Units[I].Action).WalkFrom;
           ToLoc := TKMUnitActionWalkTo(gHands[fOwner].Units[I].Action).WalkTo;
           //Unit's route must be using road network, not f.e. delivering to soldiers
-          if gTerrain.Route_CanBeMade(FromLoc, ToLoc, tpWalkRoad, 0) then
+          if gTerrain.RouteCanBeMade(FromLoc, ToLoc, tpWalkRoad) then
           begin
             //Check for shortcuts we could build
             NodeList.Clear;
@@ -988,7 +988,7 @@ begin
   {$ENDIF}
   try
     //Checking mod result against MAX_HANDS causes first update to happen ASAP
-    if (aTick + Byte(fOwner)) mod (MAX_HANDS * 10) <> MAX_HANDS then Exit;
+    if (aTick + Byte(fOwner)) mod (MAX_HANDS * 4) <> MAX_HANDS then Exit;
 
     CheckAutoRepair;
 

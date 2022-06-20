@@ -380,7 +380,7 @@ begin
       end;
 
       R := MakeListRow(['', IntToStr(fMaps[I].LocCount), fMaps[I].Name, MapSizeText(fMaps[I].MapSizeX, fMaps[I].MapSizeY)]);
-      R.Cells[2].SubTxt := fMaps[I].TxtInfo.SmallDesc;
+      R.Cells[2].SubTxt := fMaps[I].TxtInfo.SmallDescToDisplay;
       R.Cells[0].Pic := MakePic(rxGui, 28 + Byte(fMaps[I].MissionMode <> mmFighting) * 14);
       R.Tag := I;
       ColumnBox_Maps.AddItem(R);
@@ -463,6 +463,7 @@ begin
 
       Label_Title.Caption := map.Name;
       Memo_Desc.Text      := map.BigDesc;
+      ColumnBox_Maps.SelectedItem.Cells[2].SubTxt := map.TxtInfo.SmallDescToDisplay; // Update SmallText of the selected map
       MinimapView.Show;
 
       //Location
@@ -666,7 +667,7 @@ procedure TKMMenuSingleMap.Update(aForceUpdate: Boolean = False);
 const
   GOAL_CONDITION_PIC: array [TKMGoalCondition] of Word = (
     41,   // gcUnknown0         - Not used/unknown
-    39,   // gcBuildTutorial    - Must build a tannery (and other buildings from tutorial?) for it to be true. In KaM tutorial messages will be dispalyed if this is a goal
+    39,   // gcBuildTutorial    - Must build a tannery (and other buildings from tutorial?) for it to be True. In KaM tutorial messages will be dispalyed if this is a goal
     592,  // gcTime             - A certain time must pass
     38,   // + (allowed) gcBuildings        - Storehouse, school, barracks, TownHall
     62,   // + (allowed) gcTroops           - All troops

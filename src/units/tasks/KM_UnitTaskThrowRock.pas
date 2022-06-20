@@ -24,7 +24,8 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_Hand,
+  KM_Entity,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_Projectiles,
   KM_CommonGameTypes, KM_ResTypes;
 
@@ -62,7 +63,7 @@ end;
 procedure TKMTaskThrowRock.SyncLoad;
 begin
   inherited;
-  fTarget := gHands.GetUnitByUID(cardinal(fTarget));
+  fTarget := gHands.GetUnitByUID(Integer(fTarget));
 end;
 
 

@@ -20,7 +20,8 @@ type
     fOnScriptError: TKMScriptErrorEvent;
     procedure LogWarning(const aFuncName, aWarnMsg: String);
     procedure LogIntParamWarn(const aFuncName: String; const aValues: array of Integer);
-    procedure LogParamWarn(const aFuncName: String; const aValues: array of const);
+    procedure LogParamWarn(const aFuncName: String; const aValues: array of const); overload;
+    procedure LogParamWarn(const aFuncName: String; aValues1, aValues2: array of const); overload;
   public
     constructor Create(aIDCache: TKMScriptingIdCache);
     property OnScriptError: TKMScriptErrorEvent write fOnScriptError;
@@ -151,11 +152,13 @@ uses
   RegExpr,
   {$ENDIF}
   TypInfo, KromUtils,
+  KM_Entity,
   KM_Game,
   KM_HandTypes,
   KM_ResTexts, KM_ResUnits,
   KM_Resource,
-  KM_DevPerfLog, KM_DevPerfLogTypes;
+  KM_DevPerfLog, KM_DevPerfLogTypes,
+  KM_CommonUtils;
 
 
 type
@@ -491,9 +494,6 @@ begin
   if ExceptionOutsideScript then
   begin
     ExceptionOutsideScript := False; //Reset
-    {$IFDEF WDC}
-    e.Message := e.Message + sLineBreak + 'stacktrace: ' + sLineBreak + e.StackTrace;
-    {$ENDIF}
     raise e at ExceptAddr; //Exception was in game code not script, so pass up to madExcept
   end
   else
@@ -1245,35 +1245,24 @@ begin
 end;
 
 
-procedure TKMScriptEntity.LogParamWarn(const aFuncName: String; const aValues: array of const);
-const
-  SEP = ', ';
+procedure TKMScriptEntity.LogParamWarn(const aFuncName: String; aValues1, aValues2: array of const);
 var
-  I: Integer;
-  values: string;
+  str1, str2: string;
 begin
-  values := '';
+  str1 := VarRecArrToStr(aValues1);
+  str2 := VarRecArrToStr(aValues2);
 
-  for I := Low(aValues) to High(aValues) do
-    with aValues[I] do
-      case VType of
-          vtInteger:        values := values + IntToStr(VInteger)     + IfThen(I <> High(aValues), SEP);
-          vtBoolean:        values := values + BoolToStr(VBoolean)    + IfThen(I <> High(aValues), SEP);
-          vtChar:           values := values + VChar                  + IfThen(I <> High(aValues), SEP);
-          vtExtended:       values := values + FloatToStr(VExtended^) + IfThen(I <> High(aValues), SEP);
-          vtString:         values := values + VString^               + IfThen(I <> High(aValues), SEP);
-          vtPChar:          values := values + VPChar                 + IfThen(I <> High(aValues), SEP);
-          vtObject:         values := values + VObject.ClassName      + IfThen(I <> High(aValues), SEP);
-          vtClass:          values := values + VClass.ClassName       + IfThen(I <> High(aValues), SEP);
-          vtPWideChar:      values := values + string(VPWideChar)     + IfThen(I <> High(aValues), SEP);
-          vtAnsiString:     values := values + string(VAnsiString)    + IfThen(I <> High(aValues), SEP);
-          vtCurrency:       values := values + CurrToStr(VCurrency^)  + IfThen(I <> High(aValues), SEP);
-          vtVariant:        values := values + string(VVariant^)      + IfThen(I <> High(aValues), SEP);
-          vtInt64:          values := values + IntToStr(VInt64^)      + IfThen(I <> High(aValues), SEP);
-          vtUnicodeString:  values := values + string(VUnicodeString) + IfThen(I <> High(aValues), SEP);
-    end;
+  fOnScriptError(seInvalidParameter, Format('Invalid parameter(s) passed to %s: %s, [%s]', [aFuncName, str1, str2]));
+end;
 
-  fOnScriptError(seInvalidParameter, 'Invalid parameter(s) passed to ' + aFuncName + ': ' + values);
+
+procedure TKMScriptEntity.LogParamWarn(const aFuncName: String; const aValues: array of const);
+var
+  str: string;
+begin
+  str := VarRecArrToStr(aValues);
+
+  fOnScriptError(seInvalidParameter, 'Invalid parameter(s) passed to ' + aFuncName + ': ' + str);
 end;
 
 

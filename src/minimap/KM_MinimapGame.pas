@@ -25,7 +25,7 @@ uses
   Math,
   KM_Terrain, KM_TerrainTypes,
   KM_Game, KM_GameParams,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_Units, KM_UnitGroup,
   KM_Resource, KM_ResUnits,
   KM_Defaults, KM_Points, KM_CommonTypes, KM_CommonUtils,
@@ -50,17 +50,17 @@ end;
 //MapEditor stores only commanders instead of all groups members
 procedure TKMMinimapGame.DoUpdate(aRevealAll: Boolean);
 var
-  I, J, K, MX, MY: Integer;
+  I, J, K, MX, MY, tileID: Integer;
   fow: Byte;
-  ID: Word;
   U: TKMUnit;
   P: TKMPoint;
-  doesFit: Boolean;
+  doesFit, isBorder, isBorderY: Boolean;
   light: Smallint;
   group: TKMUnitGroup;
   tileOwner: TKMHandID;
   landPtr: ^TKMTerrainTile;
   col: TKMColor3b;
+  gameFlagColors: array[0..MAX_HANDS-1] of Cardinal;
 begin
   {$IFDEF PERFLOG}
   gPerfLogs.SectionEnter(psMinimap);
@@ -79,57 +79,66 @@ begin
   //  Exit;
   //end;
 
+  // Cache flag colors
+  for I := 0 to gHands.Count - 1 do
+    gameFlagColors[I] := gHands[I].GameFlagColor;
+
   for I := 0 to fMapY - 1 do
+  begin
+    MY := I + 1;
+    isBorderY := (I = 0) or (I = fMapY - 1);
     for K := 0 to fMapX - 1 do
     begin
-      MX := K+1;
-      MY := I+1;
+      isBorder := isBorderY or (K = 0) or (K = fMapX - 1);
+      MX := K + 1;
       fow := gMySpectator.FogOfWar.CheckTileRevelation(MX,MY);
 
+      tileID := I*fMapX + K;
+
       if fow = 0 then
-        fBase[I*fMapX + K] := $FF000000
-      else begin
+        fBase[tileID] := $FF000000
+      else
+      begin
         landPtr := @gTerrain.Land^[MY,MX];
-        tileOwner := -1;
-        if landPtr.TileOwner <> -1 then
-        begin
-          if gTerrain.TileHasRoad(MX, MY)
-            and (landPtr.IsUnit <> nil)
-            and InRange(TKMUnit(landPtr.IsUnit).Owner, 0, MAX_HANDS) then
-            tileOwner := TKMUnit(landPtr.IsUnit).Owner
-          else
-            tileOwner := landPtr.TileOwner;
-        end;
+        tileOwner := landPtr.TileOwner;
+        if (tileOwner <> -1)
+          and gTerrain.TileHasRoad(MX, MY)
+          and (landPtr.IsUnit <> nil)
+          and not TKMUnit(landPtr.IsUnit).IsAnimal then
+          tileOwner := TKMUnit(landPtr.IsUnit).Owner;
 
         if (tileOwner <> -1)
-          and not gTerrain.TileIsCornField(KMPoint(MX, MY)) //Do not show corn and wine on minimap
-          and not gTerrain.TileIsWineField(KMPoint(MX, MY)) then
-          fBase[I*fMapX + K] := gHands[tileOwner].GameFlagColor
+          and not gTerrain.TileIsCornField(MX, MY) //Do not show corn and wine on minimap
+          and not gTerrain.TileIsWineField(MX, MY) then
+          fBase[tileID] := gameFlagColors[tileOwner]
         else
         begin
           U := landPtr.IsUnit;
           if U <> nil then
-            if U.Owner <> HAND_ANIMAL then
-              fBase[I*fMapX + K] := gHands[U.Owner].GameFlagColor
+          begin
+            if U.IsAnimal then
+              fBase[tileID] := gRes.Units[U.UnitType].MinimapColor
             else
-              fBase[I*fMapX + K] := gRes.Units[U.UnitType].MinimapColor
+              fBase[tileID] := gameFlagColors[U.Owner];
+          end
           else
           begin
-            ID := landPtr.BaseLayer.Terrain;
             // Do not use gTerrain.Land^[].Light for borders of the map, because it is set to -1 for fading effect
             // So assume gTerrain.Land^[].Light as medium value in this case
-            if (I = 0) or (I = fMapY - 1) or (K = 0) or (K = fMapX - 1) then
-              light := 255-fow
+            if isBorder then
+              light := 255 - fow
             else
-              light := Round(landPtr.RenderLight*64)-(255-fow); //it's -255..255 range now
-            col := gRes.Tileset[ID].MainColor;
-            fBase[I*fMapX + K] := Byte(EnsureRange(col.R+light,0,255)) or
-                                  Byte(EnsureRange(col.G+light,0,255)) shl 8 or
-                                  Byte(EnsureRange(col.B+light,0,255)) shl 16 or $FF000000;
+              light := Round(gTerrain.LandExt[MY,MX].RenderLight * 64) - (255 - fow); //it's -255..255 range now
+
+            col := gRes.Tileset[landPtr.BaseLayer.Terrain].MainColor;
+            fBase[tileID] := Byte(EnsureRange(col.R + light, 0, 255)) or
+                             Byte(EnsureRange(col.G + light, 0, 255)) shl 8 or
+                             Byte(EnsureRange(col.B + light, 0, 255)) shl 16 or $FF000000;
           end;
         end;
       end;
     end;
+  end;
 
   //Scan all players units and paint all virtual group members in MapEd
   if fPaintVirtualGroups then

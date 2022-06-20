@@ -43,6 +43,7 @@ type
     fSaveWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for normal saves and save at the end of PT
     fBaseSaveWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for base save only
     fAutoSaveWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for autosaves only
+    fSavePointWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for savepoints only
 
     procedure CreateGame(aGameMode: TKMGameMode);
 
@@ -101,6 +102,8 @@ type
     procedure NewMultiplayerMap(const aFileName: UnicodeString; aMapKind: TKMMapKind; aCRC: Cardinal; aSpectating: Boolean;
                                 aDifficulty: TKMMissionDifficulty);
     procedure NewMultiplayerSave(const aSaveName: UnicodeString; Spectating: Boolean);
+
+    procedure NewRestartLastSPGame;
     procedure NewRestartLast(const aGameName, aMissionFileRel, aSave: UnicodeString; aGameMode: TKMGameMode; aCampName: TKMCampaignId;
                              aCampMap: Byte; aLocation: Byte; aColor: Cardinal; aDifficulty: TKMMissionDifficulty = mdNone;
                              aAIType: TKMAIType = aitNone);
@@ -164,11 +167,12 @@ uses
   {$IFDEF Unix} LCLType, {$ENDIF}
   SysUtils, DateUtils, Math, TypInfo, KromUtils,
   {$IFDEF USE_MAD_EXCEPT} KM_Exceptions, {$ENDIF}
+  KM_System,
   KM_FormLogistics,
   KM_Main, KM_Controls, KM_Log, KM_Sound, KM_GameInputProcess, KM_GameInputProcess_Multi,
   KM_HandsCollection,
   KM_GameSavePoints,
-  KM_Cursor, KM_ResTexts, KM_ResKeys,
+  KM_Cursor, KM_ResTexts, KM_ResKeys, KM_ResTypes,
   KM_IoGraphicUtils, KM_Settings,
   KM_Saves, KM_CommonUtils, KM_CommonShellUtils, KM_RandomChecks,
   KM_DevPerfLog, KM_DevPerfLogTypes;
@@ -190,7 +194,7 @@ begin
   // it makes sense to store its settings along with the game's in the shared folder
   fServerSettings := TKMServerSettings.Create(slShared);
 
-  gRender := TRender.Create(aRenderControl, aScreenX, aScreenY, aVSync);
+  gRender := TKMRender.Create(aRenderControl, aScreenX, aScreenY, aVSync);
 
   fChat := TKMChat.Create;
 
@@ -200,7 +204,7 @@ begin
     gRandomCheckLogger := TKMRandomCheckLogger.Create;
 
   gRes := TKMResource.Create(aOnLoadingStep, aOnLoadingText);
-  gRes.LoadMainResources(gGameSettings.Locale, gGameSettings.LoadFullFonts);
+  gRes.LoadMainResources(gGameSettings.Locale, gGameSettings.GFX.LoadFullFonts);
 
   {$IFDEF USE_MAD_EXCEPT}gExceptions.LoadTranslation;{$ENDIF}
 
@@ -210,8 +214,8 @@ begin
     //pauses here until the user clicks ok.
     MessageDlg(gResTexts[TX_GAME_ERROR_OLD_OPENGL] + EolW + EolW + gResTexts[TX_GAME_ERROR_OLD_OPENGL_2], mtWarning, [mbOk], 0);
 
-  gSoundPlayer  := TKMSoundPlayer.Create(gGameSettings.SoundFXVolume);
-  gMusic        := TKMMusicLib.Create(gGameSettings.MusicVolume);
+  gSoundPlayer  := TKMSoundPlayer.Create(gGameSettings.SFX.SoundFXVolume);
+  gMusic        := TKMMusicLib.Create(gGameSettings.SFX.MusicVolume);
   gSoundPlayer.OnRequestFade   := gMusic.Fade;
   gSoundPlayer.OnRequestUnfade := gMusic.Unfade;
 
@@ -222,14 +226,15 @@ begin
   InitMainMenu(aScreenX, aScreenY);
 
   // Start the Music playback as soon as loading is complete
-  if not NoMusic and not gGameSettings.MusicOff then
+  if not NoMusic and gGameSettings.SFX.MusicEnabled then
     gMusic.PlayMenuTrack;
 
-  gMusic.ToggleShuffle(gGameSettings.ShuffleOn); //Determine track order
+  gMusic.ToggleShuffle(gGameSettings.SFX.ShuffleOn); //Determine track order
 
   fSaveWorkerThreadHolder := TKMWorkerThreadHolder.Create('SaveWorker');
   fAutoSaveWorkerThreadHolder := TKMWorkerThreadHolder.Create('AutoSaveWorker');
   fBaseSaveWorkerThreadHolder := TKMWorkerThreadHolder.Create('BaseSaveWorker');
+  fSavePointWorkerThreadHolder := TKMWorkerThreadHolder.Create('SavePointsWorker');
 
   fOnGameStart := GameStarted;
   fOnGameEnd := GameEnded;
@@ -264,6 +269,7 @@ begin
   FreeAndNil(fSaveWorkerThreadHolder);
   FreeAndNil(fAutoSaveWorkerThreadHolder);
   FreeAndNil(fBaseSaveWorkerThreadHolder);
+  FreeAndNil(fSavePointWorkerThreadHolder);
 
   FreeAndNil(fChat);
   FreeThenNil(fCampaigns);
@@ -329,14 +335,14 @@ begin
   //Recreate resources that use Locale info
   gRes.LoadLocaleResources(gGameSettings.Locale);
   //Fonts might need reloading too
-  gRes.LoadLocaleFonts(gGameSettings.Locale, gGameSettings.LoadFullFonts);
+  gRes.LoadLocaleFonts(gGameSettings.Locale, gGameSettings.GFX.LoadFullFonts);
 
   //Force reload game resources, if they during loading process,
   //as that could cause an error in the loading thread
   //(did not figure it out why. Its easier just to reload game resources in that rare case)
   {$IFDEF LOAD_GAME_RES_ASYNC}
   if gGameSettings.AsyncGameResLoader and not gRes.Sprites.GameResLoadCompleted then
-    gRes.LoadGameResources(gGameSettings.AlphaShadows, True);
+    gRes.LoadGameResources(gGameSettings.GFX.AlphaShadows, True);
   {$ENDIF}
 
   {$IFDEF USE_MAD_EXCEPT}gExceptions.LoadTranslation;{$ENDIF}
@@ -357,7 +363,7 @@ begin
   {$IFDEF LOAD_GAME_RES_ASYNC}
   //Load game resources asychronously (by other thread)
   if gGameSettings.AsyncGameResLoader then
-    gRes.LoadGameResources(gGameSettings.AlphaShadows, True);
+    gRes.LoadGameResources(gGameSettings.GFX.AlphaShadows, True);
   {$ENDIF}
 end;
 
@@ -528,7 +534,7 @@ begin
 
   GameLoadingStep(gResTexts[TX_MENU_LOADING_DEFINITIONS]);
   gRes.OnLoadingText := GameLoadingStep;
-  gRes.LoadGameResources(gGameSettings.AlphaShadows);
+  gRes.LoadGameResources(gGameSettings.GFX.AlphaShadows);
 
   GameLoadingStep(gResTexts[TX_MENU_LOADING_INITIALIZING]);
 
@@ -564,7 +570,8 @@ begin
   gGame := TKMGame.Create(aGameMode, gRender, GameDestroyed,
                           fSaveWorkerThreadHolder,
                           fBaseSaveWorkerThreadHolder,
-                          fAutoSaveWorkerThreadHolder);
+                          fAutoSaveWorkerThreadHolder,
+                          fSavePointWorkerThreadHolder);
 end;
 
 
@@ -694,6 +701,14 @@ end;
 procedure TKMGameApp.StopGameReturnToLobby;
 begin
   if gGame = nil then Exit;
+
+  // Wait till 'paused' save will be made. We want to show it properly in the Lobby UI
+  gSystem.Cursor := kmcAnimatedDirSelector;
+  try
+    gGame.WaitForSaveToBeDone;
+  finally
+    gSystem.Cursor := kmcDefault;
+  end;
 
   FreeThenNil(gGame);
   fNetworking.ReturnToLobby; //Clears gGame event pointers from Networking
@@ -958,6 +973,42 @@ begin
 end;
 
 
+procedure TKMGameApp.NewRestartLastSPGame;
+var
+  gameMode: TKMGameMode;
+  repeatGameName: UnicodeString;
+  repeatMissionFileRel: UnicodeString;
+  repeatSave: UnicodeString;
+  repeatCampName: TKMCampaignId;
+  repeatCampMap: Byte;
+  repeatLocation: Byte;
+  repeatColor: Cardinal;
+  repeatDifficulty: TKMMissionDifficulty;
+  repeatAIType: TKMAIType;
+begin
+  if gGame = nil then Exit;
+
+  if not gGame.Params.IsSingleplayerGame then Exit;
+
+  //Remember which map we played so we could restart it
+  gameMode              := gGame.Params.Mode;
+  repeatGameName        := gGame.Params.Name;
+  repeatMissionFileRel  := gGame.Params.MissionFileRel;
+  repeatSave            := gGame.SaveFile;
+  repeatCampName        := gGame.CampaignName;
+  repeatCampMap         := gGame.CampaignMap;
+  repeatLocation        := gGame.PlayerLoc;
+  repeatColor           := gGame.PlayerColor;
+  repeatDifficulty      := gGame.Params.MissionDifficulty;
+  repeatAIType          := gGame.AIType;
+
+  StopGame(grSilent);
+
+  gGameApp.NewRestartLast(repeatGameName, repeatMissionFileRel, repeatSave, gameMode, repeatCampName, repeatCampMap,
+                          repeatLocation, repeatColor, repeatDifficulty, repeatAIType);
+end;
+
+
 procedure TKMGameApp.NewRestartLast(const aGameName, aMissionFileRel, aSave: UnicodeString; aGameMode: TKMGameMode;
                                     aCampName: TKMCampaignId; aCampMap: Byte; aLocation: Byte; aColor: Cardinal;
                                     aDifficulty: TKMMissionDifficulty = mdNone; aAIType: TKMAIType = aitNone);
@@ -1206,7 +1257,7 @@ begin
     else
       fMainMenuInterface.Paint;
 
-    gRender.RenderBrightness(gGameSettings.Brightness);
+    gRender.RenderBrightness(gGameSettings.GFX.Brightness);
   {$IFDEF PERFLOG}
   finally
     gPerfLogs.SectionLeave(psFrameFullG);
@@ -1320,7 +1371,7 @@ end;
 function TKMGameApp.CheckDATConsistency: Boolean;
 const
   // That's the magic CRC of official .dat files and our .json specifications
-  DEFINES_CRC: Cardinal = $2E3E8670;
+  DEFINES_CRC: Cardinal = $28810991;
 begin
   Result := ALLOW_MP_MODS or (gRes.GetDATCRC = DEFINES_CRC);
 end;
@@ -1370,7 +1421,7 @@ begin
   if fGlobalTickCount mod 10 = 0 then
   begin
     // Music
-    if not gGameSettings.MusicOff and gMusic.IsEnded then
+    if gGameSettings.SFX.MusicEnabled and gMusic.IsEnded then
       gMusic.PlayNextTrack; //Feed new music track
 
     //StatusBar

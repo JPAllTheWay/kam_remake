@@ -113,10 +113,11 @@ var
 implementation
 uses
   Math, TypInfo,
+  KM_Entity,
   KM_GameApp,
-  KM_HandEntity,
-  KM_HandLogistics, KM_Resource, KM_ResWares, KM_HandsCollection,
-  KM_Defaults, KM_ResHouses, KM_ResUnits, KM_ResTypes, KM_Hand; // Make compiler happy, regarding inline methods
+  KM_HandEntity, KM_Hand, KM_HandLogistics, KM_HandsCollection, KM_HandTypes,
+  KM_Resource, KM_ResWares, KM_ResUnits, KM_ResHouses, KM_ResTypes,
+  KM_Defaults; // Make compiler happy, regarding inline methods
 
 {$IFDEF USE_VIRTUAL_TREEVIEW}
 const
@@ -165,7 +166,7 @@ const
     (ID: 2;  Title: 'iD';         Alignment: taRightJustify;  Width: 40;  Visible: True; ColumnType: cctNumber),
     (ID: 3;  Title: 'Resource';   Alignment: taLeftJustify;   Width: 110; Visible: True; ColumnType: cctText),
     (ID: 4;  Title: 'To';         Alignment: taLeftJustify;   Width: 130; Visible: True; ColumnType: cctText),
-    (ID: 5;  Title: 'To ID';      Alignment: taRightJustify;  Width: 80;  Visible: True; ColumnType: cctNumber),
+    (ID: 5;  Title: 'To ID';      Alignment: taRightJustify;  Width: 80;  Visible: True; ColumnType: cctText),
     (ID: 6;  Title: 'Type';       Alignment: taLeftJustify;   Width: 70;  Visible: True; ColumnType: cctText),
     (ID: 7;  Title: 'Importance'; Alignment: taLeftJustify;   Width: 70;  Visible: True; ColumnType: cctText),
     (ID: 8;  Title: 'Performed';  Alignment: taLeftJustify;   Width: 80;  Visible: True; ColumnType: cctNumber),
@@ -457,7 +458,6 @@ const
   DEL_FROM_COLUMNS = [4..5];
   DEL_TO_COLUMNS = [6..7];
   DEL_SERF_COLUMN = 8;
-
 var
   data: PKMLogisticsIDs;
   del: TKMDeliveries;
@@ -470,13 +470,19 @@ begin
 
   del := gHands[data.handID].Deliveries.Queue;
 
-
   case TKMHandLogisticsVST(Sender).Kind of
     vstkDelivery: begin
                     gMySpectator.ResetHighlightDebug;
 
-                    offerEntity := del.Offer[del.Delivery[data.ID].OfferID].Loc_House;
-                    demandEntity := del.Demand[del.Delivery[data.ID].DemandID].GetDemandEntity;
+                    offerEntity := nil;
+                    demandEntity := nil;
+
+                    if del.Delivery[data.ID].OfferID <> DELIVERY_NO_ID then
+                      offerEntity := del.Offer[del.Delivery[data.ID].OfferWare, del.Delivery[data.ID].OfferID].Loc_House;
+
+                    if del.Delivery[data.ID].DemandID <> DELIVERY_NO_ID then
+                      demandEntity := del.Demand[del.Delivery[data.ID].DemandWare, del.Delivery[data.ID].DemandID].GetDemandEntity;
+
                     serfEntity := del.Delivery[data.ID].Serf;
 
                     // Check if click was on a specified column
@@ -490,7 +496,7 @@ begin
                       selectEntity := serfEntity
                     else
                     // otherwise circle through entities
-                    if (gMySpectator.Selected = nil) then
+                    if gMySpectator.Selected = nil then
                       selectEntity := serfEntity
                     else
                     if offerEntity = gMySpectator.Selected then
@@ -510,13 +516,13 @@ begin
                   end;
     vstkOffer:    begin
                     gMySpectator.ResetHighlightDebug;
-                    offerEntity := del.Offer[data.ID].Loc_House;
+                    offerEntity := del.Offer[data.Ware, data.ID].Loc_House;
                     gGameApp.Game.GamePlayInterface.SelectEntity(offerEntity);
                     gMySpectator.HighlightDebug := TKMHighlightEntity.New(offerEntity, OFF_COLOR);
                   end;
     vstkDemand:   begin
                     gMySpectator.ResetHighlightDebug;
-                    demandEntity := del.Demand[data.ID].GetDemandEntity;
+                    demandEntity := del.Demand[data.Ware, data.ID].GetDemandEntity;
                     gGameApp.Game.GamePlayInterface.SelectEntity(demandEntity);
                     gMySpectator.HighlightDebug := TKMHighlightEntity.New(demandEntity, DEM_COLOR);
                   end;
@@ -610,7 +616,8 @@ end;
 procedure TFormLogistics.VSTDeliveriesGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
                                               TextType: TVSTTextType; var CellText: string);
 var
-  handID, iQ: Integer;
+  handID, iQ, iO, iD: Integer;
+  oWT, dWT: TKMWareType;
   data: PKMLogisticsIDs;
   del: TKMDeliveries;
 begin
@@ -620,9 +627,14 @@ begin
   del := gHands[handID].Deliveries.Queue;
 
   iQ := data.ID;
-  if (iQ = 0) or (iQ > del.DeliveryCount) then
+  iO := del.Delivery[iQ].OfferID;
+  iD := del.Delivery[iQ].DemandID;
+  oWT := del.Delivery[iQ].OfferWare;
+  dWT := del.Delivery[iQ].DemandWare;
+
+  if (iQ = DELIVERY_NO_ID) or (iQ > del.DeliveryCount) then
   begin
-    CellText := '0';
+    CellText := '-';
     Exit;
   end;
 
@@ -631,28 +643,34 @@ begin
     1:  CellText := IntToStr(handID);
     2:  CellText := IntToStr(iQ);
     3:  CellText := gResWares[del.DeliveryWare[iQ]].Title;
-    4:  if del.Offer[del.Delivery[iQ].OfferID].Loc_House = nil then
+    4:  if (iO = DELIVERY_NO_ID) or (oWT = wtNone) or (del.Offer[oWT, iO].Loc_House = nil) then
           CellText := 'nil'
         else
-          CellText := gResHouses[del.Offer[del.Delivery[iQ].OfferID].Loc_House.HouseType].HouseName;
+          CellText := gResHouses[del.Offer[oWT, iO].Loc_House.HouseType].HouseName;
 
-    5:  if del.Offer[del.Delivery[iQ].OfferID].Loc_House = nil then
-          CellText := '0'
+    5:  if (iO = DELIVERY_NO_ID) or (oWT = wtNone) or (del.Offer[oWT, iO].Loc_House = nil) then
+          CellText := '-'
         else
-          CellText := IntToStr(del.Offer[del.Delivery[iQ].OfferID].Loc_House.UID);
+          CellText := IntToStr(del.Offer[oWT, iO].Loc_House.UID);
 
-    6:  if del.Demand[del.Delivery[iQ].DemandID].Loc_House <> nil then
-          CellText := 'H: ' + gResHouses[del.Demand[del.Delivery[iQ].DemandID].Loc_House.HouseType].HouseName
-        else
-        if del.Demand[del.Delivery[iQ].DemandID].Loc_Unit <> nil then
-          CellText := 'U: ' + gRes.Units[del.Demand[del.Delivery[iQ].DemandID].Loc_Unit.UnitType].GUIName
+    6:  if (id <> DELIVERY_NO_ID) and (dWT <> wtNone) then
+        begin
+          if del.Demand[dWT, iD].Loc_House <> nil then
+            CellText := 'H: ' + gResHouses[del.Demand[dWT, iD].Loc_House.HouseType].HouseName
+          else
+          if del.Demand[dWT, iD].Loc_Unit <> nil then
+            CellText := 'U: ' + gRes.Units[del.Demand[dWT, iD].Loc_Unit.UnitType].GUIName;
+        end
         else
           CellText := 'nil';
-    7:  if del.Demand[del.Delivery[iQ].DemandID].Loc_House <> nil then
-          CellText := IntToStr(del.Demand[del.Delivery[iQ].DemandID].Loc_House.UID)
-        else
-        if del.Demand[del.Delivery[iQ].DemandID].Loc_Unit <> nil then
-          CellText := IntToStr(del.Demand[del.Delivery[iQ].DemandID].Loc_Unit.UID)
+    7:  if (iD <> DELIVERY_NO_ID) and (dWT <> wtNone) then
+        begin
+          if del.Demand[dWT, iD].Loc_House <> nil then
+            CellText := IntToStr(del.Demand[dWT, iD].Loc_House.UID)
+          else
+          if del.Demand[dWT, iD].Loc_Unit <> nil then
+            CellText := IntToStr(del.Demand[dWT, iD].Loc_Unit.UID);
+        end
         else
           CellText := 'nil';
     8:  CellText := IntToStr(del.Delivery[iQ].Serf.UID);
@@ -665,40 +683,40 @@ procedure TFormLogistics.VSTOffersGetText(Sender: TBaseVirtualTree; Node: PVirtu
                                           TextType: TVSTTextType; var CellText: string);
 var
   handID, iO: Integer;
+  oWT: TKMWareType;
   data: PKMLogisticsIDs;
-  off: TKMDeliveryOffer;
 begin
   data := Sender.GetNodeData(Node);
   handID := data.HandID;
   iO := data.ID;
+  oWT := data.Ware;
 
-  if (iO = 0) or (iO > gHands[handID].Deliveries.Queue.OfferCount) then
+  if (iO = DELIVERY_NO_ID) or (oWT = wtNone) or (iO >= gHands[handID].Deliveries.Queue.OfferCount[oWT]) then
   begin
-    CellText := '0';
+    CellText := '-';
     Exit;
   end;
 
-  off := gHands[handID].Deliveries.Queue.Offer[iO];
+  with gHands[handID].Deliveries.Queue.Offer[oWT,iO] do
+    case VSTOffers.Header.Columns[Column].Tag of
+      0:  CellText := IntToStr(Node.Index);
+      1:  CellText := IntToStr(handID);
+      2:  CellText := IntToStr(iO);
+      3:  CellText := gResWares[oWT].Title;
+      4:  if Loc_House = nil then
+            CellText := 'nil'
+          else
+            CellText := gResHouses[Loc_House.HouseType].HouseName;
 
-  case VSTOffers.Header.Columns[Column].Tag of
-    0:  CellText := IntToStr(Node.Index);
-    1:  CellText := IntToStr(handID);
-    2:  CellText := IntToStr(iO);
-    3:  CellText := gResWares[off.Ware].Title;
-    4:  if off.Loc_House = nil then
-          CellText := 'nil'
-        else
-          CellText := gResHouses[off.Loc_House.HouseType].HouseName;
+      5:  if Loc_House = nil then
+            CellText := '-'
+          else
+            CellText := IntToStr(Loc_House.UID);
 
-    5:  if off.Loc_House = nil then
-          CellText := '0'
-        else
-          CellText := IntToStr(off.Loc_House.UID);
-
-    6:  CellText := IntToStr(off.Count);
-    7:  CellText := IntToStr(off.BeingPerformed);
-    8:  CellText := BoolToStr(off.IsDeleted, True);
-  end;
+      6:  CellText := IntToStr(Count);
+      7:  CellText := IntToStr(BeingPerformed);
+      8:  CellText := BoolToStr(IsDeleted, True);
+    end;
 end;
 
 
@@ -706,47 +724,47 @@ procedure TFormLogistics.VSTDemandsGetText(Sender: TBaseVirtualTree; Node: PVirt
                                            TextType: TVSTTextType; var CellText: string);
 var
   handID, iD: Integer;
+  dWT: TKMWareType;
   data: PKMLogisticsIDs;
-  dem: TKMDeliveryDemand;
 begin
   data := Sender.GetNodeData(Node);
   handID := data.HandID;
   iD := data.ID;
+  dWT := data.Ware;
 
-  if (iD = 0) or (iD > gHands[handID].Deliveries.Queue.DemandCount) then
+  if (iD = DELIVERY_NO_ID) or (dWT = wtNone) or (iD >= gHands[handID].Deliveries.Queue.DemandCount[dWT]) then
   begin
-    CellText := '0';
+    CellText := '-';
     Exit;
   end;
 
-  dem := gHands[handID].Deliveries.Queue.Demand[iD];
+  with gHands[handID].Deliveries.Queue.Demand[dWT,iD] do
+    case VSTDemands.Header.Columns[Column].Tag of
+      0:  CellText := IntToStr(Node.Index);
+      1:  CellText := IntToStr(handID);
+      2:  CellText := IntToStr(iD);
+      3:  CellText := gResWares[dWT].Title;
+      4:  if Loc_House <> nil then
+            CellText := 'H: ' + gResHouses[Loc_House.HouseType].HouseName
+          else
+          if Loc_Unit <> nil then
+            CellText := 'U: ' + gRes.Units[Loc_Unit.UnitType].GUIName
+          else
+            CellText := 'nil';
 
-  case VSTDemands.Header.Columns[Column].Tag of
-    0:  CellText := IntToStr(Node.Index);
-    1:  CellText := IntToStr(handID);
-    2:  CellText := IntToStr(iD);
-    3:  CellText := gResWares[dem.Ware].Title;
-    4:  if dem.Loc_House <> nil then
-          CellText := 'H: ' + gResHouses[dem.Loc_House.HouseType].HouseName
-        else
-        if dem.Loc_Unit <> nil then
-          CellText := 'U: ' + gRes.Units[dem.Loc_Unit.UnitType].GUIName
-        else
-          CellText := 'nil';
+      5:  if Loc_House <> nil then
+            CellText := IntToStr(Loc_House.UID)
+          else
+          if Loc_Unit <> nil then
+            CellText := IntToStr(Loc_Unit.UID)
+          else
+            CellText := '-';
 
-    5:  if dem.Loc_House <> nil then
-          CellText := IntToStr(dem.Loc_House.UID)
-        else
-        if dem.Loc_Unit <> nil then
-          CellText := IntToStr(dem.Loc_Unit.UID)
-        else
-          CellText := '0';
-
-    6:  CellText := GetEnumName(TypeInfo(TKMDemandType), Integer(dem.demandType));
-    7:  CellText := GetEnumName(TypeInfo(TKMDemandImportance), Integer(dem.Importance));
-    8:  CellText := IntToStr(dem.BeingPerformed);
-    9:  CellText := BoolToStr(dem.IsDeleted, True);
-  end;
+      6:  CellText := GetEnumName(TypeInfo(TKMDemandType), Integer(DemandType));
+      7:  CellText := GetEnumName(TypeInfo(TKMDemandImportance), Integer(Importance));
+      8:  CellText := IntToStr(BeingPerformed);
+      9:  CellText := BoolToStr(IsDeleted, True);
+    end;
 end;
 {$ENDIF}
 

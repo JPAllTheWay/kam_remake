@@ -373,25 +373,13 @@ begin
   gGame.MapTxtInfo.Version := Edit_Version.Text;
 
   case Radio_SmallDescType.ItemIndex of
-    0:  begin
-          gGame.MapTxtInfo.SmallDesc     := Edit_SmallDesc.Text;
-          gGame.MapTxtInfo.SmallDescLIBX := -1;
-        end;
-    1:  begin
-          gGame.MapTxtInfo.SmallDesc     := '';
-          gGame.MapTxtInfo.SmallDescLIBX := NumEdit_SmallDesc.Value;
-        end;
+    0:  gGame.MapTxtInfo.SmallDesc := Edit_SmallDesc.Text;
+    1:  gGame.MapTxtInfo.SetSmallDescLibxAndTranslation(NumEdit_SmallDesc.Value, '');
   end;
 
   case Radio_BigDescType.ItemIndex of
-    0:  begin
-          gGame.MapTxtInfo.SetBigDesc(Edit_BigDesc.Text);
-          gGame.MapTxtInfo.BigDescLIBX := -1
-        end;
-    1:  begin
-          gGame.MapTxtInfo.SetBigDesc('');
-          gGame.MapTxtInfo.BigDescLIBX := NumEdit_BigDesc.Value;
-        end;
+    0:  gGame.MapTxtInfo.BigDesc     := Edit_BigDesc.Text;
+    1:  gGame.MapTxtInfo.SetBigDescLibxAndTranslation(NumEdit_BigDesc.Value, '');
   end;
 
   gGame.MapTxtInfo.IsCoop         := CheckBox_Coop.Checked;
@@ -429,9 +417,9 @@ begin
   else
     Radio_BigDescType.ItemIndex := 0;
 
-  Edit_SmallDesc.SetTextSilently(gGame.MapTxtInfo.SmallDesc); // Will not trigger OnChange event
+  Edit_SmallDesc.SetTextSilently(gGame.MapTxtInfo.SmallDescToDisplay); // Will not trigger OnChange event
   NumEdit_SmallDesc.Value := gGame.MapTxtInfo.SmallDescLibx;
-  Edit_BigDesc.SetTextSilently(gGame.MapTxtInfo.GetBigDesc);  // Will not trigger OnChange event
+  Edit_BigDesc.SetTextSilently(gGame.MapTxtInfo.BigDescToDisplay);  // Will not trigger OnChange event
   NumEdit_BigDesc.Value   := gGame.MapTxtInfo.BigDescLibx;
   Memo_BigDesc.Text       := Edit_BigDesc.Text;
 

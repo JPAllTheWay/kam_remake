@@ -92,7 +92,7 @@ type
 
     property MultithreadLogging: Boolean read GetMultithreadLogging write SetMultithreadLogging;
 
-    // Add line if TestValue=false
+    // Add line if TestValue=False
     procedure AddAssert(const aMessageText: UnicodeString);
     // AddToLog simply adds the text
     procedure AddNoTime(const aText: UnicodeString; aWithPrefix: Boolean = True);
@@ -111,6 +111,7 @@ var
 implementation
 uses
   Classes, SysUtils,
+  KM_FileIO,
   KM_Defaults, KM_CommonUtils;
 
 const
@@ -157,7 +158,7 @@ begin
       Assert(FileAge(fPathToLogs + SearchRec.Name, fileDateTime), 'How is that it does not exists any more?');
 
       if (Abs(Now - fileDateTime) > DEL_LOGS_OLDER_THAN) then
-        DeleteFile(fPathToLogs + SearchRec.Name);
+        KMDeleteFile(fPathToLogs + SearchRec.Name);
     until (FindNext(SearchRec) <> 0);
   finally
     FindClose(SearchRec);
@@ -258,7 +259,7 @@ begin
     AssignFile(fLogFile, fLogPath);
     Rewrite(fLogFile);
     //           hh:nn:ss.zzz 12345.678s 1234567ms     text-text-text
-    WriteLn(fLogFile, '   Timestamp    Elapsed     Delta     Description');
+    WriteLn(fLogFile, '   Timestamp    Elapsed     Delta  Thread    Description');
     CloseFile(fLogFile);
   except
     on E: Exception do
@@ -275,7 +276,8 @@ end;
 procedure TKMLog.DeleteOldLogs;
 begin
   if Self = nil then Exit;
-
+  if not DELETE_OLD_LOGS then Exit;
+  
   //No need to remember the instance, it's set to FreeOnTerminate
   TKMOldLogsDeleter.Create(ExtractFilePath(fLogPath));
 end;
@@ -343,10 +345,11 @@ begin
       WriteLn(fLogFile, '    Date: ' + FormatDateTime('yyyy/mm/dd', Now));
       WriteLn(fLogFile, '========================');
     end;
-    WriteLn(fLogFile, Format('%12s %9.3fs %7dms     %s', [
+    WriteLn(fLogFile, Format('%12s %9.3fs %7dms %6d    %s', [
                   FormatDateTime('hh:nn:ss.zzz', Now),
                   TimeSince(fFirstTick) / 1000,
                   TimeSince(fPreviousTick),
+                  TThread.CurrentThread.ThreadID,
                   aText]));
 
     if aDoCloseFile then

@@ -17,7 +17,7 @@ type
 
     fCampaignId: TKMCampaignId;
     fCampaign: TKMCampaign;
-    fMapIndex: Byte;
+    fMapIndex: Byte; // Map index starts from 0
     fAnimNodeIndex : Byte;
 
     fDifficulty: TKMMissionDifficulty;
@@ -40,7 +40,7 @@ type
         Label_CampaignFlags: array[0..MAX_CAMP_MAPS - 1] of TKMLabel;
         Image_CampaignSubNode: array[0..MAX_CAMP_NODES - 1] of TKMImage;
       Panel_CampScroll: TKMPanel;
-        Image_ScrollTop, Image_Scroll, Image_ScrollClose: TKMImage;
+        Image_Scroll, Image_ScrollClose: TKMImage;
         Label_CampaignTitle, Label_CampaignText: TKMLabel;
       Image_ScrollRestore: TKMImage;
       Label_Difficulty: TKMLabel;
@@ -56,6 +56,8 @@ type
     procedure Show(aCampaign: TKMCampaignId);
 
     procedure RefreshCampaign;
+
+    function Visible: Boolean;
 
     procedure UpdateState(aTickCount: Cardinal);
   end;
@@ -73,6 +75,7 @@ const
   FLAG_LABEL_OFFSET_X = 10;
   FLAG_LABEL_OFFSET_Y = 7;
   CAMP_NODE_ANIMATION_PERIOD = 5;
+  IMG_SCROLL_MAX_HEIGHT = 430;
 
 { TKMGUIMainCampaign }
 constructor TKMMenuCampaign.Create(aParent: TKMPanel; aCampaigns: TKMCampaignsCollection; aOnPageChange: TKMMenuChangeEventText);
@@ -84,7 +87,7 @@ begin
   fCampaigns := aCampaigns;
 
   fDifficulty := mdNone;
-  fMapIndex := 1;
+  fMapIndex := 0;
   fOnPageChange := aOnPageChange;
   OnEscKeyDown := BackClick;
 
@@ -114,7 +117,7 @@ begin
   Panel_CampScroll := TKMPanel.Create(Panel_Campaign, 0, 0, 360, 430);
   Panel_CampScroll.Anchors := [anLeft,anBottom];
 
-    Image_Scroll := TKMImage.Create(Panel_CampScroll, 0, 0, 360, 430, 410, rxGui);
+    Image_Scroll := TKMImage.Create(Panel_CampScroll, 0, 0, 360, IMG_SCROLL_MAX_HEIGHT, 410, rxGui);
     Image_Scroll.ClipToBounds := True;
     Image_Scroll.AnchorsStretch;
     Image_Scroll.ImageAnchors := [anLeft, anRight, anTop];
@@ -246,7 +249,7 @@ end;
 
 procedure TKMMenuCampaign.SelectMap(aMapIndex: Byte);
 var
-  I: Integer;
+  I, panHeight: Integer;
   color: Cardinal;
 begin
   fMapIndex := aMapIndex;
@@ -268,7 +271,7 @@ begin
 
   for I := 0 to High(Image_CampaignSubNode) do
   begin
-    Image_CampaignSubNode[I].Visible := false;
+    Image_CampaignSubNode[I].Visible := False;
     Image_CampaignSubNode[I].Left := fCampaign.Maps[fMapIndex].Nodes[I].X;
     Image_CampaignSubNode[I].Top  := fCampaign.Maps[fMapIndex].Nodes[I].Y;
   end;
@@ -278,8 +281,18 @@ begin
 
   Panel_CampScroll.Left := IfThen(fCampaign.Maps[fMapIndex].TextPos = bcBottomRight, Panel_Campaign.Width - Panel_CampScroll.Width, 0);
   //Add offset from top and space on bottom to fit buttons
-  Panel_CampScroll.Height := Label_CampaignText.Top + Label_CampaignText.TextSize.Y + 70
-                             + 25*Byte((DropBox_Difficulty.Count > 0) and (fCampaign.Maps[fMapIndex].TextPos = bcBottomRight));
+  panHeight := Label_CampaignText.Top + Label_CampaignText.TextSize.Y + 70
+               + 25*Byte((DropBox_Difficulty.Count > 0) and (fCampaign.Maps[fMapIndex].TextPos = bcBottomRight));
+
+  // Stretch image in case its too small for a briefing text
+  // Stretched scroll does not look good, but its okay for now (only happens for a custom campaigns)
+  // Todo: cut scroll image into 3 pieces (top / center / bottom) and render as many of central part as needed
+  if panHeight > IMG_SCROLL_MAX_HEIGHT then
+    Image_Scroll.ImageAnchors := Image_Scroll.ImageAnchors + [anBottom]
+  else
+    Image_Scroll.ImageAnchors := Image_Scroll.ImageAnchors - [anBottom];
+
+  Panel_CampScroll.Height := panHeight;
   Panel_CampScroll.Top := Panel_Campaign.Height - Panel_CampScroll.Height;
 
   Image_ScrollRestore.Top := Panel_Campaign.Height - 50 - 53 - 32*Byte(DropBox_Difficulty.Count > 0);
@@ -303,7 +316,11 @@ end;
 procedure TKMMenuCampaign.PlayBriefingAudioTrack;
 begin
   gMusic.StopPlayingOtherFile; //Stop playing the previous briefing even if this one doesn't exist
-  TKMAudio.PauseMusicToPlayFile(fCampaign.GetBreifingAudioFile(fMapIndex));
+
+  // For some reason fMapIndex could get incorrect value
+  if not InRange(fMapIndex, 0, MAX_CAMP_MAPS - 1) then Exit;
+
+  TKMAudio.PauseMusicToPlayFile(fCampaign.GetBriefingAudioFile(fMapIndex));
 end;
 
 procedure TKMMenuCampaign.StartClick(Sender: TObject);
@@ -332,16 +349,23 @@ begin
   if not InRange(fAnimNodeIndex, 0, fCampaign.Maps[fMapIndex].NodeCount-1) then Exit;
   if (aTickCount mod CAMP_NODE_ANIMATION_PERIOD) <> 0 then Exit;
   if Image_CampaignSubNode[fAnimNodeIndex].Visible then Exit;
-  Image_CampaignSubNode[fAnimNodeIndex].Visible := true;
+  Image_CampaignSubNode[fAnimNodeIndex].Visible := True;
   inc(fAnimNodeIndex);
+end;
+
+
+function TKMMenuCampaign.Visible: Boolean;
+begin
+  Result := Panel_Campaign.Visible;
 end;
 
 
 procedure TKMMenuCampaign.UpdateState(aTickCount: Cardinal);
 begin
-  if fCampaign <> nil then
-    if fCampaign.Maps[fMapIndex].NodeCount > 0 then
-      AnimNodes(aTickCount);
+  if (fCampaign = nil) or not Visible then Exit;
+
+  if fCampaign.Maps[fMapIndex].NodeCount > 0 then
+    AnimNodes(aTickCount);
 end;
 
 
@@ -349,6 +373,8 @@ procedure TKMMenuCampaign.Resize(X, Y: Word);
 var
   I: Integer;
 begin
+  if (fCampaign = nil) or not Visible then Exit;
+
   //Special rules for resizing the campaigns panel
   Panel_Campaign_Flags.Scale := Min(768,Y) / 768;
   Panel_Campaign_Flags.Left := Round(1024*(1-Panel_Campaign_Flags.Scale) / 2);

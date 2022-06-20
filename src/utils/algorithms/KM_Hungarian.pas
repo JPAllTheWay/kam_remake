@@ -252,7 +252,7 @@ begin
       if starCol <> -1 then
       begin
         fRowsCovered[loc.Row] := True;
-        fColsCovered[starCol] := false
+        fColsCovered[starCol] := False
       end
       else
       begin

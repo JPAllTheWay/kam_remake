@@ -151,58 +151,58 @@ uses
 
 
 const
-  WarriorSFXFolder: array[WARRIOR_MIN..WARRIOR_MAX] of string = (
+  WARRIOR_SFX_FOLDER: array[WARRIOR_MIN..WARRIOR_MAX] of string = (
     'militia', 'axeman', 'swordman', 'bowman', 'crossbowman',
     'lanceman', 'pikeman', 'cavalry', 'knights', 'barbarian',
     'rebel', 'rogue', 'warrior', 'vagabond');
 
   //TPR warriors reuse TSK voices in some languages, so if the specific ones don't exist use these
-  WarriorSFXFolderBackup: array[WARRIOR_MIN..WARRIOR_MAX] of string = (
+  WARRIOR_SFX_FOLDER_BACKUP: array[WARRIOR_MIN..WARRIOR_MAX] of string = (
     '', '', '', '', '',
     '', '', '', '', '',
     'bowman', 'lanceman', 'barbarian', 'cavalry');
 
-  WarriorSFX: array[TWarriorSpeech] of string = (
+  WARRIOR_SFX: array[TWarriorSpeech] of string = (
     'select', 'eat', 'left', 'right', 'halve',
     'join', 'halt', 'send', 'attack', 'format',
     'death', 'battle', 'storm');
 
-  AttackNotifications: array[TAttackNotification] of string = ('citiz', 'town', 'units');
+  ATTACK_NOTIFICATION: array[TAttackNotification] of string = ('citiz', 'town', 'units');
 
-  CitizenSFX: array[CITIZEN_MIN..CITIZEN_MAX] of record
+  CITIZEN_SFX: array[CITIZEN_MIN..CITIZEN_MAX] of record
     WarriorVoice: TKMUnitType;
     SelectID, DeathID: byte;
   end = (
-    (WarriorVoice: utMilitia;      SelectID:3; DeathID:1), //utSerf
-    (WarriorVoice: utAxeFighter;   SelectID:0; DeathID:0), //utWoodcutter
-    (WarriorVoice: utBowman;       SelectID:2; DeathID:1), //utMiner
-    (WarriorVoice: utSwordFighter;    SelectID:0; DeathID:2), //utAnimalBreeder
-    (WarriorVoice: utMilitia;      SelectID:1; DeathID:2), //utFarmer
+    (WarriorVoice: utMilitia;       SelectID:3; DeathID:1), //utSerf
+    (WarriorVoice: utAxeFighter;    SelectID:0; DeathID:0), //utWoodcutter
+    (WarriorVoice: utBowman;        SelectID:2; DeathID:1), //utMiner
+    (WarriorVoice: utSwordFighter;  SelectID:0; DeathID:2), //utAnimalBreeder
+    (WarriorVoice: utMilitia;       SelectID:1; DeathID:2), //utFarmer
     (WarriorVoice: utCrossbowman;   SelectID:1; DeathID:0), //utLamberjack
-    (WarriorVoice: utLanceCarrier;      SelectID:1; DeathID:0), //utBaker
-    (WarriorVoice: utScout;   SelectID:0; DeathID:2), //utButcher
-    (WarriorVoice: utVagabond;     SelectID:2; DeathID:0), //utFisher
-    (WarriorVoice: utKnight;      SelectID:1; DeathID:1), //utWorker
-    (WarriorVoice: utPikeman; SelectID:1; DeathID:1), //utStoneCutter
-    (WarriorVoice: utKnight;      SelectID:3; DeathID:4), //utSmith
-    (WarriorVoice: utPikeman; SelectID:3; DeathID:2), //utMetallurgist
-    (WarriorVoice: utBowman;       SelectID:3; DeathID:0)  //utRecruit
-    );
+    (WarriorVoice: utLanceCarrier;  SelectID:1; DeathID:0), //utBaker
+    (WarriorVoice: utScout;         SelectID:0; DeathID:2), //utButcher
+    (WarriorVoice: utVagabond;      SelectID:2; DeathID:0), //utFisher
+    (WarriorVoice: utKnight;        SelectID:1; DeathID:1), //utWorker
+    (WarriorVoice: utPikeman;       SelectID:1; DeathID:1), //utStoneCutter
+    (WarriorVoice: utKnight;        SelectID:3; DeathID:4), //utSmith
+    (WarriorVoice: utPikeman;       SelectID:3; DeathID:2), //utMetallurgist
+    (WarriorVoice: utBowman;        SelectID:3; DeathID:0)  //utRecruit
+  );
 
-  NewSFXFolder = 'Sounds'+PathDelim;
-  NewSFXFile: array [TSoundFXNew] of string = (
-    'UI'+PathDelim+'ButtonClick.wav',
-    'Buildings'+PathDelim+'MarketPlace'+PathDelim+'Trade.wav',
-    'Chat'+PathDelim+'ChatArrive.wav',
-    'Chat'+PathDelim+'ChatTeam.wav',
-    'Chat'+PathDelim+'ChatSystem.wav',
-    'Chat'+PathDelim+'ChatOpen.wav',
-    'Chat'+PathDelim+'ChatClose.wav',
-    'Misc'+PathDelim+'Victory.wav',
-    'Misc'+PathDelim+'Defeat.wav',
-    'UI'+PathDelim+'Beacon.wav',
-    'UI'+PathDelim+'Error.wav',
-    'Misc'+PathDelim+'PeaceTime.wav');
+  NEW_SFX_FOLDER = 'Sounds' + PathDelim;
+  NEW_SFX_FILE: array [TSoundFXNew] of string = (
+    'UI' + PathDelim + 'ButtonClick.wav',
+    'Buildings' + PathDelim + 'MarketPlace' + PathDelim + 'Trade.wav',
+    'Chat' + PathDelim + 'ChatArrive.wav',
+    'Chat' + PathDelim +'ChatTeam.wav',
+    'Chat' + PathDelim + 'ChatSystem.wav',
+    'Chat' + PathDelim + 'ChatOpen.wav',
+    'Chat' + PathDelim + 'ChatClose.wav',
+    'Misc' + PathDelim + 'Victory.wav',
+    'Misc' + PathDelim + 'Defeat.wav',
+    'UI'   + PathDelim + 'Beacon.wav',
+    'UI'   + PathDelim + 'Error.wav',
+    'Misc' + PathDelim + 'PeaceTime.wav');
 
 
 { TKMResSounds }
@@ -295,11 +295,11 @@ begin
   if not (aUnitType in [CITIZEN_MIN..CITIZEN_MAX]) then Exit;
 
   if aSound = spDeath then
-    soundID := CitizenSFX[aUnitType].DeathID
+    soundID := CITIZEN_SFX[aUnitType].DeathID
   else
-    soundID := CitizenSFX[aUnitType].SelectID;
+    soundID := CITIZEN_SFX[aUnitType].SelectID;
 
-  Result := FileOfWarrior(CitizenSFX[aUnitType].WarriorVoice, aSound, soundID);
+  Result := FileOfWarrior(CITIZEN_SFX[aUnitType].WarriorVoice, aSound, soundID);
 end;
 
 
@@ -309,10 +309,10 @@ var
 begin
   S := ExeDir + 'data' + PathDelim + 'sfx' + PathDelim + 'speech.' + UnicodeString(fLocaleString) + PathDelim;
   if fWarriorUseBackup[aUnitType] then
-    S := S + WarriorSFXFolderBackup[aUnitType]
+    S := S + WARRIOR_SFX_FOLDER_BACKUP[aUnitType]
   else
-    S := S + WarriorSFXFolder[aUnitType];
-  S := S + PathDelim + WarriorSFX[aSound] + IntToStr(aNumber);
+    S := S + WARRIOR_SFX_FOLDER[aUnitType];
+  S := S + PathDelim + WARRIOR_SFX[aSound] + IntToStr(aNumber);
   //All our files are WAV now. Don't accept SND files because TPR uses SND in a different
   //format which can cause OpenAL to crash if someone installs KMR over TPR folder (e.g. Steam)
   Result := S+'.wav';
@@ -321,7 +321,7 @@ end;
 
 function TKMResSounds.FileOfNewSFX(aSFX: TSoundFXNew): UnicodeString;
 begin
-  Result := ExeDir + NewSFXFolder + NewSFXFile[aSFX];
+  Result := ExeDir + NEW_SFX_FOLDER + NEW_SFX_FILE[aSFX];
 end;
 
 
@@ -329,7 +329,7 @@ function TKMResSounds.FileOfNotification(aSound: TAttackNotification; aNumber: B
 var
   S: UnicodeString;
 begin
-  S := ExeDir + 'data'+PathDelim+'sfx'+PathDelim+'speech.'+UnicodeString(fLocaleString)+ PathDelim + AttackNotifications[aSound] + int2fix(aNumber,2);
+  S := ExeDir + 'data'+PathDelim+'sfx'+PathDelim+'speech.'+UnicodeString(fLocaleString)+ PathDelim + ATTACK_NOTIFICATION[aSound] + int2fix(aNumber,2);
   Result := S+'.wav';
 end;
 
@@ -394,7 +394,7 @@ begin
 
   //First inspect folders, if the prefered ones don't exist use the backups
   for U := WARRIOR_MIN to WARRIOR_MAX do
-    if not DirectoryExists(speechPath + WarriorSFXFolder[U] + PathDelim) then
+    if not DirectoryExists(speechPath + WARRIOR_SFX_FOLDER[U] + PathDelim) then
       fWarriorUseBackup[U] := True;
 
   //If the folder exists it is likely all the sounds are there

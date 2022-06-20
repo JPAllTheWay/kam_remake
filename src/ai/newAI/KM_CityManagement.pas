@@ -13,7 +13,7 @@ uses
 
 type
   TKMWarfareArr = array[WARFARE_MIN..WARFARE_MAX] of record
-    Available, Required: Word;
+    Available, Required: Integer;
     Fraction: Single;
   end;
   TKMWarriorsDemands = array[WARRIOR_EQUIPABLE_BARRACKS_MIN..WARRIOR_EQUIPABLE_BARRACKS_MAX] of Integer;
@@ -675,7 +675,7 @@ begin
     begin
       for I := 0 to Houses.Count - 1 do
       begin
-        Houses[I].BuildingRepair := false;
+        Houses[I].BuildingRepair := False;
         if (Houses[I].HouseType = htWatchTower) AND (Houses[I].DeliveryMode = dmDelivery) then
           Houses[I].SetDeliveryModeInstantly(dmClosed);
       end;
@@ -766,7 +766,7 @@ begin
     //gHands[fOwner].Stats.WareDistribution[wtSteel, htWeaponSmithy] := 5;
     //gHands[fOwner].Stats.WareDistribution[wtSteel, htArmorSmithy] := 5;
 
-    gHands[fOwner].Houses.UpdateResRequest;
+    gHands[fOwner].Houses.UpdateDemands;
   end;
 end;
 
@@ -896,7 +896,7 @@ var
           for I := Low(TROOP_COST[UT]) to High(TROOP_COST[UT]) do
             if (TROOP_COST[UT,I] <> wtNone) then
               with fRequiredWeapons[ TROOP_COST[UT,I] ] do
-                Required := Required + Round(DEFAULT_ARMY_REQUIREMENTS[UT] * WoodReq * max(1, AllyCounterWeightRatio[GT] / max(1,RatioSum)) );
+                Required := Min(High(Word), Required + Round(DEFAULT_ARMY_REQUIREMENTS[UT] * WoodReq * max(1, AllyCounterWeightRatio[GT] / max(1,RatioSum)) ));
       end;
     end;
 
@@ -1038,7 +1038,7 @@ begin
   // Ware distribution = fraction / sum of fractions * 5
   gHands[fOwner].Stats.WareDistribution[wtIron, htWeaponSmithy] := Max(  1, Min(5, Round( ArmorFraction / (WeaponFraction + ArmorFraction) * IronShare) )  );
   gHands[fOwner].Stats.WareDistribution[wtIron, htArmorSmithy] := Max(  1, Min(5, Round( WeaponFraction / (WeaponFraction + ArmorFraction) * IronShare) )  );
-  gHands[fOwner].Houses.UpdateResRequest;
+  gHands[fOwner].Houses.UpdateDemands;
 end;
 
 

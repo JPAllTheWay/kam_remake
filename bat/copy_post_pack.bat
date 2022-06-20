@@ -30,7 +30,7 @@ xcopy ..\"Modding graphics" "%kam_folder%"\"Modding graphics"\ /y /r /s
 REM ============================================================
 REM Copy *.rxa resource files 
 REM ============================================================
-xcopy "%SpritesRXADir%"\*.rxa "%kam_folder%"\data\Sprites\ /y /r /s
+REM xcopy "%SpritesRXADir%"\*.rxa "%kam_folder%"\data\Sprites\ /y /r /s
 
 
 call pull_maps.bat
@@ -48,7 +48,7 @@ xcopy "%KMRMapsRepoDir%"\Tutorials "%kam_folder%"\Tutorials\ /y /r /s
 REM ============================================================
 REM Copy video files
 REM ============================================================
-xcopy "%KMRVideosDir%" "%kam_folder%" /y /r /s
+xcopy "%KMRPrivateRepoDir%"\Video "%kam_folder%" /y /r /s
 
 REM ============================================================
 REM Copy files from KMRPrevVersionDir

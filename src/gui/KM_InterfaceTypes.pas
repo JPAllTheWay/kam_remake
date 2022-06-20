@@ -45,7 +45,6 @@ const
   RESULTS_X_PADDING = 50;
   ITEM_NOT_LOADED = -100; // smth, but not -1, as -1 is used for ColumnBox.ItemIndex, when no item is selected
 
-  RMB_SHIFT_STATES: TShiftState = [ssRight, ssShift]; // Shift states which are used as right mouse button for some of the buttons
   RMB_ADD_ROWS_CNT = 5; // Number of rows to add / remove to group when click RMB on the button
 
 

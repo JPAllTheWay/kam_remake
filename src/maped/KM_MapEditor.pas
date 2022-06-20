@@ -370,7 +370,7 @@ begin
         if not SameFileName(destPath, fAttachedFiles[I]) then
         begin
           if FileExists(destPath) then
-            DeleteFile(destPath);
+            KMDeleteFile(destPath);
           KMCopyFile(fAttachedFiles[I], destPath);
         end;
       end;
@@ -531,31 +531,30 @@ begin
 end;
 
 
-//aEraseAll - if true all objects under the cursor will be deleted
+//aEraseAll - if True all objects under the cursor will be deleted
 procedure TKMMapEditor.EraseObject(aEraseAll: Boolean);
 var
-  obj: TObject;
+  entity: TKMHandEntity;
   P: TKMPoint;
   fieldsChanged, isCorn, isWine: Boolean;
   removeTxID: Integer;
 begin
   fieldsChanged := False;
   P := gCursor.Cell;
-  obj := gMySpectator.HitTestCursor(True);
+  entity := gMySpectator.HitTestCursor(True);
   removeTxID := -1;
 
   try
-    //Delete unit/house
-    if obj is TKMUnit then
-    begin
-      gHands.RemAnyUnit(TKMUnit(obj).Position);
-      if not aEraseAll then Exit;
-    end
-    else
-    if obj is TKMHouse then
-    begin
-      gHands.RemAnyHouse(P);
-      if not aEraseAll then Exit;
+    case entity.EntityType of
+      etUnit: begin
+                // Delete unit by using precise HitTest result from gCursor (rather than Position)
+                gHands.RemAnyUnit(TKMUnit(entity).Position);
+                if not aEraseAll then Exit;
+              end;
+      etHouse:begin
+                gHands.RemAnyHouse(P);
+                if not aEraseAll then Exit;
+              end;
     end;
 
     isCorn := gTerrain.TileIsCornField(P);
@@ -564,7 +563,7 @@ begin
     if EraseTerrainObject(removeTxID) and not aEraseAll then
       Exit;
 
-    //Delete tile overlay (road/corn/wine)
+    // Delete tile overlay (road/corn/wine)
     if gTerrain.Land^[P.Y,P.X].TileOverlay = toRoad then
     begin
       if not fieldsChanged then
@@ -821,17 +820,19 @@ end;
 procedure TKMMapEditor.ProceedUnitsCursorMode;
 var
   P: TKMPoint;
-  obj: TObject;
+  entity: TKMHandEntity;
   formation: TKMFormation;
   GT: TKMGroupType;
   dir: TKMDirection;
+  U: TKMUnit;
 begin
   P := gCursor.Cell;
-  if gCursor.Tag1 = 255 then
+  if gCursor.Tag1 = UNIT_REMOVE_TAG then
   begin
-    obj := gMySpectator.HitTestCursor(True);
-    if obj is TKMUnit then
-      gHands.RemAnyUnit(TKMUnit(obj).Position);
+    entity := gMySpectator.HitTestCursor(True);
+    // Delete unit by using precise HitTest result from gCursor (rather than Position)
+    if entity.IsUnit then
+      gHands.RemAnyUnit(TKMUnit(entity).Position);
   end
   else
   if gTerrain.CanPlaceUnit(P, TKMUnitType(gCursor.Tag1)) then
@@ -852,7 +853,11 @@ begin
       gMySpectator.Hand.AddUnitGroup(TKMUnitType(gCursor.Tag1), P, dir, formation.UnitsPerRow, formation.NumUnits)
     end
     else
-      gHands.PlayerAnimals.AddUnit(TKMUnitType(gCursor.Tag1), P);
+    begin
+      U := gHands.PlayerAnimals.AddUnit(TKMUnitType(gCursor.Tag1), P);
+      if U is TKMUNitFish then
+        TKMUNitFish(U).FishCount := gCursor.MapEdFishCount;
+    end;
   end;
 end;
 

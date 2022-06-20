@@ -12,6 +12,7 @@ uses
   Math, StrUtils, SysUtils,
   KromOGLUtils,
   KM_Defaults, KM_CommonTypes, KM_Points, KM_ResTypes,
+  KM_RenderTypes,
   KM_ResFonts, KM_ResSprites;
 
 type
@@ -42,8 +43,12 @@ type
     class procedure ReleaseClipY;
     class procedure Write3DButton  (aLeft, aTop, aWidth, aHeight: SmallInt; aRX: TRXType; aID: Word; aFlagColor: TColor4;
       aState: TKMButtonStateSet; aStyle: TKMButtonStyle; aImageEnabled: Boolean = True);
-    class procedure WriteBevel     (aLeft, aTop, aWidth, aHeight: SmallInt; aEdgeAlpha: Single = 1; aBackAlpha: Single = 0.5); overload;
-    class procedure WriteBevel     (aLeft, aTop, aWidth, aHeight: SmallInt; const aColor: TKMColor3f; aEdgeAlpha: Single = 1; aBackAlpha: Single = 0.5); overload;
+
+    class procedure WriteBevel(aLeft, aTop, aWidth, aHeight: SmallInt;
+                               aEdgeAlpha: Single = BEVEL_EDGE_ALPHA_DEF; aBackAlpha: Single = BEVEL_BACK_ALPHA_DEF); overload;
+    class procedure WriteBevel(aLeft, aTop, aWidth, aHeight: SmallInt; const aColor: TKMColor3f;
+                               aEdgeAlpha: Single = BEVEL_EDGE_ALPHA_DEF; aBackAlpha: Single = BEVEL_BACK_ALPHA_DEF); overload;
+
     class procedure WritePercentBar(aLeft, aTop, aWidth, aHeight: SmallInt; aPos: Single; aSeam: Single;
       aMainColor: Cardinal = icBarColorGreen; aAddColor: Cardinal = icBarColorBlue);
     class procedure WriteReplayBar (aLeft, aTop, aWidth, aHeight: SmallInt; aPos, aPeacetime, aMaxValue: Integer; aMarks: TList<Integer>; aPattern: Word; aHighlightedMark: Integer = -1);
@@ -240,7 +245,7 @@ begin
 
       //Background
       glColor4f(1, 1, 1, 1);
-      TRender.BindTexture(gGFXData[backRX, backID].Tex.ID);
+      TKMRender.BindTexture(gGFXData[backRX, backID].Tex.TexID);
       glBegin(GL_QUADS);
         glTexCoord2f(A.x,A.y); glVertex2f(0,0);
         glTexCoord2f(B.x,A.y); glVertex2f(aWidth,0);
@@ -249,7 +254,7 @@ begin
       glEnd;
 
       //Render beveled edges
-      TRender.BindTexture(0);
+      TKMRender.BindTexture(0);
 
       c1 := 1 - down;
       c2 := down;
@@ -278,7 +283,7 @@ begin
       WritePicture(down, down, aWidth, aHeight, [], aRX, aID, aImageEnabled, aFlagColor);
     end;
 
-    TRender.BindTexture(0);
+    TKMRender.BindTexture(0);
 
     //Render MouseOver highlight
     if bsOver in aState then
@@ -303,18 +308,20 @@ begin
 end;
 
 
-class procedure TKMRenderUI.WriteBevel(aLeft, aTop, aWidth, aHeight: SmallInt; aEdgeAlpha: Single = 1; aBackAlpha: Single = 0.5);
+class procedure TKMRenderUI.WriteBevel(aLeft, aTop, aWidth, aHeight: SmallInt;
+                                       aEdgeAlpha: Single = BEVEL_EDGE_ALPHA_DEF; aBackAlpha: Single = BEVEL_BACK_ALPHA_DEF);
 begin
   WriteBevel(aLeft, aTop, aWidth, aHeight, COLOR3F_BLACK, aEdgeAlpha, aBackAlpha);
 end;
 
 
-class procedure TKMRenderUI.WriteBevel(aLeft, aTop, aWidth, aHeight: SmallInt; const aColor: TKMColor3f; aEdgeAlpha: Single = 1; aBackAlpha: Single = 0.5);
+class procedure TKMRenderUI.WriteBevel(aLeft, aTop, aWidth, aHeight: SmallInt; const aColor: TKMColor3f;
+                                       aEdgeAlpha: Single = BEVEL_EDGE_ALPHA_DEF; aBackAlpha: Single = BEVEL_BACK_ALPHA_DEF);
 begin
   if (aWidth < 0) or (aHeight < 0) then Exit;
 
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushMatrix;
   try
@@ -359,7 +366,7 @@ var
   barWidth: Word;
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushMatrix;
   try  glTranslatef(aLeft, aTop, 0);
@@ -426,7 +433,7 @@ var
   mark: Integer;
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushMatrix;
   try
@@ -488,6 +495,7 @@ var
   drawWidth, drawHeight: Integer;
 begin
   if aID = 0 then Exit;
+  if aID > High(gGFXData[aRX]) then Exit;
 
   offX  := 0;
   offY  := 0;
@@ -525,7 +533,7 @@ begin
       glTranslatef(aLeft + offX, aTop + offY, 0);
 
       //Base layer
-      TRender.BindTexture(Tex.ID);
+      TKMRender.BindTexture(Tex.TexID);
       if aEnabled then glColor3f(1,1,1) else glColor3f(0.33,0.33,0.33);
       glBegin(GL_QUADS);
         glTexCoord2f(Tex.u1,Tex.v1); glVertex2f(0            , 0             );
@@ -535,9 +543,9 @@ begin
       glEnd;
 
       //Color overlay for unit icons and scrolls
-      if Alt.ID <> 0 then
+      if Alt.TexID <> 0 then
       begin
-        TRender.BindTexture(Alt.ID);
+        TKMRender.BindTexture(Alt.TexID);
         if aEnabled then
           glColor3ub(aColor AND $FF, aColor SHR 8 AND $FF, aColor SHR 16 AND $FF)
         else
@@ -553,7 +561,7 @@ begin
       //Highlight for active/focused/mouseOver images
       if aLightness <> 0 then
       begin
-        TRender.BindTexture(Tex.ID); //Replace AltID if it was used
+        TKMRender.BindTexture(Tex.TexID); //Replace AltID if it was used
         if aLightness > 0 then
           glBlendFunc(GL_SRC_ALPHA, GL_ONE)
         else begin
@@ -581,7 +589,7 @@ var
   I: Integer;
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushAttrib(GL_LINE_BIT);
   glPushMatrix;
@@ -606,7 +614,7 @@ begin
   if aLineWidth = 0 then Exit;
 
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushAttrib(GL_LINE_BIT);
   try
@@ -625,7 +633,7 @@ end;
 class procedure TKMRenderUI.WriteShape(aLeft, aTop, aWidth, aHeight: SmallInt; Col: TColor4; Outline: TColor4 = $00000000);
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushAttrib(GL_LINE_BIT);
   try
@@ -650,7 +658,7 @@ var
   I: Integer;
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glColor4ubv(@aColor);
   glLineStipple(2, aPattern);
@@ -666,7 +674,7 @@ var
   I: Integer;
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glColor4ubv(@aColor);
   glLineStipple(2, aPattern);
@@ -680,7 +688,7 @@ end;
 class procedure TKMRenderUI.WriteLine(aFromX, aFromY, aToX, aToY: Single; aCol: TColor4; aPattern: Word = $FFFF; aLineWidth: Integer = -1);
 begin
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glColor4ubv(@aCol);
 
@@ -730,7 +738,7 @@ var
       if prevAtlas <> -1 then
         glEnd; // End previous draw
       prevAtlas := let.AtlasId;
-      TRender.BindTexture(fontSpec.TexID[let.AtlasId]);
+      TKMRender.BindTexture(fontSpec.TexID[let.AtlasId]);
       glBegin(GL_QUADS);
     end;
 
@@ -880,7 +888,7 @@ begin
 
   if SHOW_TEXT_OUTLINES then
   begin
-    TRender.BindTexture(0);
+    TKMRender.BindTexture(0);
     glPushMatrix;
       case aAlign of
         taLeft:   glTranslatef(aLeft,                               aTop, 0);
@@ -916,7 +924,7 @@ var
   W, W1, W2: Integer;
   hasText2: Boolean;
 begin
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   hasText2 := aShapeColor2 <> 0;
 
@@ -944,7 +952,7 @@ end;
 
 class procedure TKMRenderUI.WriteTexture(aLeft, aTop, aWidth, aHeight: SmallInt; const aTexture: TTexture; aCol: TColor4);
 begin
-  TRender.BindTexture(aTexture.Tex);
+  TKMRender.BindTexture(aTexture.Tex);
 
   glColor4ubv(@aCol);
   glBegin(GL_QUADS);
@@ -964,7 +972,7 @@ begin
   if aRadius = 0 then Exit;
 
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glColor4ubv(@aFillColor);
   glBegin(GL_POLYGON);
@@ -992,7 +1000,7 @@ begin
   bCol := aCol and $FFFFFF;
 
   // Reset texture to default (0), because it could be bind to any other texture (atlas)
-  TRender.BindTexture(0);
+  TKMRender.BindTexture(0);
 
   glPushMatrix;
   try

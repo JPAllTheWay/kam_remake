@@ -28,6 +28,7 @@ type
     destructor Destroy; override;
     procedure Execute; override;
 
+    procedure QueueWorkAndLog(aProc: TProc; aWorkName: string = '');
     procedure QueueWork(aProc: TProc; aWorkName: string = ''); overload;
     procedure QueueWork(aProc: TProc; aCallback: TProc<String> = nil; aWorkName: string = ''); overload;
     procedure WaitForAllWorkToComplete;
@@ -50,6 +51,8 @@ type
 
 
 implementation
+uses
+  KM_Log;
 
 
 { TKMWorkerThread }
@@ -169,6 +172,20 @@ begin
 
     NameThread;
   end;
+end;
+
+
+procedure TKMWorkerThread.QueueWorkAndLog(aProc: TProc; aWorkName: string = '');
+begin
+  QueueWork(aProc, procedure(aJobName: String)
+    begin
+      gLog.MultithreadLogging := True;
+      try
+        gLog.AddTime(Format('Job ''%s'' is completed', [aJobName]));
+      finally
+        gLog.MultithreadLogging := False;
+      end;
+    end, aWorkName);
 end;
 
 

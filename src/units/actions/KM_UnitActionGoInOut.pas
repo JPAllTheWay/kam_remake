@@ -43,6 +43,7 @@ type
     property IsStarted: Boolean read GetIsStarted; // Is unit actually started exiting or going inside?
     property Direction: TKMGoInDirection read fDirection;
     function GetDoorwaySlide(aCheck: TKMCheckAxis): Single;
+    function GetDoorwaySlides: TKMPointF;
     function Execute: TKMActionResult; override;
     procedure Save(SaveStream: TKMemoryStream); override;
   end;
@@ -50,7 +51,9 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_Resource, KM_Terrain, KM_UnitActionStay, KM_UnitActionWalkTo,
+  KM_Entity,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Resource, KM_Terrain, KM_UnitActionStay, KM_UnitActionWalkTo,
   KM_HouseBarracks, KM_ResHouses, KM_ResUnits, KM_CommonUtils, KM_GameParams,
   KM_ResTypes;
 
@@ -95,8 +98,8 @@ procedure TKMUnitActionGoInOut.SyncLoad;
 begin
   inherited;
 
-  fHouse := gHands.GetHouseByUID(cardinal(fHouse));
-  fPushedUnit := gHands.GetUnitByUID(cardinal(fPushedUnit));
+  fHouse := gHands.GetHouseByUID(Integer(fHouse));
+  fPushedUnit := gHands.GetUnitByUID(Integer(fPushedUnit));
 end;
 
 
@@ -169,7 +172,7 @@ begin
   Assert(fUsedDoorway, 'Dec doorway when not in use?');
 
   if fHouse<>nil then dec(fHouse.DoorwayUse);
-  fUsedDoorway := false;
+  fUsedDoorway := False;
 end;
 
 
@@ -332,6 +335,18 @@ begin
 end;
 
 
+function TKMUnitActionGoInOut.GetDoorwaySlides: TKMPointF;
+begin
+  if (fHouse = nil) or not fInitiated then
+    Result := KMPointF(0, 0)
+  else
+  begin
+    Result.X := Mix(0, gResHouses[fHouse.HouseType].GetDoorwayOffset(axX), fStep);
+    Result.Y := Mix(0, gResHouses[fHouse.HouseType].GetDoorwayOffset(axY), fStep);
+  end;
+end;
+
+
 function TKMUnitActionGoInOut.Execute: TKMActionResult;
 var
   U: TKMUnit;
@@ -410,7 +425,7 @@ begin
 
   //IsExchanging can be updated while we have completed less than 20% of the move. If it is changed after that
   //the unit makes a noticable "jump". This needs to be updated after starting because we don't know about an
-  //exchanging unit until they have also started walking (otherwise only 1 of the units will have IsExchanging = true)
+  //exchanging unit until they have also started walking (otherwise only 1 of the units will have IsExchanging = True)
   if (
       ((fDirection = gdGoOutside) and (fStep < 0.2)) or
       ((fDirection = gdGoInside) and (fStep > 0.8))

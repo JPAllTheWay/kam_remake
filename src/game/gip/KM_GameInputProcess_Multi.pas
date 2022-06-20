@@ -185,7 +185,7 @@ begin
     for K := 1 to MAX_LOBBY_SLOTS do
     begin
       fSchedule[I, K] := TKMCommandsPack.Create;
-      fRandomCheck[I].PlayerCheckPending[K] := false; //We don't have anything to be checked yet
+      fRandomCheck[I].PlayerCheckPending[K] := False; //We don't have anything to be checked yet
     end;
 end;
 
@@ -496,7 +496,7 @@ begin
   inherited;
 
   for I := aTick + 1 to aTick + fDelay do
-    //If the network is not connected then we must send the commands later (fSent will remain false)
+    //If the network is not connected then we must send the commands later (fSent will remain False)
     if (not fSent[I mod MAX_SCHEDULE]) and gNetworking.Connected
       and (gNetworking.NetGameState = lgsGame) then //Don't send commands unless game is running normally
     begin

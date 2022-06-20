@@ -13,7 +13,10 @@ uses
 type
   //* Delivery mode
   TKMDeliveryMode = (dmClosed, dmDelivery, dmTakeOut);
+const
+  DELIVERY_MODE_SPRITE: array [TKMDeliveryMode] of Word = (38, 37, 664);
 
+type
   TKMHouse = class;
   TKMHouseEvent = procedure(aHouse: TKMHouse) of object;
   TKMHouseFromEvent = procedure(aHouse: TKMHouse; aFrom: TKMHandID) of object;
@@ -48,43 +51,45 @@ type
   TKMHouseSketch = class(TKMHandEntityPointer<TKMHouse>)
   private
     fType: TKMHouseType; //House type
-    function GetEntrance: TKMPoint;
-    function GetPointBelowEntrance: TKMPoint;
+    fEntrance: TKMPoint;
+    fPointBelowEntrance: TKMPoint;
+    procedure UpdateEntrancePos;
   protected
     fPosition: TKMPoint; //House position on map, kinda virtual thing cos it doesn't match with entrance
-    function GetPosition: TKMPoint; override;
+    procedure SetPosition(const aPosition: TKMPoint); virtual;
     constructor Create; overload;
   public
     constructor Create(aUID: Integer; aHouseType: TKMHouseType; PosX, PosY: Integer; aOwner: TKMHandID); overload;
 
     property HouseType: TKMHouseType read fType;
 
-    property Entrance: TKMPoint read GetEntrance;
-    property PointBelowEntrance: TKMPoint read GetPointBelowEntrance;
+    property Position: TKMPoint read fPosition;
+    property Entrance: TKMPoint read fEntrance;
+    property PointBelowEntrance: TKMPoint read fPointBelowEntrance;
 
     function ObjToStringShort(const aSeparator: String = '|'): String; override;
 
     function IsEmpty: Boolean;
   end;
 
-  //Editable Version of TKMHouseSketch
-  //We do not want to allow edit TKMHouse fields, but need to do that for some sketches
+  // Editable Version of TKMHouseSketch
+  // We do not want to allow edit TKMHouse fields, but need to do that for some sketches
   TKMHouseSketchEdit = class(TKMHouseSketch)
   private
     fEditable: Boolean;
   protected
     function GetInstance: TKMHouse; override;
-    function GetPositionF: TKMPointF; override;
-    procedure SetPositionF(const aPositionF: TKMPointF); override;
+    function GetIsSelectable: Boolean; override;
+    function GetPositionForDisplayF: TKMPointF; override;
   public
     constructor Create;
 
     procedure Clear;
-    procedure CopyTo(var aHouseSketch: TKMHouseSketchEdit);
+    procedure CopyTo(aHouseSketch: TKMHouseSketchEdit);
 
     procedure SetHouseUID(aUID: Integer);
     procedure SetHouseType(aHouseType: TKMHouseType);
-    procedure SetPosition(aPosition: TKMPoint);
+    procedure SetPosition(const aPosition: TKMPoint); override;
 
     class var DummyHouseSketch: TKMHouseSketchEdit;
   end;
@@ -111,10 +116,22 @@ type
     fUpdateDeliveryModeOnTick: Cardinal; // Tick, on which we have to update real delivery mode with its NEW value
 
     fResourceIn: array [1..4] of Byte; //Resource count in input
-    //Count of the resources we have ordered for the input (used for ware distribution)
-    fResourceDeliveryCount: array[1..4] of Word; // = fResourceIn + Demands count
+
+
+    // Count of the resources we have ordered for the input (used for ware distribution)
+    //
+    // We have to keep track of how many deliveries are going on now
+    // But when demand is deleted it should be considered as well.
+    // It could be deleted or not (if serf is entering demanded house)
+    // F.e. when serf is walkin he can't close demand immidiately, he will close demand when he reach the next tile
+    // Demand is marked as Deleted and fResourceDemandsClosing is increased by 1
+    // Then we will need to reduce fResourceDeliveryCount and fResourceDemandsClosing when demand will notify this house on its close
+    // If serf is entering the house then we will not need to reduce fResourceDeliveryCount, since ware is already delivered
+    fResourceDeliveryCount: array[1..4] of Word; // = fResourceIn + Demands count (including closing demands)
+    fResourceDemandsClosing: array[1..4] of Word; // Number of closing demands at the moment
+
     fResourceOut: array [1..4] of Byte; //Resource count in output
-    fResourceOrder: array [1..4] of Word; //If HousePlaceOrders=true then here are production orders
+    fResourceOrder: array [1..4] of Word; //If HousePlaceOrders=True then here are production orders
     fResourceOutPool: array[0..19] of Byte;
     fLastOrderProduced: Byte;
 //    fResOrderDesired: array [1..4] of Single;
@@ -168,13 +185,19 @@ type
     procedure SetResourceDeliveryCount(aIndex: Integer; aCount: Word);
     function GetResourceDeliveryCount(aIndex: Integer): Word;
 
+    procedure SetResourceDemandsClosing(aIndex: Integer; aCount: Word);
+    function GetResourceDemandsClosing(aIndex: Integer): Word;
+
     property ResDeliveryCnt[aIndex: Integer]: Word read GetResourceDeliveryCount write SetResourceDeliveryCount;
+    property ResDemandsClosing[aIndex: Integer]: Word read GetResourceDemandsClosing write SetResourceDemandsClosing;
 
     function GetInstance: TKMHouse; override;
-    function GetPositionF: TKMPointF; override;
-    procedure SetPositionF(const aPositionF: TKMPointF); override;
+    function GetPositionForDisplayF: TKMPointF; override;
+    function GetPositionF: TKMPointF; inline;
 
-    function IsSelectableImpl: Boolean; override;
+    function GetIsSelectable: Boolean; override;
+
+    function TryDecResourceDelivery(aWare: TKMWareType; aDeleteCanceled: Boolean): Boolean; virtual;
 
     procedure MakeSound; virtual; //Swine/stables make extra sounds
   public
@@ -196,7 +219,7 @@ type
     procedure Demolish(aFrom: TKMHandID; IsSilent: Boolean = False); virtual;
     property BuildingProgress: Word read fBuildingProgress;
 
-    procedure SetPosition(const aPos: TKMPoint); //Used only by map editor
+    procedure UpdatePosition(const aPos: TKMPoint); //Used only by map editor
     procedure OwnerUpdate(aOwner: TKMHandID; aMoveToNewOwner: Boolean = False);
 
     function GetClosestCell(const aPos: TKMPoint): TKMPoint;
@@ -209,6 +232,8 @@ type
     function HitTest(X, Y: Integer): Boolean;
     property BuildingRepair: Boolean read fBuildingRepair write SetBuildingRepair;
     property PlacedOverRoad: Boolean read fPlacedOverRoad write fPlacedOverRoad;
+
+    property PositionF: TKMPointF read GetPositionF;
 
     property DeliveryMode: TKMDeliveryMode read fDeliveryMode;
     property NewDeliveryMode: TKMDeliveryMode read fNewDeliveryMode write SetNewDeliveryMode;
@@ -255,7 +280,7 @@ type
     procedure UpdateDamage;
 
     function IsStone: Boolean;
-    function IsComplete: Boolean;
+    function IsComplete: Boolean; inline;
     function IsDamaged: Boolean;
     property IsDestroyed: Boolean read fIsDestroyed;
     property GetDamage: Word read fDamage;
@@ -263,7 +288,7 @@ type
     procedure SetState(aState: TKMHouseState);
     function GetState: TKMHouseState;
 
-    procedure DecResourceDelivery(aWare: TKMWareType); virtual;
+    procedure HouseDemandWasClosed(aWare: TKMWareType; aDeleteCanceled: Boolean);
 
     function CheckResIn(aWare: TKMWareType): Word; virtual;
     function CheckResOut(aWare: TKMWareType): Word; virtual;
@@ -286,12 +311,12 @@ type
     property ResOut[aId: Byte]: Word read GetResOut write SetResOut;
     property ResInLocked[aId: Byte]: Word read GetResInLocked;
 
+    procedure UpdateDemands; virtual;
     procedure PostLoadMission; virtual;
 
     function ObjToString(const aSeparator: String = '|'): String; override;
 
     procedure IncAnimStep;
-    procedure UpdateResRequest;
     procedure UpdateState(aTick: Cardinal);
     procedure Paint; virtual;
   end;
@@ -330,6 +355,7 @@ implementation
 uses
   // Do not add KM_Game dependancy! Entities should be isolated as much as possible
   TypInfo, SysUtils, Math, KromUtils,
+  KM_Entity,
   KM_GameParams, KM_Terrain, KM_RenderPool, KM_RenderAux, KM_Sound,
   KM_Hand, KM_HandsCollection, KM_HandLogistics, KM_HandTypes,
   KM_Units, KM_UnitWarrior, KM_HouseWoodcutters,
@@ -341,9 +367,9 @@ uses
   KM_ResTileset;
 
 const
-  //Delay, In ticks, from user click on DeliveryMode btn, to tick, when mode will be really set.
-  //Made to prevent serf's taking/losing deliveries only because player clicks throught modes.
-  //No hurry, let's wait a bit for player to be sure, what mode he needs
+  // Delay, in ticks, from user click on DeliveryMode btn, to tick, when mode will be really set.
+  // Made to prevent serf's taking/losing deliveries only because player clicks throught modes.
+  // No hurry, let's wait a bit for player to be sure, what mode he needs
   UPDATE_DELIVERY_MODE_DELAY = 10;
 
 
@@ -360,29 +386,31 @@ begin
 
   inherited Create(etHouse, aUID, aOwner);
 
-  fPosition   := KMPoint (PosX, PosY);
-  fType       := aHouseType;
+  fType     := aHouseType;
+  fPosition := KMPoint (PosX, PosY);
+  UpdateEntrancePos;
 end;
 
 
 {Return Entrance of the house, which is different than house position sometimes}
-function TKMHouseSketch.GetEntrance: TKMPoint;
+procedure TKMHouseSketch.UpdateEntrancePos;
 begin
-  Result.X := Position.X + gResHouses[fType].EntranceOffsetX;
-  Result.Y := Position.Y;
-  Assert((Result.X > 0) and (Result.Y > 0));
+  if IsEmpty then Exit;
+  
+  fEntrance.X := fPosition.X + gResHouses[fType].EntranceOffsetX;
+  fEntrance.Y := fPosition.Y;
+  Assert((fEntrance.X > 0) and (fEntrance.Y > 0));
+
+  fPointBelowEntrance := KMPointBelow(fEntrance);
 end;
 
 
-function TKMHouseSketch.GetPointBelowEntrance: TKMPoint;
+procedure TKMHouseSketch.SetPosition(const aPosition: TKMPoint);
 begin
-  Result := KMPointBelow(Entrance);
-end;
+  fPosition.X := aPosition.X;
+  fPosition.Y := aPosition.Y;
 
-
-function TKMHouseSketch.GetPosition: TKMPoint;
-begin
-  Result := fPosition;
+  UpdateEntrancePos;
 end;
 
 
@@ -424,7 +452,7 @@ begin
 end;
 
 
-procedure TKMHouseSketchEdit.CopyTo(var aHouseSketch: TKMHouseSketchEdit);
+procedure TKMHouseSketchEdit.CopyTo(aHouseSketch: TKMHouseSketchEdit);
 begin
   aHouseSketch.SetUID(UID);
   aHouseSketch.SetHouseType(HouseType);
@@ -446,10 +474,11 @@ begin
 end;
 
 
-procedure TKMHouseSketchEdit.SetPosition(aPosition: TKMPoint);
+procedure TKMHouseSketchEdit.SetPosition(const aPosition: TKMPoint);
 begin
-  if fEditable then
-    fPosition := aPosition;
+  if not fEditable then Exit;
+
+  inherited;
 end;
 
 
@@ -460,17 +489,17 @@ begin
 end;
 
 
-function TKMHouseSketchEdit.GetPositionF: TKMPointF;
+function TKMHouseSketchEdit.GetIsSelectable: Boolean;
 begin
-  //Not used. Make compiler happy
-  raise Exception.Create('Can''t get positionF of TKMHouseSketchEdit');
+  Result := False;
 end;
 
 
-procedure TKMHouseSketchEdit.SetPositionF(const aPositionF: TKMPointF);
+function TKMHouseSketchEdit.GetPositionForDisplayF: TKMPointF;
 begin
+  Assert(False, 'Should not get positionF of TKMHouseSketchEdit');
   //Not used. Make compiler happy
-  raise Exception.Create('Can''t set positionF of TKMHouseSketchEdit');
+  Result := Entrance.ToFloat;
 end;
 
 
@@ -503,6 +532,7 @@ begin
   begin
     fResourceIn[I] := 0;
     fResourceDeliveryCount[I] := 0;
+    fResourceDemandsClosing[I] := 0;
     fResourceOut[I] := 0;
     fResourceOrder[I] := 0;
   end;
@@ -547,6 +577,7 @@ begin
   LoadStream.CheckMarker('House');
   LoadStream.Read(fType, SizeOf(fType));
   LoadStream.Read(fPosition);
+  UpdateEntrancePos;
   LoadStream.Read(fBuildState, SizeOf(fBuildState));
   LoadStream.Read(fBuildSupplyWood);
   LoadStream.Read(fBuildSupplyStone);
@@ -561,6 +592,7 @@ begin
   LoadStream.Read(fIsClosedForWorker);
   for I:=1 to 4 do LoadStream.Read(fResourceIn[I]);
   for I:=1 to 4 do LoadStream.Read(fResourceDeliveryCount[I]);
+  for I:=1 to 4 do LoadStream.Read(fResourceDemandsClosing[I]);
   for I:=1 to 4 do LoadStream.Read(fResourceOut[I]);
   for I:=1 to 4 do LoadStream.Read(fResourceOrder[I], SizeOf(fResourceOrder[I]));
 //  for I:=1 to 4 do LoadStream.Read(fResOrderDesired[I], SizeOf(fResOrderDesired[I]));
@@ -592,7 +624,7 @@ end;
 
 procedure TKMHouse.SyncLoad;
 begin
-  fWorker := TKMUnit( gHands.GetUnitByUID( Cardinal(fWorker) ) );
+  fWorker := TKMUnit(gHands.GetUnitByUID(Integer(fWorker)));
   CurrentAction.SyncLoad;
 end;
 
@@ -600,7 +632,7 @@ end;
 destructor TKMHouse.Destroy;
 begin
   FreeAndNil(CurrentAction);
-  gHands.CleanUpUnitPointer( TKMUnit(fWorker) );
+  gHands.CleanUpUnitPointer(TKMUnit(fWorker));
 
   inherited;
 end;
@@ -751,7 +783,7 @@ end;
 
 //Used by MapEditor
 //Set house to new position
-procedure TKMHouse.SetPosition(const aPos: TKMPoint);
+procedure TKMHouse.UpdatePosition(const aPos: TKMPoint);
 var
   wasOnSnow, isRallyPointSet: Boolean;
 begin
@@ -767,9 +799,9 @@ begin
     if (Self is TKMHouseWFlagPoint) then
       isRallyPointSet := TKMHouseWFlagPoint(Self).IsFlagPointSet;
 
-    gTerrain.RemRoad(GetEntrance);
-    fPosition.X := aPos.X - gResHouses[fType].EntranceOffsetX;
-    fPosition.Y := aPos.Y;
+    gTerrain.RemRoad(Entrance);
+
+    SetPosition(KMPoint(aPos.X - gResHouses[fType].EntranceOffsetX, aPos.Y));
 
     //Update rally/cutting point position for houses with flag point after change fPosition
     if (Self is TKMHouseWFlagPoint) then
@@ -837,6 +869,18 @@ begin
 end;
 
 
+procedure TKMHouse.SetResourceDemandsClosing(aIndex: Integer; aCount: Word);
+begin
+  fResourceDemandsClosing[aIndex] := EnsureRange(aCount, 0, High(Word));
+end;
+
+
+function TKMHouse.GetResourceDemandsClosing(aIndex: Integer): Word;
+begin
+  Result := fResourceDemandsClosing[aIndex];
+end;
+
+
 //Get delivery mode, used for some checks in 'ShouldAbandonDeliveryXX'
 //aImmidiate - do we want to have immidiate check (then will get "fake" NewDeliveryMode) or no (real DeliveryMode will be returned)
 function TKMHouse.GetDeliveryModeForCheck(aImmidiate: Boolean): TKMDeliveryMode;
@@ -873,17 +917,17 @@ end;
 
 procedure TKMHouse.SetNextDeliveryMode;
 begin
-  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 3 - 1) mod 3)); //We use opposite order for legacy support
+  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 3 - 1) mod 3)); // We use opposite order for legacy support
 end;
 
 
 procedure TKMHouse.SetPrevDeliveryMode;
 begin
-  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 1) mod 3)); //We use opposite order for legacy support
+  SetNewDeliveryMode(TKMDeliveryMode((Ord(fNewDeliveryMode) + 1) mod 3)); // We use opposite order for legacy support
 end;
 
 
-//Set delivery mdoe immidiately
+// Set delivery mdoe immidiately
 procedure TKMHouse.SetDeliveryModeInstantly(aValue: TKMDeliveryMode);
 begin
   fNewDeliveryMode := aValue;
@@ -909,7 +953,7 @@ begin
 end;
 
 
-function TKMHouse.IsSelectableImpl: Boolean;
+function TKMHouse.GetIsSelectable: Boolean;
 begin
   Result := not IsDestroyed;
 end;
@@ -920,10 +964,10 @@ begin
   Result := 0;
   case HouseType of
     htQuarry:       Result := TX_MSG_STONE_DEPLETED;
-    htCoalMine:    Result := TX_MSG_COAL_DEPLETED;
-    htIronMine:    Result := TX_MSG_IRON_DEPLETED;
-    htGoldMine:    Result := TX_MSG_GOLD_DEPLETED;
-    htWoodcutters: if TKMHouseWoodcutters(Self).WoodcutterMode = wmPlant then
+    htCoalMine:     Result := TX_MSG_COAL_DEPLETED;
+    htIronMine:     Result := TX_MSG_IRON_DEPLETED;
+    htGoldMine:     Result := TX_MSG_GOLD_DEPLETED;
+    htWoodcutters:  if TKMHouseWoodcutters(Self).WoodcutterMode = wmPlant then
                       Result := TX_MSG_WOODCUTTER_PLANT_DEPLETED
                     else
                       Result := TX_MSG_WOODCUTTER_DEPLETED;
@@ -1120,9 +1164,9 @@ begin
 end;
 
 
-procedure TKMHouse.SetPositionF(const aPositionF: TKMPointF);
+function TKMHouse.GetPositionForDisplayF: TKMPointF;
 begin
-  raise Exception.Create('Can''t set PositionF for House');
+  Result := Entrance.ToFloat;
 end;
 
 
@@ -1584,15 +1628,35 @@ begin
 end;
 
 
-procedure TKMHouse.DecResourceDelivery(aWare: TKMWareType);
+procedure TKMHouse.HouseDemandWasClosed(aWare: TKMWareType; aDeleteCanceled: Boolean);
+begin
+  if Self = nil then Exit;
+
+  if TryDecResourceDelivery(aWare, aDeleteCanceled) then
+    // Update demands, since our DeliveryCount was changed
+    // Maybe we need more wares to order
+    UpdateDemands;
+end;
+
+
+function TKMHouse.TryDecResourceDelivery(aWare: TKMWareType; aDeleteCanceled: Boolean): Boolean;
 var
   I: Integer;
 begin
+  Result := False;
+  if Self = nil then Exit;
+
   for I := 1 to 4 do
     if aWare = gResHouses[fType].ResInput[I] then
     begin
-      ResDeliveryCnt[I] := ResDeliveryCnt[I] - 1;
-      Exit;
+      // Do not decrease DeliveryCount, if demand delete was cancelled (demand closing was not possible, f.e. when serf enters the house)
+      // thus serf brought ware to the house and we should not decrease delivery count in that case here
+      // (but it will be decreased anyway in the ResAddToIn for market)
+      if not aDeleteCanceled then
+        ResDeliveryCnt[I] := ResDeliveryCnt[I] - 1;
+
+      ResDemandsClosing[I] := ResDemandsClosing[I] - 1;
+      Exit(True);
     end;
 end;
 
@@ -1945,15 +2009,15 @@ begin
     htSchool:        if (work = haWork5)and(step = 28) then gSoundPlayer.Play(sfxSchoolDing, fPosition); //Ding as the clock strikes 12
     htMill:          if (work = haWork2)and(step = 0) then gSoundPlayer.Play(sfxMill, fPosition);
     htCoalMine:      if (work = haWork1)and(step = 5) then gSoundPlayer.Play(sfxcoalDown, fPosition)
-                      else if (work = haWork1)and(step = 24) then gSoundPlayer.Play(sfxCoalMineThud, fPosition,true,0.8)
+                      else if (work = haWork1)and(step = 24) then gSoundPlayer.Play(sfxCoalMineThud, fPosition,True,0.8)
                       else if (work = haWork2)and(step = 7) then gSoundPlayer.Play(sfxmine, fPosition)
                       else if (work = haWork5)and(step = 1) then gSoundPlayer.Play(sfxcoalDown, fPosition);
     htIronMine:      if (work = haWork2)and(step = 7) then gSoundPlayer.Play(sfxmine, fPosition);
     htGoldMine:      if (work = haWork2)and(step = 5) then gSoundPlayer.Play(sfxmine, fPosition);
     htSawmill:       if (work = haWork2)and(step = 1) then gSoundPlayer.Play(sfxsaw, fPosition);
     htVineyard:      if (work = haWork2)and(step in [1,7,13,19]) then gSoundPlayer.Play(sfxwineStep, fPosition)
-                      else if (work = haWork5)and(step = 14) then gSoundPlayer.Play(sfxwineDrain, fPosition,true,1.5)
-                      else if (work = haWork1)and(step = 10) then gSoundPlayer.Play(sfxwineDrain, fPosition,true,1.5);
+                      else if (work = haWork5)and(step = 14) then gSoundPlayer.Play(sfxwineDrain, fPosition,True,1.5)
+                      else if (work = haWork1)and(step = 10) then gSoundPlayer.Play(sfxwineDrain, fPosition,True,1.5);
     htBakery:        if (work = haWork3)and(step in [6,25]) then gSoundPlayer.Play(sfxBakerSlap, fPosition);
     htQuarry:         if (work = haWork2)and(step in [4,13]) then gSoundPlayer.Play(sfxQuarryClink, fPosition)
                       else if (work = haWork5)and(step in [4,13,22]) then gSoundPlayer.Play(sfxQuarryClink, fPosition);
@@ -1977,7 +2041,7 @@ begin
     htArmorWorkshop: if (work = haWork2)and(step in [3,13,23]) then gSoundPlayer.Play(sfxsaw, fPosition)
                       else if (work = haWork3)and(step in [17,28]) then gSoundPlayer.Play(sfxCarpenterHammer, fPosition)
                       else if (work = haWork4)and(step in [10,20]) then gSoundPlayer.Play(sfxCarpenterHammer, fPosition);
-    htTannery:       if (work = haWork2)and(step = 5) then gSoundPlayer.Play(sfxLeather, fPosition,true,0.8);
+    htTannery:       if (work = haWork2)and(step = 5) then gSoundPlayer.Play(sfxLeather, fPosition,True,0.8);
     htButchers:      if (work = haWork2)and(step in [8,16,24]) then gSoundPlayer.Play(sfxButcherCut, fPosition)
                       else if (work = haWork3)and(step in [9,21]) then gSoundPlayer.Play(sfxSausageString, fPosition);
     htSwine:         if ((work = haWork2)and(step in [10,20]))or((work = haWork3)and(step = 1)) then gSoundPlayer.Play(sfxButcherCut, fPosition);
@@ -2010,6 +2074,7 @@ begin
   SaveStream.Write(fIsClosedForWorker);
   for I := 1 to 4 do SaveStream.Write(fResourceIn[I]);
   for I := 1 to 4 do SaveStream.Write(fResourceDeliveryCount[I]);
+  for I := 1 to 4 do SaveStream.Write(fResourceDemandsClosing[I]);
   for I := 1 to 4 do SaveStream.Write(fResourceOut[I]);
   for I := 1 to 4 do SaveStream.Write(fResourceOrder[I], SizeOf(fResourceOrder[I]));
 //  for I:=1 to 4 do SaveStream.Write(fResOrderDesired[I], SizeOf(fResOrderDesired[I]));
@@ -2084,36 +2149,37 @@ end;
 //      I change timber to 0 for the weapons workshop. My woodcutter starts again and 5 timber is still
 //      taken to the weapons workshop because the request doesn't get canceled.
 //      Maybe it's possible to cancel the current requests if no serf has taken them yet?
-procedure TKMHouse.UpdateResRequest;
+procedure TKMHouse.UpdateDemands;
 var
   I: Integer;
-  count, excess: ShortInt;
+  demandsRemoved, plannedToRemove, demandsToChange: Integer;
   resDistribution: Byte;
 begin
   for I := 1 to 4 do
-    if not (fType = htTownHall) and not (gResHouses[fType].ResInput[I] in [wtAll, wtWarfare, wtNone]) then
+  begin
+    if (fType = htTownHall) or (gResHouses[fType].ResInput[I] in [wtAll, wtWarfare, wtNone]) then Continue;
+
+    resDistribution := GetResDistribution(I);
+
+    demandsToChange := resDistribution - (ResDeliveryCnt[I] - ResDemandsClosing[I]);
+
+    //Not enough resources ordered, add new demand
+    if demandsToChange > 0 then
     begin
-      resDistribution := GetResDistribution(I);
-      //Not enough resources ordered, add new demand
-      if ResDeliveryCnt[I] < resDistribution then
-      begin
-        count := resDistribution - ResDeliveryCnt[I];
-        gHands[Owner].Deliveries.Queue.AddDemand(
-          Self, nil, gResHouses[fType].ResInput[I], count, dtOnce, diNorm);
+      gHands[Owner].Deliveries.Queue.AddDemand(Self, nil, gResHouses[fType].ResInput[I], demandsToChange, dtOnce, diNorm);
 
-        ResDeliveryCnt[I] := ResDeliveryCnt[I] + count;
-      end;
-
-      //Too many resources ordered, attempt to remove demand if nobody has taken it yet
-      if ResDeliveryCnt[I] > resDistribution then
-      begin
-        excess := ResDeliveryCnt[I] - resDistribution;
-        count := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, gResHouses[fType].ResInput[I], excess);
-
-        ResDeliveryCnt[I] := ResDeliveryCnt[I] - count; //Only reduce it by the number that were actually removed
-      end;
-
+      ResDeliveryCnt[I] := ResDeliveryCnt[I] + demandsToChange;
     end;
+
+    //Too many resources ordered, attempt to remove demand if nobody has taken it yet
+    if demandsToChange < 0 then
+    begin
+      demandsRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, gResHouses[fType].ResInput[I], -demandsToChange, plannedToRemove);
+
+      ResDeliveryCnt[I] := ResDeliveryCnt[I] - demandsRemoved; //Only reduce it by the number that were actually removed
+      ResDemandsClosing[I] := ResDemandsClosing[I] + plannedToRemove;
+    end;
+  end;
 end;
 
 
@@ -2147,7 +2213,8 @@ begin
             Format('%sWorker = %s%sAction = %s%sRepair = %s%sIsClosedForWorker = %s%sDeliveryMode = %s%s' +
                    'NewDeliveryMode = %s%sDamage = %d%s' +
                    'BuildState = %s%sBuildSupplyWood = %d%sBuildSupplyStone = %d%sBuildingProgress = %d%sDoorwayUse = %d%s' +
-                   'ResIn = %d,%d,%d,%d%sResDeliveryCnt = %d,%d,%d,%d%sResOut = %d,%d,%d,%d%sResOrder = %d,%d,%d,%d%sResOutPool = %s',
+                   'ResIn = %d,%d,%d,%d%sResDeliveryCnt = %d,%d,%d,%d%sResDemandsClosing = %d,%d,%d,%d%sResOut = %d,%d,%d,%d%s' +
+                   'ResOrder = %d,%d,%d,%d%sResOutPool = %s',
                    [aSeparator,
                     workerStr, aSeparator,
                     actStr, aSeparator,
@@ -2163,6 +2230,7 @@ begin
                     DoorwayUse, aSeparator,
                     fResourceIn[1], fResourceIn[2], fResourceIn[3], fResourceIn[4], aSeparator,
                     fResourceDeliveryCount[1], fResourceDeliveryCount[2], fResourceDeliveryCount[3], fResourceDeliveryCount[4], aSeparator,
+                    fResourceDemandsClosing[1], fResourceDemandsClosing[2], fResourceDemandsClosing[3], fResourceDemandsClosing[4], aSeparator,
                     fResourceOut[1], fResourceOut[2], fResourceOut[3], fResourceOut[4], aSeparator,
                     fResourceOrder[1], fResourceOrder[2], fResourceOrder[3], fResourceOrder[4], aSeparator,
                     resOutPoolStr]);
@@ -2386,10 +2454,12 @@ begin
   Result := not KMSamePoint(fFlagPoint, PointBelowEntrance);
 end;
 
+
 procedure TKMHouseWFlagPoint.SetFlagPoint(aFlagPoint: TKMPoint);
 begin
   fFlagPoint := GetValidPoint(aFlagPoint);
 end;
+
 
 procedure TKMHouseWFlagPoint.ValidateFlagPoint;
 begin

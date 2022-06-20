@@ -814,15 +814,14 @@ function TKMTerrainPainter.GetVertexCornerTerKinds(X,Y: Word; var aCornersTerKin
 var
   cornersTerKinds: TKMTerrainKindCorners;
 
-  procedure CheckTile(aX, aY: Word; aCorner: Byte);
+  procedure CheckTile(aX, aY: Integer; aCorner: Byte);
   begin
-    if gTerrain.TileInMapCoords(aX, aY) then
-    begin
-      GetTileOwnCornersTKinds(KMPoint(aX, aY), cornersTerKinds);
+    if not gTerrain.TileInMapCoords(aX, aY) then Exit;
 
-      aCornersTerKinds[Result] := cornersTerKinds[aCorner];
-      Inc(Result);
-    end;
+    GetTileOwnCornersTKinds(KMPoint(aX, aY), cornersTerKinds);
+
+    aCornersTerKinds[Result] := cornersTerKinds[aCorner];
+    Inc(Result);
   end;
 
 begin
@@ -1579,9 +1578,15 @@ begin
       for K := Max(fMapXn - size, 1) to Min(fMapXn + size, gTerrain.MapX) do
         begin
           case fShape of
-            hsCircle: if Sqr(I - fMapYn) + sqr(K - fMapXn) <= Sqr(size) then
+            hsCircle: if Sqr(I - fMapYn) + Sqr(K - fMapXn) <= Sqr(size) then
+                      begin
                         gTerrain.Land[I,K].Height := gCursor.MapEdConstHeight;   // Negative number means that point is outside circle
-            hsSquare: gTerrain.Land[I,K].Height := gCursor.MapEdConstHeight;
+                        gTerrain.UpdateRenderHeight(K, I);
+                      end;
+            hsSquare: begin
+                        gTerrain.Land[I,K].Height := gCursor.MapEdConstHeight;
+                        gTerrain.UpdateRenderHeight(K, I);
+                      end;
           end;
       end;
 
@@ -1600,8 +1605,11 @@ begin
       for aY := 0 to gTerrain.MapY do
         for aX := 0 to gTerrain.MapX do
           if LandTerKind[aY, aX].TerKind = aTerKind then
+          begin
             // Inc or Dec height by 1
             gTerrain.Land[aY,aX].Height := EnsureRange(gTerrain.Land[aY,aX].Height + (Byte(fRaise) * 2 - 1), 0, HEIGHT_MAX);
+            gTerrain.LandExt[aY,aX].RenderHeight := gTerrain.Land[aY,aX].GetRenderHeight;
+          end;
 
       gTerrain.UpdateLighting;
       gTerrain.UpdatePassability;
@@ -1684,6 +1692,7 @@ begin
     end;
 
     gTerrain.Land^[I,K].Height := Trunc(tmp);
+    gTerrain.UpdateRenderHeight(K, I);
     LandTerKind[I,K].HeightAdd := Round(Frac(tmp)*255); //write Fractional part in 0..255 range (1Byte) to save us mem
   end;
 

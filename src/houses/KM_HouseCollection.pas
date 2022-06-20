@@ -40,7 +40,7 @@ type
     procedure Load(LoadStream: TKMemoryStream);
     procedure SyncLoad;
     procedure IncAnimStep;
-    procedure UpdateResRequest; //Change resource requested counts for all houses
+    procedure UpdateDemands; //Change resource requested counts for all houses
     procedure DeleteHouseFromList(aHouse: TKMHouse);
     procedure RemoveAllHouses;
     procedure RemoveHousesOutOfBounds(const aInsetRect: TKMRect);
@@ -53,7 +53,9 @@ type
 implementation
 uses
   SysUtils, Types, Math,
-  KM_Game, KM_GameParams, KM_Terrain,
+  KM_Entity,
+  KM_Game, KM_GameParams, KM_GameUIDTracker, KM_Terrain,
+  KM_HandTypes, KM_HandEntity,
   KM_HouseInn, KM_HouseMarket, KM_HouseBarracks, KM_HouseSchool, KM_HouseStore, KM_HouseArmorWorkshop, KM_HouseSwineStable,
   KM_HouseTownHall, KM_HouseWoodcutters,
   KM_Resource,
@@ -93,15 +95,15 @@ end;
 
 function TKMHousesCollection.AddToCollection(aHouseType: TKMHouseType; aPosX, aPosY: Integer; aOwner: TKMHandID; aHBS: TKMHouseBuildState): TKMHouse;
 var
-  uid: Cardinal;
+  uid: Integer;
 begin
-  uid := gGame.GetNewUID;
+  uid := gUIDTracker.GetNewUID;
 
   case aHouseType of
     htSwine,
     htStables:       Result := TKMHouseSwineStable.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htInn:           Result := TKMHouseInn.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
-    htMarket:   Result := TKMHouseMarket.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
+    htMarket:        Result := TKMHouseMarket.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htSchool:        Result := TKMHouseSchool.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htBarracks:      Result := TKMHouseBarracks.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
     htTownHall:      Result := TKMHouseTownHall.Create(uid, aHouseType,aPosX,aPosY, aOwner, aHBS);
@@ -259,7 +261,7 @@ begin
       //Recruits should not go to a barracks with ware delivery switched off or with not accept flag for recruits
       if (Houses[I].HouseType = htBarracks)
         and ((Houses[I].DeliveryMode <> dmDelivery) or (TKMHouseBarracks(Houses[I]).NotAcceptRecruitFlag)) then Continue;
-      if not gTerrain.Route_CanBeMade(aLoc, Houses[I].PointBelowEntrance, tpWalk, 0) then Continue;
+      if not gTerrain.RouteCanBeMade(aLoc, Houses[I].PointBelowEntrance, tpWalk) then Continue;
 
       dist := KMLengthSqr(aLoc, Houses[I].Position);
 
@@ -386,7 +388,7 @@ begin
       htSwine,
       htStables:       H := TKMHouseSwineStable.Load(LoadStream);
       htInn:           H := TKMHouseInn.Load(LoadStream);
-      htMarket:   H := TKMHouseMarket.Load(LoadStream);
+      htMarket:        H := TKMHouseMarket.Load(LoadStream);
       htSchool:        H := TKMHouseSchool.Load(LoadStream);
       htBarracks:      H := TKMHouseBarracks.Load(LoadStream);
       htStore:         H := TKMHouseStore.Load(LoadStream);
@@ -413,13 +415,13 @@ end;
 
 
 //Update resource requested counts for all houses
-procedure TKMHousesCollection.UpdateResRequest;
+procedure TKMHousesCollection.UpdateDemands;
 var
   I: Integer;
 begin
   for I := 0 to Count - 1 do
   if Houses[I].IsComplete and not Houses[I].IsDestroyed then
-    Houses[I].UpdateResRequest;
+    Houses[I].UpdateDemands;
 end;
 
 

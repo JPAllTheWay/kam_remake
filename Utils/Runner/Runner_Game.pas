@@ -146,6 +146,8 @@ type
   end;
 
   TKMRunnerDesyncTest = class(TKMRunnerCommon)
+  const
+    DEF_PLAYER_HAND = 0;
   type
     TKMDesyncRunKind = (drkGame, drkReplay, drkGameCRC, drkReplayCRC, drkGameSave);
   private
@@ -157,7 +159,7 @@ type
     fRunKind: TKMDesyncRunKind;
     fRun: Integer;
     fMap: string;
-    fSavePointTick: Cardinal;
+    fSavePointTick: Integer;
     fRngMismatchFound: Boolean;
     fRngMismatchTick: Integer;
     fCRCDesyncFound: Boolean;
@@ -1230,7 +1232,8 @@ begin
 
   if gGameParams.Tick = 1 then
   begin
-    gGame.GameInputProcess.CmdPlayerChanged(0, 'AI 1', hndComputer, AIType);
+    gGame.GameInputProcess.CmdPlayerChanged(DEF_PLAYER_HAND, 'AI 1', hndComputer, AIType);
+    gHands[DEF_PLAYER_HAND].AddAIType(AIType);
 
 //    if gHands[0].CanBeHuman then
 //      gHands[0].AI.Setup.ApplyMultiplayerSetup(AIType = aitAdvanced)
@@ -1414,7 +1417,7 @@ var
     fRunSeed := L;
 
     mapFullName := Format('%sMapsMP\%s\%s.dat',[ExeDir,fMap,fMap]);
-    gGameApp.NewSingleMap(mapFullName, fMap, -1, 0, mdNone, AIType);
+    gGameApp.NewSingleMap(mapFullName, fMap, DEF_PLAYER_HAND, 0, mdNone, AIType);
     gGame.Params.GetGameModeSetEvent(fGameModeSetEvent);
   end;
 
@@ -1512,7 +1515,7 @@ begin
         if LOAD_SAVEPT_AT_TICK <> 0 then
           fSavePointTick := LOAD_SAVEPT_AT_TICK
         else
-          fSavePointTick := (I + Byte(MapsType <> rmtFight)*SKIP_FIRST_SAVEPT_CNT) * savesFreq - 1;
+          fSavePointTick := Max(1, (I + Byte(MapsType <> rmtFight)*SKIP_FIRST_SAVEPT_CNT) * savesFreq - 1);
 
         if gGameApp.TryLoadSavePoint(fSavePointTick) then
         begin
@@ -1522,6 +1525,8 @@ begin
           Log('SavePointTick = ' + IntToStr(fSavePointTick));
 
           fRunKind := drkReplay;
+
+          Assert(gGame <> nil, 'gGame is nil ! Check Runner.log to find out why it was not possible to create it');
           gGame.GameInputProcess.OnReplayDesync := ReplayCrashed;
 
           SimulateGame(fSavePointTick + 1, Min(fSavePointTick + replayLength, simulLastTick));
@@ -1810,6 +1815,7 @@ begin
   GAME_SAVE_STRIP_FOR_CRC := True;
   SKIP_SAVE_SAVPTS_TO_FILE := True;
   SAVE_RANDOM_CHECKS := False;
+  BLOCK_FILE_WRITE := True;
 //  GAME_SAVE_CHECKPOINT_FREQ_MIN := 0;
 //  GAME_SAVE_CHECKPOINT_CNT_LIMIT_MAX := 0;
 
@@ -1827,13 +1833,14 @@ end;
 function TKMRunnerAAIPerformance.TickPlayed(aTick: Cardinal): Boolean;
 begin
   // good for debug
+  Result := True;
 end;
 
 
 procedure TKMRunnerAAIPerformance.Execute(aRun: Integer);
 const
   // Maps for simulation (I dont use for loop in this array)
-  MAPS: array [1..17] of String = ('Across the Desert','Mountainous Region','Battle Sun','Neighborhood Clash','Valley of the Equilibrium','Wilderness',
+  MAPS: array [1..18] of String = ('Stress_Test_200','Across the Desert','Mountainous Region','Battle Sun','Neighborhood Clash','Valley of the Equilibrium','Wilderness',
                                    'Border Rivers','Blood and Ice','A Midwinter''s Day','Coastal Expedition','Defending the Homeland','Eruption',
                                    'Forgotten Lands','Golden Cliffs','Rebound','Riverlands', 'Shadow Realm');
   MAPS_8P: array [1..29] of String = ('A War of Justice','Babylon','Back in the Desert','Center Castle Looting','Cold Water 8P',
@@ -1880,7 +1887,7 @@ const
 var
   K,L: Integer;
 //  mapsCnt: Integer;
-  simulLastTick, totalRuns: Integer;
+  startMapI, simulLastTick, totalRuns: Integer;
 
   mapT1, mapT2, score: Cardinal;
 begin
@@ -1893,8 +1900,9 @@ begin
 
 //  mapsCnt := 0;
   score := 0;
+  startMapI := 2;
 
-  for K := 1 to MAPS_TO_TEST do
+  for K := startMapI to MAPS_TO_TEST + startMapI - 1 do
 //  for K := 5 to High(MAPS) do
 //  while M < mapsCnt do
   begin
@@ -1918,6 +1926,7 @@ begin
       CUSTOM_SEED_VALUE := L + Seed;
 
       OnProgress3('Seed: ' + IntToStr(CUSTOM_SEED_VALUE));
+      OnProgress2(fMap + ' Run ' + IntToStr(L));
 
       OnProgress_Left('');
       OnProgress_Left2('');
@@ -1941,8 +1950,6 @@ begin
 //      Exclude(gLog.MessageTypes, lmtCommands);
 
       simulLastTick := min(SIMUL_TIME_MAX, fResults.TimesCount - 1);
-
-      OnProgress2(fMap + ' Run ' + IntToStr(L));
 
       if Assigned(fOnStop)
         and fOnStop then

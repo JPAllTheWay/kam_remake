@@ -14,7 +14,7 @@ type
 
   TIndexSizeArray = array of TIndexItem;
 
-  TBinItem = packed record
+  TKMBinItem = packed record
     Width, Height: Word;
     Sprites: array of packed record
       SpriteID: Integer;
@@ -22,7 +22,7 @@ type
     end;
   end;
 
-  TBinArray = array of TBinItem;
+  TBinArray = array of TKMBinItem;
 
   TBin = class
     fChild1: TBin; //
@@ -37,7 +37,7 @@ type
     function Insert(const aItem: TIndexItem): TBin; //Return bin that has accepted the sprite, or nil of Bin is full
     function Width: Word;
     function Height: Word;
-    procedure GetAllItems(var aItems: TBinItem);
+    procedure GetAllItems(var aItems: TKMBinItem);
 
     procedure DidNotFit(const aItem: TIndexItem);
     function CanFit(const aItem: TIndexItem): Boolean;
@@ -192,7 +192,7 @@ end;
 
 
 //Recursively go through all Bins and collect Image info
-procedure TBin.GetAllItems(var aItems: TBinItem);
+procedure TBin.GetAllItems(var aItems: TKMBinItem);
 begin
   if (fChild1 <> nil) and (fChild2 <> nil)  then
   begin

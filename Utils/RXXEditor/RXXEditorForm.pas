@@ -68,8 +68,6 @@ uses
 
 
 procedure TRXXForm1.FormCreate(Sender: TObject);
-var
-  RT: TRXType;
 begin
   ExeDir := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..\..\');
 
@@ -270,7 +268,6 @@ end;
 
 procedure TRXXForm1.btnExportClick(Sender: TObject);
 var
-  filePath: string;
   I: Integer;
 begin
   if lbSpritesList.SelCount = 1 then
@@ -311,7 +308,7 @@ procedure TRXXForm1.btnSaveRXXClick(Sender: TObject);
 begin
   if not SaveDialog1.Execute then Exit;
   gLog.AddTime('Trimmed ' + IntToStr(fSprites.TrimSprites));
-  fSprites.SaveToRXXFile(SaveDialog1.FileName);
+  fSprites.SaveToRXXFile(SaveDialog1.FileName, True);
 end;
 
 

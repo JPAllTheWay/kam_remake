@@ -76,7 +76,7 @@ type
     function RNDPointsInGrid(const acnt: Single; aSpace: Integer; const aMinimum,aMaximum: TKMPoint): TKMPointArray;
     function RNDPointInCircle(aMin,aMax,aCenter: TKMPoint; aMaxRadius,aMinRadius: Single): TKMPoint;
 
-    procedure SnowMountains(var A: TKMByte2Array);
+    procedure FillWalkableTilesInMountains(var A: TKMByte2Array);
     procedure NoGoZones(var Locs: TKMPointArray; var TilesPartsArr: TTileParts);
   // Rules for extraction shapes from linear interpolation
     procedure Rules(const aTopLim,aTopLim2,aDownLim,aDownLim2: Integer; var aArr: TInteger2Array);
@@ -87,6 +87,7 @@ type
   // Fix of mountain to be able to construct mine there
     //procedure MineFix(const Position: TKMPoint; const MINESIZE, Resource: Byte; var Visited: TBoolean2Array; var A: TKMByte2Array);
     procedure MineFix(var A: TKMByte2Array);
+    procedure MineFinalFixer(var TilesPartsArr: TTileParts; var A: TKMByte2Array);
   // These functions secure smooth transitions
     procedure CellularAutomaton(var A: TKMByte2Array);
     function TileTemplate(var A: TKMByte2Array): TKMByte2Array;
@@ -98,7 +99,6 @@ type
     procedure GenerateBasicTiles(var TilesPartsArr: TTileParts; var A: TKMByte2Array);
     procedure GenerateHeight(var aLocs: TKMPointArray; var TilesPartsArr: TTileParts; var A: TKMByte2Array; var TileTempl: TKMByte2Array);
     procedure GenerateObjects(var TilesPartsArr: TTileParts; var A: TKMByte2Array);
-    procedure MineFinalFixer(var TilesPartsArr: TTileParts; var A: TKMByte2Array);
   public
     RMGSettings: TKMRMGSettings;
     constructor Create;
@@ -273,23 +273,23 @@ begin
     {$IFDEF DEBUG_RMG}
     with Locs do
     begin
-      Active := False;
-      Players := 4;
-      Layout := 0;
+      Active := True;
+      Players := 1;
+      Layout := 3;
       ProtectedRadius := 6;
       with Resource do
       begin
         Active := True;
         ConnectLocs := True;
         MineFix := True;
-        Stone := 1000;
-        Gold := 300;
+        Stone := 0;
+        Gold := 0;
         Iron := 250;
       end;
     end;
     with Obstacle do
     begin
-      Active := True;
+      Active := False;
       Density := 20;
       Size := 20;
       Variance := 10;
@@ -318,10 +318,10 @@ begin
     end;
     with Height do
     begin
-      Active := False;
-      Step := 4;
-      Slope := 40;
-      Height := 10;
+      Active := True;
+      Step := 6;
+      Slope := 100;
+      Height := 100;
       SmoothOutMountainPeaks := DEF_SMOOTH_OUT_MOUNT_PEAKS;
       HideNonSmoothTransition := True;
     end;
@@ -333,7 +333,7 @@ begin
       Trees := 20;
       Animals := True;
     end;
-    Seed := 0;
+    Seed := 655165336;
     Decomposition := False;
     BasicTiles := False;
     CA := True;
@@ -374,10 +374,10 @@ begin
       Ground := True;
       Snow := True;
       Sand := True;
-      FirstLayerStep := 5;
-      FirstLayerLimit := 6;
-      SecondLayerStep := 5;
-      SecondLayerLimit := 6;
+      FirstLayerStep := 6;
+      FirstLayerLimit := 7;
+      SecondLayerStep := 4;
+      SecondLayerLimit := 5;
     end;
     with OnePath do
     begin
@@ -389,7 +389,7 @@ begin
       Active := True;
       Step := 4;
       Slope := 40;
-      Height := 70;
+      Height := 80;
       SmoothOutMountainPeaks := DEF_SMOOTH_OUT_MOUNT_PEAKS;
       HideNonSmoothTransition := True;
     end;
@@ -497,9 +497,9 @@ begin
   // Detect and replace inaccessible terrain
   fRNG.Seed := RMGSettings.Seed;
   if RMGSettings.OnePath.ReplaceTerrain then
-    SnowMountains(A);
+    FillWalkableTilesInMountains(A);
 
-  // Create tile decomposition (every tile have 4 parts and max 2 biomes)
+  // Create tile decomposition (every tile has 4 parts and max 2 biomes)
   fRNG.Seed := RMGSettings.Seed;
   TileTemplateArr := TileTemplate(A);
 
@@ -621,11 +621,14 @@ begin
     Revealers := gGame.MapEditor.Revealers[K];
     Revealers.Clear;
     Revealers.Add(Locs[K], 20);
-    for L := 0 to fRes.Count - 1 do
-      with fRes.Resources[L] do
-        if (InitOwner = K) then //InitOwner, Resource, MinesCnt: Byte;
-          for X := Low(Points) to High(Points) do
-            Revealers.Add(Points[X], 10);
+    // Skip revealers in debug mode so center screen is visible
+    {$IFNDEF DEBUG_RMG}
+      for L := 0 to fRes.Count - 1 do
+        with fRes.Resources[L] do
+          if (InitOwner = K) then //InitOwner, Resource, MinesCnt: Byte;
+            for X := Low(Points) to High(Points) do
+              Revealers.Add(Points[X], 10);
+    {$ENDIF}
   end;
 
   // Update game info
@@ -635,14 +638,14 @@ begin
 
     if (Length(gGame.MapTxtInfo.Author) = 0) then
       gGame.MapTxtInfo.Author := 'Random map generator';
-    if (Length(gGame.MapTxtInfo.SmallDesc) = 0) then
+    if (Length(gGame.MapTxtInfo.SmallDescToDisplay) = 0) then
       gGame.MapTxtInfo.SmallDesc := 'Randomly generated map';
-    if (Length(gGame.MapTxtInfo.GetBigDesc) = 0) then
+    if (Length(gGame.MapTxtInfo.BigDescToDisplay) = 0) then
       with RMGSettings.Locs do
-        gGame.MapTxtInfo.SetBigDesc( Format(
+        gGame.MapTxtInfo.BigDesc := Format(
           'This is a randomly generated map [%dx%d] for %d players||Parameters:| Stones = %d| Gold = %d| Iron = %d| Initial resources: %s',
           [fMapX, fMapY, Players, Resource.Stone, Resource.Gold, Resource.Iron, InitResStr]
-        ));
+        );
 
     gGame.MapTxtInfo.IsRMG := True;
 
@@ -1361,7 +1364,7 @@ const
     Right := True;
     X := aInitPoint.X;
     Y := aInitPoint.Y;
-    cnt := 1;
+    cnt := 0;
     elements := 1;
     aPointArr[0] := KMPoint(X,Y);
     for I := 1 to aReqSize do
@@ -2041,12 +2044,12 @@ begin
   //   | [Y2,X0]  [Y2,X1]  [Y2,X2] |                        | 6  5  4 |
   //    ———————————————————————————                          —————————
   overflow := 0;
-  repeatWhile := true;
+  repeatWhile := True;
   // There are changes which affect previous tiles so the cycle somethimes have to be repeated
   while repeatWhile AND (overflow < 10) do
   begin
     overflow := overflow + 1;
-    repeatWhile := false;
+    repeatWhile := False;
     for Y1 := 1 to High(A)-2 do
     begin
       Y0 := Y1-1;
@@ -2092,7 +2095,7 @@ begin
 
           else// if A[Y1,X1] > 0 then // When is grass here do nothing
           begin
-            repeatWhile := true;
+            repeatWhile := True;
             if (A[Y1,X1] = A[Y1,X0]) then
             begin
               A[Y2,X0] := A[Y1,X1];
@@ -2521,12 +2524,12 @@ begin
 end;
 
 
-// Replace textures which are surrounded by mountains by snow biome
+// Replace textures which are surrounded by mountains
 // A = TKMByte2Array of biomes
-procedure TKMRandomMapGenerator.SnowMountains(var A: TKMByte2Array);
+procedure TKMRandomMapGenerator.FillWalkableTilesInMountains(var A: TKMByte2Array);
   const
-    IronMix: array[0..2] of TBiomeType = (btGroundSnow, btSnow1, btDark);
-    GoldMix: array[0..2] of TBiomeType = (btGroundSnow, btSnow1, btDark);
+    IronMix: array[0..4] of TBiomeType = (btWater, btGroundSnow, btSnow1, btDark, btGround);
+    GoldMix: array[0..4] of TBiomeType = (btWater, btGroundSnow, btSnow1, btDark, btCoastSand);
   var
     X,Y, Count: Integer;
     PresentBiomes: Cardinal;
@@ -3011,107 +3014,6 @@ end;
 // TilesPartsArr = tiles composition array
 // A = array of biomes
 procedure TKMRandomMapGenerator.MineFinalFixer(var TilesPartsArr: TTileParts; var A: TKMByte2Array);
-//var
-//  X,Y,X1,X2,maxY,minX,maxX,MinMineSize, minVal, maxIndex, startIndex, actVal, MaxPosIdx: Integer;
-//  X_RESERVE, X_FLOAT: Single;
-//  MinLimit, MaxLimit: TSmallIntArray;
-//  MineSearch: TKMMinerFixSearch;
-//begin
-//  if (MineCnt < 1) then
-//    Exit;
-//// Initialization
-//  SetLength(Shape,Length(A[0])+2);
-//  SetLength(MinLimit, Length(A[0])+2);
-//  SetLength(MaxLimit, Length(A[0])+2);
-//  for X := Low(Shape) to High(Shape) do
-//  begin
-//    Shape[X].Active := False;
-//    Shape[X].Min := High(MinLimit);
-//    MinLimit[X] := High(MinLimit);
-//    Shape[X].Max := Low(MaxLimit);
-//    MaxLimit[X] := Low(MaxLimit);
-//  end;
-//
-//// Detect shape of resource
-//  //if RMGSettings.Objects.Active then
-//  //begin
-//  //
-//    MineSearch := TKMMinerFixSearch.Create(  KMPoint(  Low(A[0]), Low(A) ), KMPoint( High(A[0]), High(A) ), MinLimit, MaxLimit, aVisited, A  );
-//    try
-//      MineSearch.QuickFlood(aPosition.X,aPosition.Y,Resource);
-//    finally
-//      MineSearch.Free;
-//    end;
-//    for X := Low(Shape) to High(Shape) do
-//      if (Shape[X].Min <> MinLimit[X]) then
-//      begin
-//        Shape[X].Active := True;
-//        Shape[X].Min := MinLimit[X];
-//        Shape[X].Max := MaxLimit[X];
-//      end;
-//  //end
-//  //else
-//  //  MinerFixFloodSearch(Resource, aPosition.Y, aPosition.X, aVisited);
-//
-//// Find start index of shape
-//  X := 0;
-//  while not Shape[X].Active AND (X < High(Shape)) do
-//    X := X+1;
-//  minX := X;
-//  while Shape[X].Active AND (X < High(Shape)) do
-//    X := X+1;
-//  maxX := X-1;
-//
-//// Change shape to be able to mine resources here
-//  MinMineSize := MINESIZE + 1;
-//  X_RESERVE := (maxX - minX) / (MineCnt*1.0) - MinMineSize;
-//  X := minX;
-//  X_FLOAT := MinX;
-//  while (X+MinMineSize <= MaxX) do
-//  begin
-//    minVal := High(Integer);
-//    maxIndex := High(A);
-//  // Scan last interval of tiles and find best spot for fix
-//    for X1 := X to Max(X,Round(X_FLOAT+X_RESERVE)) do
-//    begin
-//    // Find a southernmost point in minimal interval of possible mine
-//      maxY := 0;
-//      for X2 := X1+1 to Min(maxX,X1+MINESIZE) do // We need to focus only on balancing of 2 or 3 tiles where will be mine (edge tiles may be higher but we dont care)
-//        if (Shape[X2].Max > maxY) then
-//        begin
-//          maxY := Shape[X2].Max;
-//          MaxPosIdx := X2;
-//        end;
-//    // Calculate the price of transformation which secure place mine (price = penalization of deleted tiles)
-//      actVal := 0;
-//      for X2 := X1 to Min(maxX,X1+MINESIZE) do
-//        actVal := actVal + Max(0, maxY - Shape[X2].Max); // Edges of potential mine tiles may be higher but it is fine
-//    // Save best solution (closer to right is better)
-//      if (actVal < minVal) then
-//      begin
-//        minVal := actVal;
-//        maxIndex := MaxPosIdx;
-//        startIndex := X1;
-//      end;
-//    end;
-//  // Apply changes
-//    maxY := Shape[maxIndex].Max;
-//    for X1 := startIndex to startIndex + MinMineSize do
-//    begin
-//      Y := Shape[X1].Max;
-//      while (Y <= maxY) AND (Y < High(A)) do
-//      begin
-//        Shape[X1].Max := Shape[X1].Max + 1;
-//        A[Y,X1] := Resource;
-//        aVisited[Y,X1] := True;
-//        Y := Y + 1;
-//      end;
-//    end;
-//    X_FLOAT := X_FLOAT + X_RESERVE + MinMineSize;
-//    X := Round(X_FLOAT);
-//  end;
-//end;
-//
 
   function CheckObject(aID: Word): Boolean;
   begin
@@ -3119,10 +3021,38 @@ procedure TKMRandomMapGenerator.MineFinalFixer(var TilesPartsArr: TTileParts; va
       Result := CanBeRemoved AND not AllBlocked;
   end;
 
-  procedure FixMine(aX,aY,aBiome: Integer);
+  procedure MarkMine(aPoint: TKMPoint; aBiome: Integer);
+  var
+    K, L, bestIdx: Integer;
+    dist, bestDist: Single;
+  begin
+    BestDist := 1E10;
+    bestIdx := -1;
+    for K := 0 to fRes.Count - 1 do
+      if (fRes.Resources[K].Resource = aBiome) then
+        for L := 0 to Length(fRes.Resources[K].Points) - 1 do
+        begin
+          dist := KMDistanceSqr(fRes.Resources[K].Points[L], aPoint);
+          if (dist < bestDist) then
+          begin
+            bestIdx := K;
+            bestDist := dist;
+          end;
+        end;
+    if (bestIdx > -1) then
+      with fRes.Resources[bestIdx] do
+      begin
+        Inc(FinalCnt);
+        SetLength(MinePoints, FinalCnt);
+        MinePoints[High(MinePoints)] := aPoint;
+      end;
+  end;
+
+  function FixMine(aX,aY,aBiome: Integer): Integer;
   var
     X,Y, MineHeight: Integer;
   begin
+    Result := 0;
     // Check tiles if placing mine is possible
     for X := aX to aX + 3 + Byte(aBiome = Byte(btIron)) do
       if (A[aY,X] <> aBiome) then
@@ -3148,39 +3078,57 @@ procedure TKMRandomMapGenerator.MineFinalFixer(var TilesPartsArr: TTileParts; va
         if not CheckObject(TilesPartsArr.Obj[Y,X]) then
           TilesPartsArr.Obj[Y,X] := 255;
       end;
+
+    // Find and mark mine
+    MarkMine(KMPoint(aX,aY), aBiome);
+
+    // Skip next tiles so only one potential mine is detected
+    Result := 2 + Byte(aBiome = Byte(btIron));
   end;
 
+const
+  OBSTACLE_IN_MINE: array[0..1] of Word = (8, 9);
+  OBSTACLE_IN_MINE_BUILDABLE: array[0..4] of Word = (0,1,2,3,4);
 var
 //  RESOURCE: Byte;
-  X,Y: Integer;
+  X,Y, K,L: Integer;
 //  Visited: TBoolean2Array;
 //  Resources: TBalancedResource1Array;
 begin
+  // Fix height and objects
   for Y := 2 to fMapY-2 do
-    for X := 2 to fMapX-2-5 do
+  begin
+    X := 2;
+    while (X <= fMapX-2-5) do
     begin
       if (A[Y,X] = Byte(btStone)) AND (A[Y+1,X] < Byte(btStone)) then
       begin
         if not CheckObject(TilesPartsArr.Obj[Y,X]) then
           TilesPartsArr.Obj[Y,X] := 255;
       end
-      else if (A[Y,X] = Byte(btGold)) then FixMine(X,Y,Byte(btGold))
-      else if (A[Y,X] = Byte(btIron)) then FixMine(X,Y,Byte(btIron));
+      else if (A[Y,X] = Byte(btGold)) then X := X + FixMine(X,Y,Byte(btGold))
+      else if (A[Y,X] = Byte(btIron)) then X := X + FixMine(X,Y,Byte(btIron));
+      X := X + 1;
     end;
-  //Resources := fRes.Resources;
-  //for I := 0 to fRes.Count - 1 do
-  //begin
-  //  if (Resources[I].Resource = Byte(btGold)) then
-  //    RESOURCE := 2
-  //  else if (Resources[I].Resource = Byte(btIron)) then
-  //    RESOURCE := 3
-  //  else // Coal and Stone are always fine
-  //    Continue;
-  //  for K := Low(Resources[I].Points) to High(Resources[I].Points) do
-  //    if not Visited[ Resources[I].Points[K].Y, Resources[I].Points[K].X ]
-  //       AND (A[ Resources[I].Points[K].Y, Resources[I].Points[K].X ] = Resources[I].Resource) then
-  //      Fixer(RESOURCE, Resources[I].Resource, Resources[I].MinesCnt, Resources[I].Points[K], Visited);
-  //end;
+  end;
+
+  // Remove mines if the count was exceeded
+    for K := 0 to fRes.Count - 1 do
+      with fRes.Resources[K] do
+        if (Resource = Byte(btIron)) then
+        begin
+          L := 1;
+          if (FinalCnt < MinesCnt) then
+            L := 2;
+
+          while (L < Length(MinePoints)) AND (FinalCnt > MinesCnt) do
+          begin
+            TilesPartsArr.Obj[ MinePoints[L].Y, MinePoints[L].X+2 ] := OBSTACLE_IN_MINE[ fRNG.RandomI(Length(OBSTACLE_IN_MINE)) ];
+            TilesPartsArr.Obj[ MinePoints[L].Y, MinePoints[L].X+3 ] := OBSTACLE_IN_MINE_BUILDABLE[ fRNG.RandomI(Length(OBSTACLE_IN_MINE_BUILDABLE)) ];
+            Dec(FinalCnt);
+            L := L + 2;
+          end;
+        end;
 end;
 
 
@@ -3998,13 +3946,13 @@ end;
 //
 //    // Detect 8 surrounding tiles and store ideal transition of each tile into B
 //      //{
-//      check := true;
+//      check := True;
 //      for aY := 0 to 2 do
 //        for aX := 0 to 2 do
 //        begin
 //          B[Y1,X1,aY,aX] := BT[ A[Y1,X1] , A[Y0+aY,X0+aX] ];
 //          if (B[Y1,X1,aY,aX] <> -1) then
-//            check := false
+//            check := False
 //          else
 //            B[Y1,X1,aY,aX] := A[Y1,X1];
 //        end;
@@ -4217,14 +4165,14 @@ end;
 //  var
 //    i,j: Integer;
 //  begin
-//    Result := false;
+//    Result := False;
 //    for i := Low(Arr) to High(Arr)-1 do
 //    begin
 //      Tile := Arr[I];
 //      for j := i+1 to High(Arr) do
 //        if (Tile = Arr[j]) then
 //        begin
-//          Result := true;
+//          Result := True;
 //          Exit;
 //        end;
 //    end;
@@ -4404,7 +4352,7 @@ end;
 //      // 4-tiles transition
 //        15: begin
 //            // Special case where are 2 diagonal tiles same
-//              check := false;
+//              check := False;
 //              if (B[Y1,X1] = B[Y2,X2]) then // 1 = 4
 //              begin
 //                if not canWalk[ B[Y1,X2] ] then
@@ -4412,7 +4360,7 @@ end;
 //                else if not canWalk[ B[Y2,X1] ] then
 //                  B[Y2,X1] := B[Y1,X1] // 3 := 1
 //                else
-//                   check := true;
+//                   check := True;
 //              end
 //              else if (B[Y2,X1] = B[Y1,X2]) then // 2 = 3
 //              begin
@@ -4421,10 +4369,10 @@ end;
 //                else if not canWalk[ B[Y2,X2] ] then
 //                  B[Y2,X2] := B[Y2,X1] // 4 := 2
 //                else
-//                   check := true;
+//                   check := True;
 //              end
 //              else
-//                check := true;
+//                check := True;
 //
 //            // 4 different tiles
 //              if check then

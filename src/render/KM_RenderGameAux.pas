@@ -6,7 +6,7 @@ uses
 
 type
   // Aux render of the game
-  TRenderGameAux = class
+  TKMRenderGameAux = class
   public
     procedure TileTerrainIDs(const aRect: TKMRect);
     procedure TileTerrainKinds(const aRect: TKMRect);
@@ -24,12 +24,13 @@ type
   end;
 
 var
-  gRenderGameAux: TRenderGameAux;
+  gRenderGameAux: TKMRenderGameAux;
 
 implementation
 uses
   dglOpenGL,
   SysUtils,
+  KM_Entity,
   KM_RenderAux,
   KM_Game, KM_GameParams,
   KM_Units,
@@ -43,7 +44,7 @@ const
     (icWhite, icLightCyan, icCyan, icDarkCyan);
 
 
-procedure TRenderGameAux.TileTerrainIDs(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainIDs(const aRect: TKMRect);
 var
   I, J, K, cnt: Integer;
   customStr: String;
@@ -73,7 +74,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainKinds(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainKinds(const aRect: TKMRect);
 
   procedure DrawTerKind(X,Y: Integer);
   var
@@ -119,7 +120,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainOverlays(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainOverlays(const aRect: TKMRect);
 var
   I, J: Integer;
   str: string;
@@ -135,7 +136,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainTileLock(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainTileLock(const aRect: TKMRect);
 const
   TILE_LOCK_STR: array[TKMTileLock] of string = ('', 'Fenced', 'Digged', 'House', 'FieldW', 'RoadW');
 var
@@ -147,7 +148,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainTileObjectID(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainTileObjectID(const aRect: TKMRect);
 var
   I, J: Integer;
 begin
@@ -157,7 +158,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainTileUnit(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainTileUnit(const aRect: TKMRect);
 var
   I, J: Integer;
   color: Cardinal;
@@ -172,7 +173,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainVertexUnit(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainVertexUnit(const aRect: TKMRect);
 var
   I, J: Integer;
 begin
@@ -186,7 +187,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainTreeAge(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainTreeAge(const aRect: TKMRect);
 var
   I, J: Integer;
 begin
@@ -196,7 +197,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainFieldAge(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainFieldAge(const aRect: TKMRect);
 var
   I, J: Integer;
 begin
@@ -206,7 +207,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainJamMeter(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainJamMeter(const aRect: TKMRect);
 const
   JAM_DRAW_STEP = 3;
 var
@@ -226,7 +227,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.TileTerrainHeight(const aRect: TKMRect);
+procedure TKMRenderGameAux.TileTerrainHeight(const aRect: TKMRect);
 var
   I, J: Integer;
 begin
@@ -237,7 +238,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.Passability(const aRect: TKMRect; aPass: Byte);
+procedure TKMRenderGameAux.Passability(const aRect: TKMRect; aPass: Byte);
 const
   DRAW_DOT_FOR_PASS: set of TKMTerrainPassability = [tpElevate, tpFactor];
 var
@@ -264,7 +265,7 @@ begin
 end;
 
 
-procedure TRenderGameAux.RenderResizeMap(const aExceptRect: TKMRect);
+procedure TKMRenderGameAux.RenderResizeMap(const aExceptRect: TKMRect);
 var
   I, K: Integer;
 begin

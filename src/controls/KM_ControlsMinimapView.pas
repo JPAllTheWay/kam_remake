@@ -85,7 +85,7 @@ begin
     fMinimap.SubOnUpdateTexture(UpdateTexture);
     fMinimap.SubOnResize(ResizeMinimap);
 
-    fMapTex.Tex := TRender.GenerateTextureCommon(ftNearest, ftNearest);
+    fMapTex.Tex := TKMRender.GenerateTextureCommon(ftNearest, ftNearest);
   end;
 end;
 
@@ -140,7 +140,7 @@ begin
     Move(Pointer(NativeUint(fMinimap.Base) + I * fMinimap.MapX * 4)^,
          Pointer(NativeUint(wData) + I * fWidthPOT * 4)^, fMinimap.MapX * 4);
 
-  TRender.UpdateTexture(fMapTex.Tex, fWidthPOT, fHeightPOT, tfRGBA8, wData);
+  TKMRender.UpdateTexture(fMapTex.Tex, fWidthPOT, fHeightPOT, tfRGBA8, wData);
   FreeMem(wData);
 
   UpdateSizes;

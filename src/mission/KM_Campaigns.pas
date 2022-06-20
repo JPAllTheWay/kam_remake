@@ -90,7 +90,7 @@ type
     function GetMissionName(aIndex: Byte): String;
     function GetMissionTitle(aIndex: Byte): String;
     function GetMissionBriefing(aIndex: Byte): String;
-    function GetBreifingAudioFile(aIndex: Byte): String;
+    function GetBriefingAudioFile(aIndex: Byte): String;
     function GetCampaignDataScriptFilePath: UnicodeString;
 
     procedure UnlockAllMissions;
@@ -500,25 +500,30 @@ var
   I: Integer;
   textMission: TKMTextLibraryMulti;
 begin
-  for I := 0 to fMapCount - 1 do
-  begin
-    //Load TxtInfo
-    if fMapsInfo[I].TxtInfo = nil then
-      fMapsInfo[I].TxtInfo := TKMMapTxtInfo.Create
-    else
-      fMapsInfo[I].TxtInfo.ResetInfo;
-    fMapsInfo[I].TxtInfo.LoadTXTInfo(GetMissionFile(I, '.txt'));
+  //Load mission name from mission Libx library
+  textMission := TKMTextLibraryMulti.Create;
+  try
+    for I := 0 to fMapCount - 1 do
+    begin
+      //Load TxtInfo
+      if fMapsInfo[I].TxtInfo = nil then
+        fMapsInfo[I].TxtInfo := TKMMapTxtInfo.Create
+      else
+        fMapsInfo[I].TxtInfo.ResetInfo;
 
-    fMapsInfo[I].MissionName := '';
-    //Load mission name from mission Libx library
-    textMission := TKMTextLibraryMulti.Create;
-    try
-      textMission.LoadLocale(GetMissionFile(I, '.%s.libx'));
+      fMapsInfo[I].TxtInfo.LoadTXTInfo(GetMissionFile(I, '.txt'));
+
+      fMapsInfo[I].MissionName := '';
+
+      textMission.Clear; // Better clear object, than rectreate it for every map
+      // Make a full scan for Libx top ID, to allow unordered Libx ID's by not carefull campaign makers
+      textMission.LoadLocale(GetMissionFile(I, '.%s.libx'));//, True);
+
       if textMission.HasText(MISSION_NAME_LIBX_ID) then
         fMapsInfo[I].MissionName := StringReplace(textMission[MISSION_NAME_LIBX_ID], '|', ' ', [rfReplaceAll]); //Replace | with space
-    finally
-      FreeAndNil(textMission);
     end;
+  finally
+    FreeAndNil(textMission);
   end;
 end;
 
@@ -671,18 +676,26 @@ begin
 end;
 
 
-function TKMCampaign.GetBreifingAudioFile(aIndex: Byte): String;
+// aIndex starts from 0
+function TKMCampaign.GetBriefingAudioFile(aIndex: Byte): String;
+
+  function GetBriefingPath(aLocale: AnsiString): string;
+  begin
+    // map index is 1-based in the file names
+    Result := fPath + ShortName + Format('%.2d', [aIndex + 1]) + PathDelim +
+                      ShortName + Format('%.2d', [aIndex + 1]) + '.' + UnicodeString(aLocale) + '.mp3';
+  end;
+
 begin
-  Result := fPath + ShortName + Format('%.2d', [aIndex+1]) + PathDelim +
-            ShortName + Format('%.2d', [aIndex + 1]) + '.' + UnicodeString(gResLocales.UserLocale) + '.mp3';
+  Assert(InRange(aIndex, 0, MAX_CAMP_MAPS - 1));
+
+  Result := GetBriefingPath(gResLocales.UserLocale);
 
   if not FileExists(Result) then
-    Result := fPath + ShortName + Format('%.2d', [aIndex+1]) + PathDelim +
-              ShortName + Format('%.2d', [aIndex + 1]) + '.' + UnicodeString(gResLocales.FallbackLocale) + '.mp3';
+    Result := GetBriefingPath(gResLocales.FallbackLocale);
 
   if not FileExists(Result) then
-    Result := fPath + ShortName + Format('%.2d', [aIndex+1]) + PathDelim +
-              ShortName + Format('%.2d', [aIndex + 1]) + '.' + UnicodeString(gResLocales.DefaultLocale) + '.mp3';
+    Result := GetBriefingPath(gResLocales.DefaultLocale);
 end;
 
 

@@ -167,8 +167,8 @@ begin
   fOwner := aPlayer;
   fSetup := aSetup;
   fWorkerCount := 0;
-  fCityUnderConstruction := false;
-  fCityCompleted := false;
+  fCityUnderConstruction := False;
+  fCityCompleted := False;
 
   fMaxGoldMineCnt := 0;
   fDecCoalMineCnt := 0;

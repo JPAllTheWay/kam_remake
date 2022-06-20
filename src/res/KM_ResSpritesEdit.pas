@@ -29,8 +29,8 @@ type
     procedure SoftWater(aTileset: TKMResTileset);
     procedure Delete(aIndex: Integer);
     procedure LoadFromRXFile(const aFileName: string);
-    procedure SaveToRXXFile(const aFileName: string);
-    procedure SaveToRXAFile(const aFileName: string);
+    procedure SaveToRXXFile(const aFileName: string; aAddHeader: Boolean);
+    procedure SaveToRXAFile(const aFileName: string; aAddHeader: Boolean);
     function TrimSprites: Cardinal; //For debug
     procedure ClearTemp; override;
     procedure GetImageToBitmap(aIndex: Integer; aBmp, aMask: TBitmap);
@@ -45,7 +45,12 @@ uses
   KM_SoftShadows,
   KM_IoPNG,
   KM_RenderTypes,
-  KM_CommonClasses;
+  KM_CommonClasses,
+  KM_Utils;
+
+
+const
+  RXX_VERSION_1: AnsiString = 'RXX1';
 
 
 var
@@ -680,15 +685,15 @@ begin
 end;
 
 
-procedure TKMSpritePackEdit.SaveToRXAFile(const aFileName: string);
+procedure TKMSpritePackEdit.SaveToRXAFile(const aFileName: string; aAddHeader: Boolean);
 const
   SNS_MAX_ABS_VAL = CELL_SIZE_PX*5; // Empirical value
 var
   I, Count: Integer;
-  SAT: TSpriteAtlasType;
+  SAT: TKMSpriteAtlasType;
   InputStream: TCompressionStream;
   OutputStream: TFileStream;
-  baseRAM, idealRAM, colorRAM, texCount: Cardinal;
+  baseRAM, colorRAM, texCount: Cardinal;
 begin
   if IsEmpty then Exit;
 
@@ -697,6 +702,8 @@ begin
   ForceDirectories(ExtractFilePath(aFileName));
 
   OutputStream := TFileStream.Create(aFileName, fmCreate);
+  if aAddHeader then
+    WriteBinaryHeader(OutputStream, RXX_VERSION_1);
   InputStream := TCompressionStream.Create(clMax, OutputStream);
 
   //Sprite info
@@ -722,7 +729,7 @@ begin
     end;
 
   //Atlases
-  for SAT := Low(TSpriteAtlasType) to High(TSpriteAtlasType) do
+  for SAT := Low(TKMSpriteAtlasType) to High(TKMSpriteAtlasType) do
   begin
     Count := Length(fGFXPrepData[SAT]);
     InputStream.Write(Count, 4);
@@ -734,7 +741,7 @@ begin
         Count := Length(SpriteInfo.Sprites);
         InputStream.Write(Count, 4);
         InputStream.Write(SpriteInfo.Sprites[0], Count*SizeOf(SpriteInfo.Sprites[0]));
-        InputStream.Write(TexType, SizeOf(TTexFormat));
+        InputStream.Write(TexType, SizeOf(TKMTexFormat));
         Count := Length(Data);
         InputStream.Write(Count, 4);
         InputStream.Write(Data[0], Count*SizeOf(Data[0]));
@@ -746,7 +753,7 @@ begin
 end;
 
 
-procedure TKMSpritePackEdit.SaveToRXXFile(const aFileName: string);
+procedure TKMSpritePackEdit.SaveToRXXFile(const aFileName: string; aAddHeader: Boolean);
 var
   I: Integer;
   InputStream: TMemoryStream;
@@ -778,6 +785,8 @@ begin
         InputStream.Write(fRXData.Mask[I, 0], fRXData.Size[I].X * fRXData.Size[I].Y);
     end;
   OutputStream := TFileStream.Create(aFileName, fmCreate);
+  if aAddHeader then
+    WriteBinaryHeader(OutputStream, RXX_VERSION_1);
   CompressionStream := TCompressionStream.Create(clMax, OutputStream);
   InputStream.Position := 0;
   CompressionStream.CopyFrom(InputStream, InputStream.Size);

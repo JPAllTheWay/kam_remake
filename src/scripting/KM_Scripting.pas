@@ -77,6 +77,7 @@ type
     property ValidationIssues: TKMScriptValidatorResult read fValidationIssues;
     procedure LoadFromFile(const aFileName, aCampaignDataFilePath: UnicodeString; aCampaignData: TKMemoryStream);
     procedure ExportDataToText;
+    procedure ExportScriptCode;
 
     procedure Save(SaveStream: TKMemoryStream);
     procedure Load(LoadStream: TKMemoryStream);
@@ -451,6 +452,7 @@ begin
     // After that they can be used from within the script.
     c := Sender.AddClassN(nil, AnsiString(fStates.ClassName));
     //*States-Check*//
+    RegisterMethodCheck(c, 'function  AAIAttackHouseTypesGet(aHand: Byte): TKMHouseTypeSet');
     RegisterMethodCheck(c, 'function  AIArmyType(aHand: Byte): TKMArmyType');
     RegisterMethodCheck(c, 'function  AIAutoAttack(aHand: Byte): Boolean');
     RegisterMethodCheck(c, 'function  AIAutoAttackRange(aHand: Byte): Integer');
@@ -470,6 +472,7 @@ begin
     RegisterMethodCheck(c, 'function  AISerfsPerHouse(aHand: Byte): Single');
     RegisterMethodCheck(c, 'function  AISoldiersLimit(aHand: Byte): Integer');
     RegisterMethodCheck(c, 'function  AIStartPosition(aHand: Byte): TKMPoint');
+    RegisterMethodCheck(c, 'function  AIUnlimitedEquip(aHand: Byte): Boolean');
     RegisterMethodCheck(c, 'function  AIWorkerLimit(aHand: Byte): Integer');
     RegisterMethodCheck(c, 'function  CampaignMissionID: Integer');
     RegisterMethodCheck(c, 'function  CampaignMissionsCount: Integer');
@@ -505,10 +508,6 @@ begin
     RegisterMethodCheck(c, 'function  GroupOwner(aGroupID: Integer): Integer');
     RegisterMethodCheck(c, 'function  GroupType(aGroupID: Integer): Integer');
     RegisterMethodCheck(c, 'function  GroupTypeEx(aGroupID: Integer): TKMGroupType');
-    RegisterMethodCheck(c, 'function  HandHouseCanBuild(aHand: Integer; aHouseType: TKMHouseType): Boolean');
-    RegisterMethodCheck(c, 'function  HandHouseLock(aHand: Integer; aHouseType: TKMHouseType): TKMHandHouseLock');
-    RegisterMethodCheck(c, 'function  HandUnitCanTrain(aHand: Integer; aUnitType: TKMUnitType): Boolean');
-    RegisterMethodCheck(c, 'function  HandWareDistribution(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType): Integer');
     RegisterMethodCheck(c, 'function  HouseAllowAllyToSelect(aHouseID: Integer): Boolean');
     RegisterMethodCheck(c, 'function  HouseAt(aX, aY: Integer): Integer');
     RegisterMethodCheck(c, 'function  HouseBarracksRallyPointX(aBarracks: Integer): Integer');
@@ -544,6 +543,7 @@ begin
     RegisterMethodCheck(c, 'function  HouseTypeToOccupantType(aHouseType: Integer): Integer');
     RegisterMethodCheck(c, 'function  HouseTypeToWorkerType(aHouseType: TKMHouseType): TKMUnitType');
     RegisterMethodCheck(c, 'function  HouseUnlocked(aHand: Integer; aHouseType: Integer): Boolean');
+    RegisterMethodCheck(c, 'function  HouseWareAmount(aHouseID: Integer; aWare: TKMWareType): Integer');
     RegisterMethodCheck(c, 'function  HouseWareBlocked(aHouseID: Integer; aWareType: Integer): Boolean');
     RegisterMethodCheck(c, 'function  HouseWareBlockedEx(aHouseID: Integer; aWareType: TKMWareType): Boolean');
     RegisterMethodCheck(c, 'function  HouseWareBlockedTakeOut(aHouseID: Integer; aWareType: TKMWareType): Boolean');
@@ -616,10 +616,16 @@ begin
     RegisterMethodCheck(c, 'function  PlayerGetAllGroups(aHand: Byte): TIntegerArray');
     RegisterMethodCheck(c, 'function  PlayerGetAllHouses(aHand: Byte): TIntegerArray');
     RegisterMethodCheck(c, 'function  PlayerGetAllUnits(aHand: Byte): TIntegerArray');
+    RegisterMethodCheck(c, 'function  PlayerHouseTypeCanBuild(aHand: Integer; aHouseType: TKMHouseType): Boolean');
+    RegisterMethodCheck(c, 'function  PlayerHouseTypeLock(aHand: Integer; aHouseType: TKMHouseType): TKMHandHouseLock');
+    RegisterMethodCheck(c, 'function  PlayerIsAdvancedAI(aHand: Byte): Boolean');
     RegisterMethodCheck(c, 'function  PlayerIsAI(aHand: Byte): Boolean');
+    RegisterMethodCheck(c, 'function  PlayerIsClassicAI(aHand: Byte): Boolean');
     RegisterMethodCheck(c, 'function  PlayerName(aHand: Byte): AnsiString');
+    RegisterMethodCheck(c, 'function  PlayerUnitTypeCanTrain(aHand: Integer; aUnitType: TKMUnitType): Boolean');
     RegisterMethodCheck(c, 'function  PlayerVictorious(aHand: Byte): Boolean');
     RegisterMethodCheck(c, 'function  PlayerWareDistribution(aHand: Byte; aWareType: Byte; aHouseType: Byte): Byte');
+    RegisterMethodCheck(c, 'function  PlayerWareDistributionEx(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType): Integer');
     RegisterMethodCheck(c, 'function  StatAIDefencePositionsCount(aHand: Byte): Integer');
     RegisterMethodCheck(c, 'function  StatArmyCount(aHand: Byte): Integer');
     RegisterMethodCheck(c, 'function  StatArmyPower(aHand: Byte): Single');
@@ -682,6 +688,7 @@ begin
 
     c := Sender.AddClassN(nil, AnsiString(fActions.ClassName));
     //*Actions-Check*//
+    RegisterMethodCheck(c, 'procedure AAIAttackHouseTypesSet(aHand: Byte; aHouses: TKMHouseTypeSet)');
     RegisterMethodCheck(c, 'procedure AIArmyType(aHand: Byte; aType: TKMArmyType)');
     RegisterMethodCheck(c, 'function  AIAttackAdd(aHand: Integer; aRepeating: Boolean; aDelay: Cardinal; aTotalMen: Integer; ' +
       'aMeleeGroupCount: Integer; aAntiHorseGroupCount: Integer; aRangedGroupCount: Integer; ' +
@@ -711,6 +718,7 @@ begin
     RegisterMethodCheck(c, 'procedure AISerfsPerHouse(aHand: Byte; aSerfs: Single)');
     RegisterMethodCheck(c, 'procedure AISoldiersLimit(aHand: Byte; aLimit: Integer)');
     RegisterMethodCheck(c, 'procedure AIStartPosition(aHand: Byte; X, Y: Integer)');
+    RegisterMethodCheck(c, 'procedure AIUnlimitedEquip(aHand: Byte; aUnlimitedEquip: Boolean)');
     RegisterMethodCheck(c, 'procedure AIWorkerLimit(aHand: Byte; aLimit: Byte)');
     RegisterMethodCheck(c, 'procedure CinematicEnd(aHand: Byte)');
     RegisterMethodCheck(c, 'procedure CinematicPanTo(aHand: Byte; X, Y: Integer; Duration: Integer)');
@@ -761,10 +769,6 @@ begin
     RegisterMethodCheck(c, 'procedure GroupOrderWalk(aGroupID: Integer; X, Y: Integer; aDirection: Integer)');
     RegisterMethodCheck(c, 'procedure GroupOrderWalkEx(aGroupID: Integer; X, Y: Integer; aDirection: TKMDirection)');
     RegisterMethodCheck(c, 'procedure GroupSetFormation(aGroupID: Integer; aNumColumns: Byte)');
-    RegisterMethodCheck(c, 'procedure HandHouseLock(aHand: Integer; aHouseType: TKMHouseType; aLock: TKMHandHouseLock)');
-    RegisterMethodCheck(c, 'procedure HandTradeAllowed(aHand: Integer; aWareType: TKMWareType; aAllowed: Boolean)');
-    RegisterMethodCheck(c, 'procedure HandUnitCanTrain(aHand: Integer; aUnitType: TKMUnitType; aCanTrain: Boolean)');
-    RegisterMethodCheck(c, 'procedure HandWareDistribution(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType; aAmount: Integer)');
     RegisterMethodCheck(c, 'procedure HouseAddBuildingMaterials(aHouseID: Integer)');
     RegisterMethodCheck(c, 'procedure HouseAddBuildingMaterialsEx(aHouseID: Integer; aWoodAmount: Integer; aStoneAmount: Integer)');
     RegisterMethodCheck(c, 'procedure HouseAddBuildingProgress(aHouseID: Integer)');
@@ -843,10 +847,14 @@ begin
     RegisterMethodCheck(c, 'procedure PlayerAllianceNFogChange(aHand1: Byte; aHand2: Byte; aCompliment: Boolean; aAllied: Boolean; aSyncAllyFog: Boolean)');
     RegisterMethodCheck(c, 'procedure PlayerDefeat(aHand: Integer)');
     RegisterMethodCheck(c, 'procedure PlayerGoalsRemoveAll(aHand: Integer; aForAllPlayers: Boolean)');
+    RegisterMethodCheck(c, 'procedure PlayerHouseTypeLock(aHand: Integer; aHouseType: TKMHouseType; aLock: TKMHandHouseLock)');
     RegisterMethodCheck(c, 'procedure PlayerShareBeacons(aHand1: Integer; aHand2: Integer; aBothWays: Boolean; aShare: Boolean)');
     RegisterMethodCheck(c, 'procedure PlayerShareFog(aHand1: Integer; aHand2: Integer; aShare: Boolean)');
     RegisterMethodCheck(c, 'procedure PlayerShareFogCompliment(aHand1: Integer; aHand2: Integer; aShare: Boolean)');
+    RegisterMethodCheck(c, 'procedure PlayerTradeAllowed(aHand: Integer; aWareType: TKMWareType; aAllowed: Boolean)');
+    RegisterMethodCheck(c, 'procedure PlayerUnitTypeCanTrain(aHand: Integer; aUnitType: TKMUnitType; aCanTrain: Boolean)');
     RegisterMethodCheck(c, 'procedure PlayerWareDistribution(aHand: Byte; aWareType: Byte; aHouseType: Byte; aAmount: Byte)');
+    RegisterMethodCheck(c, 'procedure PlayerWareDistributionEx(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType; aAmount: Integer)');
     RegisterMethodCheck(c, 'procedure PlayerWin(aVictors: array of Integer; aTeamVictory: Boolean)');
     RegisterMethodCheck(c, 'function  PlayOGG(aHand: ShortInt; aFileName: AnsiString; aVolume: Single): Integer');
     RegisterMethodCheck(c, 'function  PlayOGGAtLocation(aHand: ShortInt; aFileName: AnsiString; aVolume: Single; aRadius: Single; ' +
@@ -1192,6 +1200,7 @@ begin
     with classImp.Add(TKMScriptStates) do
     begin
       //*States-Reg*//
+      RegisterMethod(@TKMScriptStates.AAIAttackHouseTypesGet, 'AAIAttackHouseTypesGet');
       RegisterMethod(@TKMScriptStates.AIArmyType, 'AIArmyType');
       RegisterMethod(@TKMScriptStates.AIAutoAttack, 'AIAutoAttack');
       RegisterMethod(@TKMScriptStates.AIAutoAttackRange, 'AIAutoAttackRange');
@@ -1210,6 +1219,7 @@ begin
       RegisterMethod(@TKMScriptStates.AISerfsPerHouse, 'AISerfsPerHouse');
       RegisterMethod(@TKMScriptStates.AISoldiersLimit, 'AISoldiersLimit');
       RegisterMethod(@TKMScriptStates.AIStartPosition, 'AIStartPosition');
+      RegisterMethod(@TKMScriptStates.AIUnlimitedEquip, 'AIUnlimitedEquip');
       RegisterMethod(@TKMScriptStates.AIWorkerLimit, 'AIWorkerLimit');
       RegisterMethod(@TKMScriptStates.CampaignMissionID, 'CampaignMissionID');
       RegisterMethod(@TKMScriptStates.CampaignMissionsCount, 'CampaignMissionsCount');
@@ -1245,10 +1255,6 @@ begin
       RegisterMethod(@TKMScriptStates.GroupOwner, 'GroupOwner');
       RegisterMethod(@TKMScriptStates.GroupType, 'GroupType');
       RegisterMethod(@TKMScriptStates.GroupTypeEx, 'GroupTypeEx');
-      RegisterMethod(@TKMScriptStates.HandHouseCanBuild, 'HandHouseCanBuild');
-      RegisterMethod(@TKMScriptStates.HandHouseLock, 'HandHouseLock');
-      RegisterMethod(@TKMScriptStates.HandUnitCanTrain, 'HandUnitCanTrain');
-      RegisterMethod(@TKMScriptStates.HandWareDistribution, 'HandWareDistribution');
       RegisterMethod(@TKMScriptStates.HouseAllowAllyToSelect, 'HouseAllowAllyToSelect');
       RegisterMethod(@TKMScriptStates.HouseAt, 'HouseAt');
       RegisterMethod(@TKMScriptStates.HouseBarracksRallyPointX, 'HouseBarracksRallyPointX');
@@ -1284,6 +1290,7 @@ begin
       RegisterMethod(@TKMScriptStates.HouseTypeToOccupantType, 'HouseTypeToOccupantType');
       RegisterMethod(@TKMScriptStates.HouseTypeToWorkerType, 'HouseTypeToWorkerType');
       RegisterMethod(@TKMScriptStates.HouseUnlocked, 'HouseUnlocked');
+      RegisterMethod(@TKMScriptStates.HouseWareAmount, 'HouseWareAmount');
       RegisterMethod(@TKMScriptStates.HouseWareBlocked, 'HouseWareBlocked');
       RegisterMethod(@TKMScriptStates.HouseWareBlockedEx, 'HouseWareBlockedEx');
       RegisterMethod(@TKMScriptStates.HouseWareBlockedTakeOut, 'HouseWareBlockedTakeOut');
@@ -1356,10 +1363,16 @@ begin
       RegisterMethod(@TKMScriptStates.PlayerGetAllGroups, 'PlayerGetAllGroups');
       RegisterMethod(@TKMScriptStates.PlayerGetAllHouses, 'PlayerGetAllHouses');
       RegisterMethod(@TKMScriptStates.PlayerGetAllUnits, 'PlayerGetAllUnits');
+      RegisterMethod(@TKMScriptStates.PlayerHouseTypeCanBuild, 'PlayerHouseTypeCanBuild');
+      RegisterMethod(@TKMScriptStates.PlayerHouseTypeLock, 'PlayerHouseTypeLock');
+      RegisterMethod(@TKMScriptStates.PlayerIsAdvancedAI, 'PlayerIsAdvancedAI');
       RegisterMethod(@TKMScriptStates.PlayerIsAI, 'PlayerIsAI');
+      RegisterMethod(@TKMScriptStates.PlayerIsClassicAI, 'PlayerIsClassicAI');
       RegisterMethod(@TKMScriptStates.PlayerName, 'PlayerName');
+      RegisterMethod(@TKMScriptStates.PlayerUnitTypeCanTrain, 'PlayerUnitTypeCanTrain');
       RegisterMethod(@TKMScriptStates.PlayerVictorious, 'PlayerVictorious');
       RegisterMethod(@TKMScriptStates.PlayerWareDistribution, 'PlayerWareDistribution');
+      RegisterMethod(@TKMScriptStates.PlayerWareDistributionEx, 'PlayerWareDistributionEx');
       RegisterMethod(@TKMScriptStates.StatAIDefencePositionsCount, 'StatAIDefencePositionsCount');
       RegisterMethod(@TKMScriptStates.StatArmyCount, 'StatArmyCount');
       RegisterMethod(@TKMScriptStates.StatArmyPower, 'StatArmyPower');
@@ -1424,6 +1437,7 @@ begin
     with classImp.Add(TKMScriptActions) do
     begin
       //*Actions-Reg*//
+      RegisterMethod(@TKMScriptActions.AAIAttackHouseTypesSet, 'AAIAttackHouseTypesSet');
       RegisterMethod(@TKMScriptActions.AIArmyType, 'AIArmyType');
       RegisterMethod(@TKMScriptActions.AIAttackAdd, 'AIAttackAdd');
       RegisterMethod(@TKMScriptActions.AIAttackAddEx, 'AIAttackAddEx');
@@ -1449,6 +1463,7 @@ begin
       RegisterMethod(@TKMScriptActions.AISerfsPerHouse, 'AISerfsPerHouse');
       RegisterMethod(@TKMScriptActions.AISoldiersLimit, 'AISoldiersLimit');
       RegisterMethod(@TKMScriptActions.AIStartPosition, 'AIStartPosition');
+      RegisterMethod(@TKMScriptActions.AIUnlimitedEquip, 'AIUnlimitedEquip');
       RegisterMethod(@TKMScriptActions.AIWorkerLimit, 'AIWorkerLimit');
       RegisterMethod(@TKMScriptActions.CinematicEnd, 'CinematicEnd');
       RegisterMethod(@TKMScriptActions.CinematicPanTo, 'CinematicPanTo');
@@ -1496,10 +1511,6 @@ begin
       RegisterMethod(@TKMScriptActions.GroupOrderWalk, 'GroupOrderWalk');
       RegisterMethod(@TKMScriptActions.GroupOrderWalkEx, 'GroupOrderWalkEx');
       RegisterMethod(@TKMScriptActions.GroupSetFormation, 'GroupSetFormation');
-      RegisterMethod(@TKMScriptActions.HandHouseLock, 'HandHouseLock');
-      RegisterMethod(@TKMScriptActions.HandTradeAllowed, 'HandTradeAllowed');
-      RegisterMethod(@TKMScriptActions.HandUnitCanTrain, 'HandUnitCanTrain');
-      RegisterMethod(@TKMScriptActions.HandWareDistribution, 'HandWareDistribution');
       RegisterMethod(@TKMScriptActions.HouseAddBuildingMaterials, 'HouseAddBuildingMaterials');
       RegisterMethod(@TKMScriptActions.HouseAddBuildingMaterialsEx, 'HouseAddBuildingMaterialsEx');
       RegisterMethod(@TKMScriptActions.HouseAddBuildingProgress, 'HouseAddBuildingProgress');
@@ -1572,10 +1583,14 @@ begin
       RegisterMethod(@TKMScriptActions.PlayerAllianceNFogChange, 'PlayerAllianceNFogChange');
       RegisterMethod(@TKMScriptActions.PlayerDefeat, 'PlayerDefeat');
       RegisterMethod(@TKMScriptActions.PlayerGoalsRemoveAll, 'PlayerGoalsRemoveAll');
+      RegisterMethod(@TKMScriptActions.PlayerHouseTypeLock, 'PlayerHouseTypeLock');
       RegisterMethod(@TKMScriptActions.PlayerShareBeacons, 'PlayerShareBeacons');
       RegisterMethod(@TKMScriptActions.PlayerShareFog, 'PlayerShareFog');
       RegisterMethod(@TKMScriptActions.PlayerShareFogCompliment, 'PlayerShareFogCompliment');
+      RegisterMethod(@TKMScriptActions.PlayerTradeAllowed, 'PlayerTradeAllowed');
+      RegisterMethod(@TKMScriptActions.PlayerUnitTypeCanTrain, 'PlayerUnitTypeCanTrain');
       RegisterMethod(@TKMScriptActions.PlayerWareDistribution, 'PlayerWareDistribution');
+      RegisterMethod(@TKMScriptActions.PlayerWareDistributionEx, 'PlayerWareDistributionEx');
       RegisterMethod(@TKMScriptActions.PlayerWin, 'PlayerWin');
       RegisterMethod(@TKMScriptActions.PlayOGG, 'PlayOGG');
       RegisterMethod(@TKMScriptActions.PlayOGGAtLocation, 'PlayOGGAtLocation');
@@ -1737,12 +1752,31 @@ var
   s: string;
   SL: TStringList;
 begin
+  if Self = nil then Exit;
+
   SL := TStringList.Create;
   try
     IFPS3DataToText(fByteCode, s);
     SL.Text := s;
     ForceDirectories(ExeDir  + 'Export' + PathDelim);
     SL.SaveToFile(ExeDir + 'Export' + PathDelim + 'script_DataText.txt');
+  finally
+    SL.Free;
+  end;
+end;
+
+
+procedure TKMScripting.ExportScriptCode;
+var
+  SL: TStringList;
+begin
+  if Self = nil then Exit;
+
+  SL := TStringList.Create;
+  try
+    SL.Text := fScriptCode;
+    ForceDirectories(ExeDir  + 'Export' + PathDelim);
+    SL.SaveToFile(ExeDir + 'Export' + PathDelim + 'script_code.script');
   finally
     SL.Free;
   end;

@@ -41,7 +41,7 @@ type
   TKMNewMapEditorEvent = procedure (const aFileName: UnicodeString; aSizeX: Integer = 0; aSizeY: Integer = 0; aMapFullCRC: Cardinal = 0;
                                     aMapSimpleCRC: Cardinal = 0; aMultiplayerLoadMode: Boolean = False) of object;
 
-  TKMGameShowMessageEvent = procedure (aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal; aHandIndex: TKMHandID) of object;
+  TKMGameShowMessageEvent = procedure (aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer; aHandIndex: TKMHandID) of object;
 
 const
   // Location color 'magic value', which means we should not overwrite location color which was set in the map editor

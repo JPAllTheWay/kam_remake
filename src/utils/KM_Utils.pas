@@ -31,6 +31,9 @@ uses
 
   function CompareTextLogical(A, B: UnicodeString): Integer;
 
+  procedure WriteBinaryHeader(aStream: TStream; aVersion: AnsiString);
+  procedure ReadBinaryHeader(aStream: TStream; out aVersionStr: AnsiString);
+
 
 implementation
 uses
@@ -305,6 +308,50 @@ begin
       end;
     end;
   end;
+end;
+
+
+const
+  VERSION_LEN = 4;
+  VERSION_ADD_LEN = 32;
+
+procedure WriteBinaryHeader(aStream: TStream; aVersion: AnsiString);
+const
+  GAME_REV_LEN = 6;
+  ADD_LEN = VERSION_ADD_LEN - GAME_REV_LEN - 2;
+var
+  I: Integer;
+  addition: AnsiString;
+  zero: Byte;
+begin
+  Assert(Length(aVersion) = VERSION_LEN);
+  aStream.Write(Pointer(aVersion)^, VERSION_LEN);
+
+  zero := 0;
+  aStream.Write(zero, SizeOf(zero));
+  aStream.Write(Pointer(GAME_REVISION)^, GAME_REV_LEN);
+  aStream.Write(zero, SizeOf(zero));
+
+  addition := AnsiString(DateTimeToStr(Now));
+
+  // Cut additional info, if needed
+  if Length(addition) > ADD_LEN then
+    addition := Copy(addition, 1, ADD_LEN);
+
+  aStream.Write(Pointer(addition)^, Length(addition));
+
+  for I := 0 to ADD_LEN - Length(addition) - 1 do
+    aStream.Write(zero, SizeOf(zero));
+end;
+
+
+procedure ReadBinaryHeader(aStream: TStream; out aVersionStr: AnsiString);
+begin
+  SetLength(aVersionStr, VERSION_LEN);
+  aStream.Read(Pointer(aVersionStr)^, VERSION_LEN);
+
+  // Skip additional VERSION_ADD_LEN bytes
+  aStream.Position := VERSION_LEN + VERSION_ADD_LEN;
 end;
 
 

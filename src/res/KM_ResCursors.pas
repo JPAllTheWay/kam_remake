@@ -23,7 +23,7 @@ uses
 
 const
   // Which cursor is used for which direction
-  DIRECTION_CURSOR: array [TKMDirection] of TKMCursor = (
+  DIRECTION_CURSOR: array [TKMDirection] of TKMCursorImageType = (
     kmcDirNA, kmcDir0, kmcDir1, kmcDir2, kmcDir3, kmcDir4, kmcDir5, kmcDir6, kmcDir7);
 
 { TKMResCursors }

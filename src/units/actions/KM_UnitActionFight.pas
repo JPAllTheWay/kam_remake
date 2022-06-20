@@ -38,7 +38,9 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_ResSound, KM_Sound, KM_UnitWarrior, KM_Resource, KM_Projectiles,
+  KM_Entity,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_ResSound, KM_Sound, KM_UnitWarrior, KM_Resource, KM_Projectiles,
   KM_ResUnits, KM_Hand;
 
 
@@ -97,7 +99,7 @@ procedure TKMUnitActionFight.SyncLoad;
 begin
   inherited;
 
-  fOpponent := gHands.GetUnitByUID(Cardinal(fOpponent));
+  fOpponent := gHands.GetUnitByUID(Integer(fOpponent));
 end;
 
 
@@ -188,6 +190,7 @@ begin
   //See if Opponent has walked away (i.e. Serf) or died
   if fOpponent.IsDeadOrDying //Don't continue to fight dead units
   or not fOpponent.Visible //Don't continue to fight units that have went into a house
+  or (gHands[fUnit.Owner].Alliances[fOpponent.Owner] = atAlly) //Unit could become ally from script
   or not TKMUnitWarrior(fUnit).WithinFightRange(fOpponent.Position)
   or not fUnit.CanWalkDiagonaly(fUnit.Position, fOpponent.Position) then //Might be a tree between us now
   begin
@@ -201,7 +204,7 @@ begin
       //Start fighting this opponent by resetting the action
       fOpponent.GetPointer; //Add to pointer count
       TKMUnitWarrior(fUnit).OnPickedFight(TKMUnitWarrior(fUnit), fOpponent);
-      Locked := true;
+      Locked := True;
       fFightDelay := -1;
       //Ranged units should turn to face the new opponent immediately
       if TKMUnitWarrior(fUnit).IsRanged then
@@ -221,7 +224,7 @@ begin
 end;
 
 
-//A result of true means exit from Execute
+//A result of True means exit from Execute
 function TKMUnitActionFight.ExecuteProcessRanged(Step: Byte): Boolean;
 var
   W: TKMUnitWarrior;
@@ -259,7 +262,7 @@ begin
 end;
 
 
-//A result of true means exit from Execute
+//A result of True means exit from Execute
 function TKMUnitActionFight.ExecuteProcessMelee(Step: Byte): Boolean;
 var
   isHit: Boolean;
@@ -318,12 +321,21 @@ end;
 function TKMUnitActionFight.Execute: TKMActionResult;
 var
   cycle, step: Byte;
+  W: TKMUnitWarrior;
 begin
-  cycle := max(gRes.Units[fUnit.UnitType].UnitAnim[ActionType, fUnit.Direction].Count, 1);
+  W := TKMUnitWarrior(fUnit);
+  cycle := Max(gRes.Units[fUnit.UnitType].UnitAnim[ActionType, fUnit.Direction].Count, 1);
   step  := fUnit.AnimStep mod cycle;
 
   Result := ExecuteValidateOpponent(step);
-  if Result = arActDone then Exit;
+  if Result = arActDone then
+  begin
+    // Face back to our order direction when we have done fighting with our enemy
+    if W.IsRanged and (W.FaceDir <> dirNA) then
+      fUnit.Direction := W.FaceDir;
+    Exit;
+  end;
+
   step := fUnit.AnimStep mod cycle; //Can be changed by ExecuteValidateOpponent, so recalculate it
 
   //Opponent can walk next to us, keep facing him
@@ -331,7 +343,7 @@ begin
     fUnit.Direction := KMGetDirection(fUnit.PositionF, fOpponent.PositionF);
 
   //If the vertex usage has changed we should update it
-  if not TKMUnitWarrior(fUnit).IsRanged then //Ranged units do not use verticies
+  if not W.IsRanged then //Ranged units do not use verticies
     if not UpdateVertexUsage(fUnit.Position, fOpponent.Position) then
     begin
       //The vertex is being used so we can't fight
@@ -339,7 +351,7 @@ begin
       Exit;
     end;
 
-  if TKMUnitWarrior(fUnit).IsRanged then
+  if W.IsRanged then
   begin
     if ExecuteProcessRanged(step) then
       Exit;
@@ -350,7 +362,7 @@ begin
 
   //Aiming Archers and pausing melee may miss a few ticks, (exited above) so don't put anything critical below!
 
-  StepDone := (fUnit.AnimStep mod cycle = 0) or TKMUnitWarrior(fUnit).IsRanged; //Archers may abandon at any time as they need to walk off imediantly
+  StepDone := (fUnit.AnimStep mod cycle = 0) or W.IsRanged; //Archers may abandon at any time as they need to walk off imediantly
   Inc(fUnit.AnimStep);
 end;
 

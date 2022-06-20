@@ -308,7 +308,7 @@ begin
   fClientList := TKMClientsList.Create;
   {$IFDEF WDC} fServer := TKMNetServerOverbyte.Create; {$ENDIF}
   {$IFDEF FPC} fServer := TKMNetServerLNet.Create;     {$ENDIF}
-  fListening := false;
+  fListening := False;
   fRoomCount := 0;
 
   {$IFDEF WDC}
@@ -372,7 +372,7 @@ begin
   fServer.OnDataAvailable := DataAvailable;
   fServer.StartListening(aPort);
   Status('Listening on port ' + IntToStr(aPort));
-  fListening := true;
+  fListening := True;
   SaveHTMLStatus;
 end;
 
@@ -383,7 +383,7 @@ var
 begin
   fOnStatusMessage := nil;
   fServer.StopListening;
-  fListening := false;
+  fListening := False;
   for I := 0 to fRoomCount - 1 do
   begin
     FreeAndNil(fRoomInfo[I].GameInfo);
@@ -1116,10 +1116,10 @@ function TKMNetServer.AddNewRoom: Boolean;
 begin
   if fRoomCount = fMaxRooms then
   begin
-    Result := false;
+    Result := False;
     Exit;
   end;
-  Result := true;
+  Result := True;
   Inc(fRoomCount);
   SetLength(fRoomInfo,fRoomCount);
   fRoomInfo[fRoomCount-1].HostHandle := NET_ADDRESS_EMPTY;

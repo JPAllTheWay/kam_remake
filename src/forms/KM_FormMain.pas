@@ -42,15 +42,14 @@ type
     chkSuperSpeed: TCheckBox;
     Export_Deliverlists1: TMenuItem;
     Export_Sounds1: TMenuItem;
-    Export_HouseAnim1: TMenuItem;
-    Export_UnitAnim1: TMenuItem;
+    mnExportHouseAnim: TMenuItem;
+    mnExportUnitAnim: TMenuItem;
     RGPlayer: TRadioGroup;
     btnGameStop: TButton;
     OpenMissionMenu: TMenuItem;
-    AnimData1: TMenuItem;
     Other1: TMenuItem;
     Debug_ShowPanel: TMenuItem;
-    Export_TreeAnim1: TMenuItem;
+    mnExportTreeAnim: TMenuItem;
     ExportMainMenu: TMenuItem;
     Debug_EnableCheats: TMenuItem;
     ExportUIPages: TMenuItem;
@@ -89,10 +88,10 @@ type
     chkLogShowInChat: TCheckBox;
     chkUIControlsID: TCheckBox;
     Debug_ShowLogistics: TMenuItem;
-    UnitAnim_All: TMenuItem;
+    mnExportUnitAnimAll: TMenuItem;
     N3: TMenuItem;
-    Soldiers: TMenuItem;
-    Civilians1: TMenuItem;
+    mnExportUnitAnimSoldiers: TMenuItem;
+    mnExportUnitAnimCivilians: TMenuItem;
     SaveSettings: TMenuItem;
     N4: TMenuItem;
     ReloadSettings: TMenuItem;
@@ -245,6 +244,23 @@ type
     seHighlightNavMesh: TSpinEdit;
     mnExportUnitsDat: TMenuItem;
     mnOpenSettingsDir: TMenuItem;
+    mnScriptCode: TMenuItem;
+    btnGameRestart: TButton;
+    mnOpenSettingsXML: TMenuItem;
+    chkViewportPos: TCheckBox;
+    mnAnimations: TMenuItem;
+    mnHDAnimations: TMenuItem;
+    mnExportHDUnitAnim: TMenuItem;
+    mnExportHDUnitAnimCivilians: TMenuItem;
+    mnExportHDUnitAnimSoldiers: TMenuItem;
+    N13: TMenuItem;
+    mnExportHDUnitAnimAll: TMenuItem;
+    mnExportHDHouseAnim: TMenuItem;
+    mnExportHDTreeAnim: TMenuItem;
+    N14: TMenuItem;
+    reesrxa1: TMenuItem;
+    Housesrxa1: TMenuItem;
+    Unitsrxa1: TMenuItem;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -279,13 +295,13 @@ type
     procedure Export_CustomClick(Sender: TObject);
     procedure Export_TilesetClick(Sender: TObject);
     procedure Export_Sounds1Click(Sender: TObject);
-    procedure Export_HouseAnim1Click(Sender: TObject);
-    procedure Export_TreeAnim1Click(Sender: TObject);
+    procedure mnExportHouseAnimClick(Sender: TObject);
+    procedure mnExportTreeAnimClick(Sender: TObject);
     procedure Export_Fonts1Click(Sender: TObject);
     procedure Export_DeliverLists1Click(Sender: TObject);
-    procedure UnitAnim_AllClick(Sender: TObject);
-    procedure SoldiersClick(Sender: TObject);
-    procedure Civilians1Click(Sender: TObject);
+    procedure mnExportUnitAnimAllClick(Sender: TObject);
+    procedure mnExportUnitAnimSoldiersClick(Sender: TObject);
+    procedure mnExportUnitAnimCiviliansClick(Sender: TObject);
 
     procedure Debug_PrintScreenClick(Sender: TObject);
     procedure Debug_SaveGameWholeMapToImageClick(Sender: TObject);
@@ -319,14 +335,29 @@ type
     procedure btnGameSaveClick(Sender: TObject);
     procedure mnExportUnitsDatClick(Sender: TObject);
     procedure mnOpenSettingsDirClick(Sender: TObject);
+    procedure mnScriptCodeClick(Sender: TObject);
+    procedure btnGameRestartClick(Sender: TObject);
+    procedure mnOpenSettingsXMLClick(Sender: TObject);
+    procedure cpCollapseChanged(Sender: TObject);
+    procedure mnExportHDTreeAnimClick(Sender: TObject);
+    procedure mnExportHDHouseAnimClick(Sender: TObject);
+    procedure mnExportHDUnitAnimAllClick(Sender: TObject);
+    procedure mnExportHDUnitAnimSoldiersClick(Sender: TObject);
+    procedure mnExportHDUnitAnimCiviliansClick(Sender: TObject);
+    procedure reesrxa1Click(Sender: TObject);
+    procedure Housesrxa1Click(Sender: TObject);
+    procedure Unitsrxa1Click(Sender: TObject);
+    procedure mnExportHDUnitThoughtsClick(Sender: TObject);
   private
     {$IFDEF MSWindows}
     fMenuItemHint: TKMVclMenuItemHint; // Custom hint over menu item
     {$ENDIF}
+    fDevSettings: TKMDevSettings;
     fStartVideoPlayed: Boolean;
     fUpdating: Boolean;
     fMissionDefOpenPath: UnicodeString;
     fOnControlsUpdated: TObjectIntegerEvent;
+
     procedure FormKeyDownProc(aKey: Word; aShift: TShiftState; aIsFirst: Boolean);
     procedure FormKeyUpProc(aKey: Word; aShift: TShiftState);
 //    function ConfirmExport: Boolean;
@@ -352,16 +383,13 @@ type
 
     procedure ShowInCustomWindow;
     procedure ShowInDefaultWindow;
-  private
-    fDevSettings: TKMDevSettings;
   protected
     procedure WndProc(var Message: TMessage); override; //
     {$ENDIF}
   public
     RenderArea: TKMRenderControl;
     SuppressAltForMenu: Boolean; //Suppress Alt key 'activate window menu' function
-    procedure ControlsSetVisibile(aShowCtrls, aShowGroupBox: Boolean); overload;
-    procedure ControlsSetVisibile(aShowCtrls: Boolean); overload;
+    procedure UpdateFormState;
     procedure ControlsReset;
     procedure ControlsRefill;
 
@@ -373,10 +401,11 @@ type
     procedure SetExportGameStats(aEnabled: Boolean);
     procedure SetMySpecHandIndex(aHandID: TKMHandID);
     procedure ShowFolderPermissionError;
-    procedure SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer = 0);
+    procedure SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer);
     property OnControlsUpdated: TObjectIntegerEvent read fOnControlsUpdated write fOnControlsUpdated;
 
     procedure Defocus;
+    procedure OtherFormChanged;
 
     procedure AfterFormCreated;
   end;
@@ -409,7 +438,7 @@ uses
   KM_Log, KM_CommonClasses, KM_VclHelpers, KM_Video,
   KM_Settings, KM_MainSettings, KM_GameSettings,
   KM_ServerSettings,
-
+  KM_CommonShellUtils,
   KM_IoXML,
   KM_GameInputProcess,
   KM_ResTypes,
@@ -464,6 +493,15 @@ begin
 
   chkShowFlatTerrain.Tag := Ord(dcFlatTerrain);
   tbWaterLight.Tag := Ord(dcFlatTerrain);
+
+  fDevSettings := TKMDevSettings.Create(ExeDir, mainGroup, cpGameControls);
+
+  fUpdating := True;
+  try
+    fDevSettings.Load;
+  finally
+    fUpdating := False;
+  end;
 end;
 
 
@@ -500,7 +538,7 @@ begin
 
   Application.ProcessMessages;
 
-  if not fStartVideoPlayed and (gGameSettings <> nil) and gGameSettings.VideoStartup then
+  if not fStartVideoPlayed and (gGameSettings <> nil) and gGameSettings.Video.PlayOnStartup then
   begin
     gVideoPlayer.AddVideo(CAMPAIGNS_FOLDER_NAME + PathDelim + 'The Peasants Rebellion' + PathDelim + 'Logo', vfkStarting);
     gVideoPlayer.AddVideo('KaM', vfkStarting);
@@ -543,8 +581,17 @@ procedure TFormMain.FormKeyDownProc(aKey: Word; aShift: TShiftState; aIsFirst: B
 begin
   if aKey = gResKeys[kfDebugWindow] then
   begin
-    SHOW_DEBUG_CONTROLS := not SHOW_DEBUG_CONTROLS;
-    ControlsSetVisibile(SHOW_DEBUG_CONTROLS, not (ssCtrl in aShift)); //Hide groupbox when Ctrl is pressed
+    case fDevSettings.DebugFormState of
+      fsNone  :     if (ssCtrl in aShift) then
+                      fDevSettings.DebugFormState := fsDebugMenu //Hide groupbox when Ctrl is pressed
+                    else
+                      fDevSettings.DebugFormState := fsDebugFull;
+      fsDebugMenu:  fDevSettings.DebugFormState := fsDebugFull;
+      fsDebugFull:  fDevSettings.DebugFormState := fsNone;
+    end;
+
+    UpdateFormState;
+    fDevSettings.Save;
   end;
 
   if gGameApp <> nil then
@@ -582,7 +629,7 @@ end;
 
 procedure TFormMain.ReloadLibxClick(Sender: TObject);
 begin
-  gRes.LoadLocaleAndFonts(gGameSettings.Locale, gGameSettings.LoadFullFonts);
+  gRes.LoadLocaleAndFonts(gGameSettings.Locale, gGameSettings.GFX.LoadFullFonts);
 end;
 
 
@@ -716,11 +763,23 @@ end;
 
 
 procedure TFormMain.mnOpenSettingsDirClick(Sender: TObject);
-var
-  s: string;
 begin
-  s := ExpandFileName(TKMSettings.GetDir);
-  ShellExecute(Application.Handle, 'open', 'explorer.exe', PChar('"' + s + '"'), nil, SW_NORMAL);
+  ShellOpenFolder(gGameAppSettings.Path, True);
+end;
+
+
+procedure TFormMain.mnOpenSettingsXMLClick(Sender: TObject);
+begin
+  ShellOpenFile(gGameAppSettings.Path);
+end;
+
+
+procedure TFormMain.mnScriptCodeClick(Sender: TObject);
+begin
+  if (gGameApp <> nil)
+  and (gGameApp.Game <> nil)
+  and (gGame.Scripting <> nil) then
+    gGame.Scripting.ExportScriptCode;
 end;
 
 
@@ -800,18 +859,21 @@ end;
 //Exports
 procedure TFormMain.Export_TreesRXClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxTrees, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxTrees, ExportDone);
 end;
+
 
 procedure TFormMain.Export_HousesRXClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxHouses, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxHouses, ExportDone);
 end;
+
 
 procedure TFormMain.Export_UnitsRXClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxUnits, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxUnits, ExportDone);
 end;
+
 
 procedure TFormMain.Export_ScriptDataClick(Sender: TObject);
 begin
@@ -821,37 +883,80 @@ begin
     gGame.Scripting.ExportDataToText;
 end;
 
+
 procedure TFormMain.Export_GUIClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxGUI, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxGUI, ExportDone);
 end;
+
 
 procedure TFormMain.Export_GUIMainRXClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxGUIMain, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxGUIMain, ExportDone);
 end;
+
 
 procedure TFormMain.Export_CustomClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxCustom, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxCustom, ExportDone);
 end;
+
 
 procedure TFormMain.Export_TilesetClick(Sender: TObject);
 begin
-  gResExporter.ExportSpritesToPNG(rxTiles, ExportDone);
+  gResExporter.ExportSpritesFromRXXToPNG(rxTiles, ExportDone);
 end;
+
 
 procedure TFormMain.Export_Sounds1Click(Sender: TObject);
 begin
   gRes.Sounds.ExportSounds;
 end;
 
-procedure TFormMain.Export_TreeAnim1Click(Sender: TObject);
+
+procedure TFormMain.mnExportTreeAnimClick(Sender: TObject);
 begin
   gResExporter.ExportTreeAnim(ExportDone);
 end;
 
-procedure TFormMain.Export_HouseAnim1Click(Sender: TObject);
+
+procedure TFormMain.mnExportHDHouseAnimClick(Sender: TObject);
+begin
+  gResExporter.ExportHDHouseAnim(ExportDone);
+end;
+
+
+procedure TFormMain.mnExportHDTreeAnimClick(Sender: TObject);
+begin
+  gResExporter.ExportHDTreeAnim(ExportDone);
+end;
+
+
+procedure TFormMain.mnExportHDUnitAnimAllClick(Sender: TObject);
+begin
+  gResExporter.ExportHDUnitAnim(UNIT_MIN, UNIT_MAX, True, True, ExportDone);
+end;
+
+
+procedure TFormMain.mnExportHDUnitAnimCiviliansClick(Sender: TObject);
+begin
+  gResExporter.ExportHDUnitAnim(CITIZEN_MIN, CITIZEN_MAX, False, False, ExportDone);
+end;
+
+
+procedure TFormMain.mnExportHDUnitAnimSoldiersClick(Sender: TObject);
+begin
+  gResExporter.ExportHDUnitAnim(WARRIOR_MIN, WARRIOR_MAX, False, False, ExportDone);
+end;
+
+
+procedure TFormMain.mnExportHDUnitThoughtsClick(Sender: TObject);
+begin
+  gResExporter.ExportHDUnitAnim(utNone, utNone, True, False, ExportDone);
+end;
+
+
+procedure TFormMain.mnExportHouseAnimClick(Sender: TObject);
 begin
   gResExporter.ExportHouseAnim(ExportDone);
 end;
@@ -943,19 +1048,19 @@ begin
 end;
 
 
-procedure TFormMain.UnitAnim_AllClick(Sender: TObject);
+procedure TFormMain.mnExportUnitAnimAllClick(Sender: TObject);
 begin
   gResExporter.ExportUnitAnim(UNIT_MIN, UNIT_MAX, True, ExportDone);
 end;
 
 
-procedure TFormMain.Civilians1Click(Sender: TObject);
+procedure TFormMain.mnExportUnitAnimCiviliansClick(Sender: TObject);
 begin
   gResExporter.ExportUnitAnim(CITIZEN_MIN, CITIZEN_MAX, False, ExportDone);
 end;
 
 
-procedure TFormMain.SoldiersClick(Sender: TObject);
+procedure TFormMain.mnExportUnitAnimSoldiersClick(Sender: TObject);
 begin
   gResExporter.ExportUnitAnim(WARRIOR_MIN, WARRIOR_MAX, False, ExportDone);
 end;
@@ -987,6 +1092,12 @@ end;
 procedure TFormMain.btFindObjByUIDClick(Sender: TObject);
 begin
   FindObjByUID(seFindObjByUID.Value);
+end;
+
+
+procedure TFormMain.btnGameRestartClick(Sender: TObject);
+begin
+  gGameApp.NewRestartLastSPGame;
 end;
 
 
@@ -1124,9 +1235,9 @@ begin
     TCheckBox(aCtrl).Checked :=   (aCtrl = chkBevel)
                                or (aCtrl = chkLogNetConnection)
                                or (aCtrl = chkLogSkipTempCmd)
-                               or ((aCtrl = chkSnowHouses) and gGameSettings.AllowSnowHouses)
-                               or ((aCtrl = chkInterpolatedRender) and gGameSettings.InterpolatedRender)
-                               or ((aCtrl = chkInterpolatedAnims) and gGameSettings.InterpolatedAnimations)
+                               or ((aCtrl = chkSnowHouses) and gGameSettings.GFX.AllowSnowHouses)
+                               or ((aCtrl = chkInterpolatedRender) and gGameSettings.GFX.InterpolatedRender)
+                               or ((aCtrl = chkInterpolatedAnims) and gGameSettings.GFX.InterpolatedAnimations)
                                or (aCtrl = chkShowObjects)
                                or (aCtrl = chkShowHouses)
                                or (aCtrl = chkShowUnits)
@@ -1240,17 +1351,15 @@ begin
 end;
 
 
+procedure TFormMain.OtherFormChanged;
+begin
+  fDevSettings.Save;
+end;
+
+
 procedure TFormMain.AfterFormCreated;
 begin
-  fDevSettings := TKMDevSettings.Create(ExeDir, mainGroup, cpGameControls);
-
-  fUpdating := True;
-  try
-    fDevSettings.Load;
-  finally
-    fUpdating := False;
-    ControlsUpdate(nil); // Update controls after loading all of them
-  end;
+  ControlsUpdate(nil); // Update controls after loading all of them
 
   ConstrolsDisableTabStops;
 end;
@@ -1259,26 +1368,26 @@ end;
 function TFormMain.AllowFindObjByUID: Boolean;
 begin
   Result := // Update values only if Debug panel is opened or if we are debugging
-        ((SHOW_DEBUG_CONTROLS and not cpDebugInput.Collapsed)
+        (((fDevSettings.DebugFormState <> fsNone) and not cpDebugInput.Collapsed)
           or {$IFDEF DEBUG} True {$ELSE} False {$ENDIF}) // But its ok if we are in Debug build
         and chkFindObjByUID.Checked     // and checkbox is checked
         and gMain.IsDebugChangeAllowed; // and not in MP
 end;
 
 
-procedure TFormMain.SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer = 0);
+procedure TFormMain.SetEntitySelected(aEntityUID: Integer; aEntity2UID: Integer);
 begin
   if not AllowFindObjByUID then Exit;
 
   seEntityUID.SetValueWithoutChange(aEntityUID);
   seWarriorUID.SetValueWithoutChange(aEntity2UID);
-                                                                {TODO -oOwner -cGeneral : ActionItem}
+
   if GetKeyState(VK_MENU) < 0 then
     seFindObjByUID.Value := aEntityUID // will trigger OnChange
   else
   if GetKeyState(VK_SHIFT) < 0 then
   begin
-    if aEntity2UID = 0 then
+    if aEntity2UID = UID_NONE then
       aEntity2UID := aEntityUID;
     seFindObjByUID.Value := aEntity2UID; // will trigger OnChange
   end
@@ -1293,12 +1402,13 @@ begin
 
   try
     {$IFDEF WDC}
-    chkSnowHouses.        SetCheckedWithoutClick(gGameSettings.AllowSnowHouses); // Snow houses checkbox could be updated before game
-    chkInterpolatedRender.SetCheckedWithoutClick(gGameSettings.InterpolatedRender);
-    chkInterpolatedAnims. SetCheckedWithoutClick(gGameSettings.InterpolatedAnimations);
+    chkSnowHouses.        SetCheckedWithoutClick(gGameSettings.GFX.AllowSnowHouses); // Snow houses checkbox could be updated before game
+    chkInterpolatedRender.SetCheckedWithoutClick(gGameSettings.GFX.InterpolatedRender);
+    chkInterpolatedAnims. SetCheckedWithoutClick(gGameSettings.GFX.InterpolatedAnimations);
     chkLoadUnsupSaves.    SetCheckedWithoutClick(ALLOW_LOAD_UNSUP_VERSION_SAVE);
     chkDebugScripting.    SetCheckedWithoutClick(DEBUG_SCRIPTING_EXEC);
     chkPaintSounds.       SetCheckedWithoutClick(DISPLAY_SOUNDS);
+    chkViewportPos.       SetCheckedWithoutClick(SHOW_VIEWPORT_POS);
     chkSkipRender.        SetCheckedWithoutClick(SKIP_RENDER);
     chkSkipSound.         SetCheckedWithoutClick(SKIP_SOUND);
     chkShowGameTick.      SetCheckedWithoutClick(SHOW_GAME_TICK);
@@ -1342,30 +1452,46 @@ begin
 end;
 
 
-procedure TFormMain.ControlsSetVisibile(aShowCtrls: Boolean);
-begin
-  ControlsSetVisibile(aShowCtrls, aShowCtrls);
-end;
-
-
-procedure TFormMain.ControlsSetVisibile(aShowCtrls, aShowGroupBox: Boolean);
+procedure TFormMain.UpdateFormState;
 var
   I: Integer;
+  showCtrls, showGroupBox: Boolean;
 begin
+  case fDevSettings.DebugFormState of
+    fsNone:       begin
+                    showCtrls := False;
+                    showGroupBox := False;
+                  end;
+    fsDebugMenu:  begin
+                    showCtrls := True;
+                    showGroupBox := False;
+                  end;
+    fsDebugFull:  begin
+                    showCtrls := True;
+                    showGroupBox := True;
+                  end;
+    else
+    begin
+      showCtrls := False;
+      showGroupBox := False;
+    end;
+  end;
+
+
   Refresh;
 
-  mainGroup.Visible  := aShowGroupBox and aShowCtrls;
-  StatusBar1.Visible := aShowCtrls;
+  mainGroup.Visible  := showGroupBox and showCtrls;
+  StatusBar1.Visible := showCtrls;
 
   //For some reason cycling Form.Menu fixes the black bar appearing under the menu upon making it visible.
   //This is a better workaround than ClientHeight = +20 because it works on Lazarus and high DPI where Menu.Height <> 20.
   Menu := nil;
-  if aShowCtrls then Menu := MainMenu1;
+  if showCtrls then Menu := MainMenu1;
 
-  mainGroup.Enabled  := aShowGroupBox and aShowCtrls;
-  StatusBar1.Enabled := aShowCtrls;
+  mainGroup.Enabled  := showGroupBox and showCtrls;
+  StatusBar1.Enabled := showCtrls;
   for I := 0 to MainMenu1.Items.Count - 1 do
-    MainMenu1.Items[I].Enabled := aShowCtrls;
+    MainMenu1.Items[I].Enabled := showCtrls;
 
   Refresh;
 
@@ -1490,6 +1616,7 @@ begin
     SKIP_RENDER := chkSkipRender.Checked;
     SKIP_SOUND := chkSkipSound.Checked;
     DISPLAY_SOUNDS := chkPaintSounds.Checked;
+    SHOW_VIEWPORT_POS := chkViewportPos.Checked;
 
     gbFindObjByUID.Enabled := chkFindObjByUID.Checked;
 
@@ -1536,10 +1663,10 @@ begin
   SKIP_RENDER_TEXT := chkSkipRenderText.Checked;
   DBG_UI_HINT_POS := chkCursorCoordinates.Checked;
 
-  {$IFDEF WDC} //one day update .lfm for lazarus...
-  gGameSettings.AllowSnowHouses := chkSnowHouses.Checked;
-  gGameSettings.InterpolatedRender := chkInterpolatedRender.Checked;
-  gGameSettings.InterpolatedAnimations := chkInterpolatedAnims.Checked;
+  {$IFDEF WDC} // one day update .lfm for lazarus...
+  gGameSettings.GFX.AllowSnowHouses := chkSnowHouses.Checked;
+  gGameSettings.GFX.InterpolatedRender := chkInterpolatedRender.Checked;
+  gGameSettings.GFX.InterpolatedAnimations := chkInterpolatedAnims.Checked;
 
   ALLOW_LOAD_UNSUP_VERSION_SAVE := chkLoadUnsupSaves.Checked;
   {$ENDIF}
@@ -1633,6 +1760,12 @@ begin
   if Assigned(fOnControlsUpdated) and (Sender is TControl) then
     fOnControlsUpdated(Sender, TControl(Sender).Tag);
 
+  fDevSettings.Save;
+end;
+
+
+procedure TFormMain.cpCollapseChanged(Sender: TObject);
+begin
   fDevSettings.Save;
 end;
 
@@ -1823,6 +1956,7 @@ begin
 end;
 
 
+
 {$IFDEF MSWindows}
 procedure TFormMain.WMSysCommand(var Msg: TWMSysCommand);
 begin
@@ -1947,29 +2081,34 @@ end;
 
 procedure TFormMain.DoMessage(var Msg: TMsg; var Handled: Boolean);
 var
-  //repCount: Integer;
+  //repCount, altState: Integer;
   prevState: Integer;
   shiftState: TShiftState;
   key: Word;
 begin
   // Application.OnMessage allows us to catch ALL messages (even those handled by F11 panel controls when they are active)
-  if Msg.message = WM_KEYDOWN then
-  begin
-    // Msg.lParam format:
-    // [0..15 repCount] - always returns 1 ?
-    // [16..23 scan code]
-    // [24 extended bit]
-    // [25..28 reserved]
-    // [29 context]
-    // [30 previous state]
-    // [31 transition state]
+  case Msg.message of
+    WM_KEYDOWN,
+    WM_SYSKEYDOWN:
+      begin
+        // Msg.lParam format:
+        // [0..15 repCount] - always returns 1 ?
+        // [16..23 scan code]
+        // [24 extended bit]
+        // [25..28 reserved]
+        // [29 context]
+        // [30 previous state]
+        // [31 transition state]
 
-    //repCount := Msg.lParam and $FF;
-    prevState := Msg.lParam shr 30 and $1;
-    shiftState := KeyDataToShiftState(Msg.lParam);
-    key := Msg.wParam;
+        //repCount := Msg.lParam and $FF;
+        //altState := Msg.lParam shr 29 and $1;
+        prevState := Msg.lParam shr 30 and $1;
+        shiftState := KeyDataToShiftState(Msg.lParam);
 
-    FormKeyDownProc(Key, shiftState, prevState = 0);
+        key := Msg.wParam;
+
+        FormKeyDownProc(Key, shiftState, prevState = 0);
+      end;
   end;
 end;
 {$ENDIF}
@@ -2057,6 +2196,24 @@ begin
   // To disable TabStop on TRadioGroup we need to disable it on its contents
   for I := 0 to TRadioGroup(Sender).ControlCount - 1 do
     TRadioButton(TRadioGroup(Sender).Controls[I]).TabStop := False;
+end;
+
+
+procedure TFormMain.reesrxa1Click(Sender: TObject);
+begin
+  gResExporter.ExportSpritesFromRXAToPNG(rxTrees, ExportDone);
+end;
+
+
+procedure TFormMain.Housesrxa1Click(Sender: TObject);
+begin
+  gResExporter.ExportSpritesFromRXAToPNG(rxHouses, ExportDone);
+end;
+
+
+procedure TFormMain.Unitsrxa1Click(Sender: TObject);
+begin
+  gResExporter.ExportSpritesFromRXAToPNG(rxUnits, ExportDone);
 end;
 
 

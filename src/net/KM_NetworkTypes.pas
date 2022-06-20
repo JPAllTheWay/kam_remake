@@ -28,6 +28,29 @@ const
 
   //Client-Server-Client exchange packets. Each packet is a certain type
 type
+
+  // Attention!
+  //
+  // *********************************************************
+  // Add any new message kinds to the end of the next enum !!!
+  // *********************************************************
+  //
+  // Real situation example:
+  // ************************************************************************************************************************
+  // That issue was caused by adding new network command type of mkAskToSendCrashreport, which was added in r14423.
+  // Command type is used not only in the game code, but in server code as well.
+  // Most commands are just ignored by the server, but some commands are not,
+  // f.e. server knows about the password so he should be able to receive that command type.
+  // But mkAskToSendCrashreport was not added to the end of the list, but before mkPassword command.
+  // Thus in r13651 mkPassword got an ID of 23 (let's say), but on r14423 its already 24, because of the new mkAskToSendCrashreport.
+  // So when r14432 game client send mkPassword as a host he sends command ID of 24, but old server got 24 and its not mkPassword for him,
+  // but some other command, which he did not except to receive and just ignores it. Thus password is not set on the server side.
+  // When server and game client both have same version - their commands IDs are equal and everything is fine.
+  // ************************************************************************************************************************
+  //
+  // Alternative solution could be to send message kind as a text, to avoid such errors in the future
+  // Or even better solution is to use fixed IDs for an enum values
+
   TKMessageKind = (
     mkAskToJoin,       //Client asks Host if he can join
     mkAllowToJoin,     //Host allows Client to join
@@ -106,6 +129,10 @@ type
     mkVote,            //Joiner tells host his vote
     mkAskToSendCrashreport // Ask other player to send crashreport, because we got desync error with him
   );
+  // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  // ^^^ Add new network command types to the end of the list. Check explanation above ^^^
+  // ************************************************************************************************************************
+
 
 
   TKMPacketFormat = (

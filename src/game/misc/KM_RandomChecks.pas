@@ -95,7 +95,7 @@ begin
   fCallers := TDictionary<Byte, AnsiString>.Create;
   fRngLog := TDictionary<Cardinal, TKMRLRecordList>.Create;
   fTickStreamQueue := TObjectQueue<TKMemoryStream>.Create;
-  fTickStreamQueue.OwnsObjects := True; // Set the OwnsObjects to true - the Queue will free them automatically
+  fTickStreamQueue.OwnsObjects := True; // Set the OwnsObjects to True - the Queue will free them automatically
   fRngChecksInTick := TKMRLRecordList.Create;
   fSavedTicksCnt := 0;
   fEnabled := True;

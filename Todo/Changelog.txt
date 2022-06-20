@@ -139,6 +139,7 @@ Improvements:
  +    Select area to work in for woodcutters
  +    Woodcutter's house new woodcutter mode - Plant only
  +    New house delivery mode (ability to take ware out of the house, using house same as storage)
+ +    Change of fisher work plan: go fishing more frequent but get only 1 bucket of fish and avoid long 59s wait after that. Production rate stays approximately the same (+/-5%)
  +    Fixed unit hitbox. Now there are no gaps between units who stay next to each other
  +    Delivery: redispatch delivery when demand should be cancelled (closed house/ware distribution change/market changed goods)
  +    Added ability to specify what wares has to stay in the Barracks during evacuation (new "red triangle" on right mouse click was added there)
@@ -188,6 +189,7 @@ Improvements:
  +    Game Save should overwrite old save folder content
  +    Greatly reduced save time
  +    Do save game scripting overlays data into the game save 
+ +    Show 10k for wares count, when it >= 10000 items in the store / barracks. In the market show 1k, when its >= 1000 items 
  +    Group rows right click gives +/-5 rows to the group 
  +    Game statistics:
         Ability to see stats while watching replay / spectating. Or allied players stats while playing
@@ -257,10 +259,12 @@ Improvements:
  +    Menu single map: add View Readme (pdf) button
  +    Menu single map: add detailed hints over goals on the SP menu page
  +    Menu MapEd: add hint with map dimensions when hover over 'Size' column
+ +    MapEd menu: add column with 'human' locs
  +    Credits menu page: load asian fonts if needed
  +    Add 'Discord' button to the Credits page
  +    Replays list - significally improved replays list loading speed (about 10 times faster on average), by skipping CRC calc
  +    fixed various menu render issues related to 4k resolutions
+ +    when sort maps by sizes use actual map area for the maps with the same size labels (XS, XL etc)
  +    Lobby:
  +      reset bans - added cooldown 1s, to prohibit annoying spam with it
  +      added new button to the lobby setting menu, to notify not ready players
@@ -280,6 +284,7 @@ Improvements:
  
  Hotkeys:
  +  L Allow to customize and save hotkeys settings
+ +    Use KeyDown instead of KeyUp for most of the hotkeys
  +    Added new hotkeys for road/field/wine/erase plans
  +    Added new hotkey to switch selection between same type buildings/units/groups
  +    Added support of extra mouse buttons (forward/backward) as hotkeys
@@ -295,6 +300,8 @@ Improvements:
  +    Added hotkey to go to next tick in the replay
  +    Add F2 hotkey for rename map / replay
  +    Add hotkeys for music / sound adjustment
+ +    Add shortcut to remove buildings without confirmation (hold Shift + Ctrl and click on a house)
+ +    Add MapEd hotkeys to quick map save (Ctrl + S), Flat terrain and Tiles grid functions
  +    Add hotkeys for train/next/prev units in school/barracks/townhall (a/s/d by default). Add 2 more hotkey categories: Unit keys, house keys (subcategories of Game keys). Set default Tiles palette hotkey as F8. Allow to bind TAB hotkey. Set default road/fields/erase hotkeys to q/w/e/r
  
  Spectating/watching replay:
@@ -400,6 +407,7 @@ Improvements:
  +    Better defence positions placement (automatically add unit group)
  +    rework how fields / winefields are placed with stages
  +    add Set smooth coal feature
+ +    players popup menu: add buttons next to every player to delete ir and to set MP setup
  +    New in extras menu:
         Passability trackbar:
           + Can Build without house/tree passability - show tiles, where it will be possible to build, after tree or house is removed
@@ -415,6 +423,7 @@ Improvements:
  +    Update to current version of remObjects PascalScript. 
  +    improved error positioning (row:col)
  +    Added ability to include scripts. Added pascal style directives. Show exact error position in script. 
+ +    Improvements in PascalScript enums on compilation phase
  +    Added support for ogg audio format with similar functions as for WAV (PlayOGG/PlayOGGAtLocation/PlayOGGAtLocationLooped/PlayOGGFadeMusic/PlayOGGLooped/StopLoopedOGG)
  +    Added ability to declare custom event handlers
  +    Added support to declare custom player console commands
@@ -455,6 +464,7 @@ Improvements:
  +    Added:
 
 States:
+AAIAttackHouseTypesGet
 AIDefencePositionGetEx
 AIGroupsFormationGetEx
 ClosestGroupEx
@@ -464,10 +474,6 @@ ClosestHouseMultipleTypesEx
 ClosestUnitEx
 ClosestUnitMultipleTypesEx
 GroupTypeEx   
-HandHouseCanBuild   
-HandUnitCanTrain   
-HandHouseLock   
-HandWareDistribution   
 HouseBarracksRecruitBlock  
 HouseTypeEx   
 HouseTypeMaxHealthEx   
@@ -477,6 +483,12 @@ MapTilePassabilityEx
 MarketFromWareEx   
 MarketToWareEx   
 MarketValueEx   
+PlayerIsAdvancedAI
+PlayerIsClassicAI
+PlayerHouseTypeCanBuild   
+PlayerUnitTypeCanTrain   
+PlayerHouseTypeLock   
+PlayerWareDistributionEx   
 StatHouseMultipleTypesCountEx   
 StatHouseTypeCountEx   
 StatHouseTypePlansCountEx   
@@ -502,12 +514,10 @@ OnMarketTradeEx
 OnUnitAfterDiedEx   
 
 Actions:
+AAIAttackHouseTypesSet
 AIAttackAddEx  
 AIDefencePositionAddEx
 AIGroupsFormationSetEx
-HandTradeAllowed   
-HandUnitCanTrain   
-HandWareDistribution   
 GiveAnimalEx  
 GiveGroupEx  
 GiveUnitEx   
@@ -529,6 +539,10 @@ HouseWareBlockEx
 HouseWeaponsOrderSetEx  
 MarketSetTradeEx  
 PlanAddHouseEx  
+PlayerHouseTypeLock
+PlayerTradeAllowed   
+PlayerUnitTypeCanTrain   
+PlayerWareDistributionEx   
 UnitDirectionSetEx  
 
 Changes:
@@ -548,6 +562,8 @@ OnWareProduced to use with TKMWareType instead of Integer
  Maps:
  +    Added 'The Cruel King' campaign made by Gogoud
  -    Removed SP maps: Mission For The Competition and TPR_Mission7.
+ +    Add 'Breaking the Chains' SP mission made by Harry
+ +    Add 'True Administrator' SP map madeby DontTalk
  
  
  Other: 
@@ -595,6 +611,8 @@ OnWareProduced to use with TKMWareType instead of Integer
  +    Use russian ё letter instead of е, when possible
  +    Make a separate mutex for beta version so player can run MP game on beta version and on old r6720 at once
  +    added new network command to ask other player to send crashreport as well, so in case he will send it I will get 2 reports from both of the players
+ +    When manually delete maps or replays they will be deleted to the windows recycle bin
+ +    add 'open settings file / folder' in the F11 menu
  +    Game settings changes: 
         split them into server settings (in the .ini file) and game settings (in the .xml file)
         move settings into %MYDOCUMENTS%/MyGames/Knights and Merchants Remake/ folder, so they will be reused between game versions 

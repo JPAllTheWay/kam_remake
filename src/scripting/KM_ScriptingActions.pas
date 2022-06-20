@@ -20,6 +20,7 @@ type
   public
     property OnSetLogLinesMaxCnt: TIntegerEvent read fOnSetLogLinesMaxCnt write fOnSetLogLinesMaxCnt;
 
+    procedure AAIAttackHouseTypesSet(aHand: Byte; aHouses: TKMHouseTypeSet);
     procedure AIArmyType(aHand: Byte; aType: TKMArmyType);
     function AIAttackAdd(aHand: Integer; aRepeating: Boolean; aDelay: Cardinal; aTotalMen: Integer;
                          aMeleeGroupCount, aAntiHorseGroupCount, aRangedGroupCount, aMountedGroupCount: Integer; aRandomGroups: Boolean;
@@ -47,6 +48,7 @@ type
     procedure AISerfsPerHouse(aHand: Byte; aSerfs: Single);
     procedure AISoldiersLimit(aHand: Byte; aLimit: Integer);
     procedure AIStartPosition(aHand: Byte; X, Y: Integer);
+    procedure AIUnlimitedEquip(aHand: Byte; aUnlimitedEquip: Boolean);
     procedure AIWorkerLimit(aHand, aLimit: Byte);
 
     procedure CinematicStart(aHand: Byte);
@@ -99,11 +101,6 @@ type
     procedure GroupOrderWalk(aGroupID: Integer; X, Y, aDirection: Integer);
     procedure GroupOrderWalkEx(aGroupID: Integer; X, Y: Integer; aDirection: TKMDirection);
     procedure GroupSetFormation(aGroupID: Integer; aNumColumns: Byte);
-
-    procedure HandHouseLock(aHand: Integer; aHouseType: TKMHouseType; aLock: TKMHandHouseLock);
-    procedure HandTradeAllowed(aHand: Integer; aWareType: TKMWareType; aAllowed: Boolean);
-    procedure HandUnitCanTrain(aHand: Integer; aUnitType: TKMUnitType; aCanTrain: Boolean);
-    procedure HandWareDistribution(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType; aAmount: Integer);
 
     procedure HouseAddBuildingMaterials(aHouseID: Integer);
     procedure HouseAddBuildingMaterialsEx(aHouseID, aWoodAmount, aStoneAmount: Integer);
@@ -187,10 +184,14 @@ type
     procedure PlayerAddDefaultGoals(aHand: Byte; aBuildings: Boolean);
     procedure PlayerDefeat(aHand: Integer);
     procedure PlayerGoalsRemoveAll(aHand: Integer; aForAllPlayers: Boolean);
+    procedure PlayerHouseTypeLock(aHand: Integer; aHouseType: TKMHouseType; aLock: TKMHandHouseLock);
     procedure PlayerShareBeacons(aHand1, aHand2: Integer; aBothWays, aShare: Boolean);
     procedure PlayerShareFog(aHand1, aHand2: Integer; aShare: Boolean);
     procedure PlayerShareFogCompliment(aHand1, aHand2: Integer; aShare: Boolean);
+    procedure PlayerTradeAllowed(aHand: Integer; aWareType: TKMWareType; aAllowed: Boolean);
+    procedure PlayerUnitTypeCanTrain(aHand: Integer; aUnitType: TKMUnitType; aCanTrain: Boolean);
     procedure PlayerWareDistribution(aHand, aWareType, aHouseType, aAmount: Byte);
+    procedure PlayerWareDistributionEx(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType; aAmount: Integer);
     procedure PlayerWin(const aVictors: array of Integer; aTeamVictory: Boolean);
 
     function PlayWAV(aHand: ShortInt; const aFileName: AnsiString; aVolume: Single): Integer;
@@ -239,16 +240,17 @@ type
 implementation
 uses
   TypInfo,
+  KM_Entity,
   KM_AI, KM_AIDefensePos,
   KM_Game, KM_GameParams, KM_GameTypes, KM_FogOfWar,
-  KM_HandsCollection, KM_HandLogistics, KM_HandConstructions,
+  KM_HandsCollection, KM_HandLogistics, KM_HandConstructions, KM_HandEntity,
   KM_HouseBarracks, KM_HouseSchool, KM_HouseStore, KM_HouseMarket, KM_HouseTownHall,
   KM_UnitWarrior,
   KM_UnitGroupTypes,
   KM_Resource, KM_ResUnits, KM_Hand, KM_ResMapElements,
   KM_PathFindingRoad,
   KM_Terrain,
-  KM_CommonUtils, KM_CommonClasses;
+  KM_CommonUtils, KM_CommonClasses, KM_CommonClassesExt;
 
 const
   MIN_SOUND_AT_LOC_RADIUS = 28;
@@ -367,6 +369,35 @@ begin
 end;
 
 
+//* Version: 14600
+//* Sets player house lock aLock for a specified house type aHouseType
+//* if htAny is passed for house type then aLock will be applied to all house types
+procedure TKMScriptActions.PlayerHouseTypeLock(aHand: Integer; aHouseType: TKMHouseType; aLock: TKMHandHouseLock);
+var
+  HT: TKMHouseType;
+begin
+  try
+    //Verify all input parameters
+    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+      and ((aHouseType = htAny) or (aHouseType in HOUSES_VALID)) then
+    begin
+      if aHouseType = htAny then
+      begin
+        for HT in HOUSES_VALID do
+          gHands[aHand].Locks.HouseLock[HT] := aLock;
+      end
+      else
+        gHands[aHand].Locks.HouseLock[aHouseType] := aLock;
+    end
+    else
+      LogParamWarn('Actions.PlayerHouseTypeLock', [aHand, GetEnumName(TypeInfo(TKMHouseType), Integer(aHouseType))]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
 //* Version: 7000+
 //* Sets whether player A shares his beacons with player B.
 //* Sharing can still only happen between allied players, but this command lets you disable allies from sharing.
@@ -436,10 +467,10 @@ end;
 
 
 //* Version: 5057
-//* Set specified player(s) victorious, and all team members of those player(s) if the 2nd parameter TeamVictory is set to true.
+//* Set specified player(s) victorious, and all team members of those player(s) if the 2nd parameter TeamVictory is set to True.
 //* All players who were not set to victorious are set to defeated.
 //* aVictors: Array of player IDs
-//Sets all player IDs in aVictors to victorious, and all their team members if aTeamVictory is true.
+//Sets all player IDs in aVictors to victorious, and all their team members if aTeamVictory is True.
 //All other players are set to defeated.
 procedure TKMScriptActions.PlayerWin(const aVictors: array of Integer; aTeamVictory: Boolean);
 var
@@ -490,7 +521,7 @@ begin
       and InRange(aAmount, 0, 5) then
     begin
       gHands[aHand].Stats.WareDistribution[WARE_ID_TO_TYPE[aWareType], HOUSE_ID_TO_TYPE[aHouseType]] := aAmount;
-      gHands[aHand].Houses.UpdateResRequest;
+      gHands[aHand].Houses.UpdateDemands;
     end
     else
       LogIntParamWarn('Actions.PlayerWareDistribution', [aHand, aWareType, aHouseType, aAmount]);
@@ -501,9 +532,37 @@ begin
 end;
 
 
+//* Version: 14600
+//* Sets ware distribution for the specified resource, house and player.
+//* aAmount: Distribution amount (0..5)
+//* Note: distribution should be set after 1st tick of the game,
+//* thus it will not make effect to use it in OnMissionStart event handler
+procedure TKMScriptActions.PlayerWareDistributionEx(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType; aAmount: Integer);
+begin
+  try
+    if (aWareType in WARES_VALID)
+      and (aWareType in [wtIron, wtCoal, wtTimber, wtCorn])
+      and (aHouseType in HOUSES_VALID)
+      and InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+      and InRange(aAmount, 0, 5) then
+    begin
+      gHands[aHand].Stats.WareDistribution[aWareType, aHouseType] := aAmount;
+      gHands[aHand].Houses.UpdateDemands;
+    end
+    else
+      LogParamWarn('Actions.PlayerWareDistributionEx', [aHand,
+                                                        GetEnumName(TypeInfo(TKMWareType), Integer(aWareType)),
+                                                        GetEnumName(TypeInfo(TKMHouseType), Integer(aHouseType)), aAmount]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
 //* Version: 5097
 //* Change whether player1 is allied to player2.
-//* If Compliment is true, then it is set both ways (so also whether player2 is allied to player1)
+//* If Compliment is True, then it is set both ways (so also whether player2 is allied to player1)
 //* aCompliment: Both ways
 procedure TKMScriptActions.PlayerAllianceChange(aHand1, aHand2: Byte; aCompliment, aAllied: Boolean);
 const
@@ -538,7 +597,7 @@ end;
 
 //* Version: 7000+
 //* Change whether player1 is allied to player2.
-//* If Compliment is true, then it is set both ways (so also whether player2 is allied to player1)
+//* If Compliment is True, then it is set both ways (so also whether player2 is allied to player1)
 //* aCompliment: Both ways
 //* aSyncAllyFog: Synchronize allies fogs of war
 procedure TKMScriptActions.PlayerAllianceNFogChange(aHand1, aHand2: Byte; aCompliment, aAllied, aSyncAllyFog: Boolean);
@@ -574,7 +633,7 @@ end;
 
 //* Version: 5165
 //* Add default goals/lost goals for the specified player.
-//* If the parameter buildings is true the goals will be important buildings.
+//* If the parameter buildings is True the goals will be important buildings.
 //* Otherwise it will be troops.
 procedure TKMScriptActions.PlayerAddDefaultGoals(aHand: Byte; aBuildings: Boolean);
 begin
@@ -1267,6 +1326,25 @@ begin
 end;
 
 
+//* Version: 14600
+//* Sets set of house types, houses of which Advanced AI should attack
+//* By default those house types are [htBarracks, htStore, htSchool, htTownhall]
+procedure TKMScriptActions.AAIAttackHouseTypesSet(aHand: Byte; aHouses: TKMHouseTypeSet);
+begin
+  try
+    if InRange(aHand, 0, gHands.Count - 1)
+      and gHands[aHand].Enabled
+      and gHands[aHand].AI.Setup.NewAI then
+      gHands[aHand].AI.ArmyManagement.ArmyVectorFieldScanHouses := aHouses
+    else
+      LogParamWarn('Actions.AAIAttackHouseTypesSet', [aHand, TSet<TKMHouseTypeSet>.SetToString(aHouses)]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
 //* Version: 7000+
 //* Sets AI army type
 //* aType: (atIronThenLeather, atLeather, atIron, atIronAndLeather)
@@ -1356,7 +1434,7 @@ end;
 
 //* Version: 7000+
 //* Remove AI attack by attack UID
-//* Result: true, if attack was succesfully removed, false, if attack was not found
+//* Result: True, if attack was succesfully removed, False, if attack was not found
 function TKMScriptActions.AIAttackRemove(aHand, aAIAttackUID: Integer): Boolean;
 begin
   Result := False;
@@ -1737,7 +1815,7 @@ end;
 procedure TKMScriptActions.AIRecruitLimit(aHand, aLimit: Byte);
 begin
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled) then
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
       gHands[aHand].AI.Setup.RecruitCount := aLimit
     else
       LogIntParamWarn('Actions.AIRecruitLimit', [aHand, aLimit]);
@@ -1758,7 +1836,7 @@ end;
 procedure TKMScriptActions.AIRepairMode(aHand: Integer; aRepairMode: TKMAIRepairMode);
 begin
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled
       and (aRepairMode <> rmNone) then
       gHands[aHand].AI.Setup.RepairMode := aRepairMode
     else
@@ -1776,7 +1854,7 @@ end;
 procedure TKMScriptActions.AISerfsPerHouse(aHand: Byte; aSerfs: Single);
 begin
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled) then
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
       gHands[aHand].AI.Setup.SerfsPerHouse := aSerfs
     else
       LogIntParamWarn('Actions.AISerfsPerHouse', [aHand]);
@@ -1792,7 +1870,7 @@ end;
 procedure TKMScriptActions.AISoldiersLimit(aHand: Byte; aLimit: Integer);
 begin
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled
     and (aLimit >= -1) then                       //-1 means unlimited; else MaxSoldiers = aLimit
       gHands[aHand].AI.Setup.MaxSoldiers := aLimit
     else
@@ -1809,11 +1887,27 @@ end;
 procedure TKMScriptActions.AIStartPosition(aHand: Byte; X, Y: Integer);
 begin
   try
-    if (InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled))
-    and (gTerrain.TileInMapCoords(X, Y)) then
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled
+    and gTerrain.TileInMapCoords(X, Y) then
       gHands[aHand].AI.Setup.StartPosition := KMPoint(X, Y)
     else
       LogIntParamWarn('Actions.AIStartPosition', [aHand, X, Y]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Version: 14800
+//* Sets AI unlimited equip parameter
+procedure TKMScriptActions.AIUnlimitedEquip(aHand: Byte; aUnlimitedEquip: Boolean);
+begin
+  try
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
+      gHands[aHand].AI.Setup.UnlimitedEquip := aUnlimitedEquip
+    else
+      LogParamWarn('Actions.AIUnlimitedEquip', [aHand, BoolToStr(aUnlimitedEquip, True)]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -1826,7 +1920,7 @@ end;
 procedure TKMScriptActions.AIWorkerLimit(aHand, aLimit: Byte);
 begin
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled) then
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
       gHands[aHand].AI.Setup.WorkerCount := aLimit
     else
       LogIntParamWarn('Actions.AIWorkerLimit', [aHand, aLimit]);
@@ -1890,7 +1984,7 @@ end;
 
 
 //* Version: 6311
-//* Adds finished field and returns true if field was successfully added
+//* Adds finished field and returns True if field was successfully added
 function TKMScriptActions.GiveField(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -1916,7 +2010,7 @@ end;
 
 
 //* Version: 7000+
-//* Sets field age if tile is corn field, or adds finished field and sets its age if tile is empty, and returns true if this was successfully done
+//* Sets field age if tile is corn field, or adds finished field and sets its age if tile is empty, and returns True if this was successfully done
 //* aStage: 0..6, sets the field growth stage. 0 = empty field; 6 = corn has been cut
 //* aRandomAge: sets FieldAge to random, according to specified stage. Makes fields more realistic
 function TKMScriptActions.GiveFieldAged(aHand, X, Y: Integer; aStage: Byte; aRandomAge: Boolean): Boolean;
@@ -1946,7 +2040,7 @@ end;
 
 
 //* Version: 6311
-//* Adds finished road and returns true if road was successfully added
+//* Adds finished road and returns True if road was successfully added
 function TKMScriptActions.GiveRoad(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -2094,7 +2188,7 @@ end;
 
 
 //* Version: 6311
-//* Adds finished winefield and returns true if winefield was successfully added
+//* Adds finished winefield and returns True if winefield was successfully added
 function TKMScriptActions.GiveWineField(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -2120,7 +2214,7 @@ end;
 
 
 //* Version: 7000+
-//* Sets winefield age if tile is winefield, or adds finished winefield and sets its age if tile is empty, and returns true if this was successfully done
+//* Sets winefield age if tile is winefield, or adds finished winefield and sets its age if tile is empty, and returns True if this was successfully done
 //* aStage: 0..3, sets the field growth stage. 0 = new fruits; 3 = grapes are ready to be harvested; according to WINE_STAGES_COUNT
 //* aRandomAge: sets FieldAge to random, according to specified stage. Makes fields more realistic
 function TKMScriptActions.GiveWineFieldAged(aHand, X, Y: Integer; aStage: Byte; aRandomAge: Boolean): Boolean;
@@ -2187,16 +2281,18 @@ end;
 
 //* Version: 5777
 //* Reveals a rectangular area in fog of war for player
-//* X1: Left coordinate
-//* Y1: Top coordinate
-//* X2: Right coordinate
-//* Y2: Bottom coordinate
+//* Left top corner of the map is 0:0
+//* Right bottom corner is MapX, MapY (f.e. 255:255)
+//* X1: Left coordinate of the 1st tile left top corner vertex
+//* Y1: Top coordinate of the 1st tile left top corner vertex
+//* X2: Right coordinate of the 2nd tile left top corner vertex
+//* Y2: Bottom coordinate of the 2nd tile left top corner vertex
 procedure TKMScriptActions.FogRevealRect(aHand, X1, Y1, X2, Y2: Integer);
 begin
   try
     if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-    and gTerrain.TileInMapCoords(X1,Y1)
-    and gTerrain.TileInMapCoords(X2,Y2) then
+      and gTerrain.VerticeInMapCoords(X1+1,Y1+1)
+      and gTerrain.VerticeInMapCoords(X2+1,Y2+1) then
       gHands[aHand].FogOfWar.RevealRect(KMPoint(X1, Y1), KMPoint(X2, Y2), FOG_OF_WAR_MAX)
     else
       LogIntParamWarn('Actions.FogRevealRect', [aHand, X1, Y1, X2, Y2]);
@@ -2209,16 +2305,18 @@ end;
 
 //* Version: 5777
 //* Covers a rectangular area in fog of war for player
-//* X1: Left coordinate
-//* Y1: Top coordinate
-//* X2: Right coordinate
-//* Y2: Bottom coordinate
+//* Left top corner of the map is 0:0
+//* Right bottom corner is MapX, MapY (f.e. 255:255)
+//* X1: Left coordinate of the 1st tile left top corner vertex
+//* Y1: Top coordinate of the 1st tile left top corner vertex
+//* X2: Right coordinate of the 2nd tile left top corner vertex
+//* Y2: Bottom coordinate of the 2nd tile left top corner vertex
 procedure TKMScriptActions.FogCoverRect(aHand, X1, Y1, X2, Y2: Integer);
 begin
   try
     if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-    and gTerrain.TileInMapCoords(X1,Y1)
-    and gTerrain.TileInMapCoords(X2,Y2) then
+      and gTerrain.VerticeInMapCoords(X1+1,Y1+1)
+      and gTerrain.VerticeInMapCoords(X2+1,Y2+1) then
       gHands[aHand].FogOfWar.CoverRect(KMPoint(X1, Y1), KMPoint(X2, Y2))
     else
       LogIntParamWarn('Actions.FogCoverRect', [aHand, X1, Y1, X2, Y2]);
@@ -2460,7 +2558,7 @@ procedure TKMScriptActions.SetTradeAllowed(aHand, aResType: Integer; aAllowed: B
 begin
   try
     //Verify all input parameters
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled
       and (aResType in [Low(WARE_ID_TO_TYPE)..High(WARE_ID_TO_TYPE)]) then
       gHands[aHand].Locks.AllowToTrade[WARE_ID_TO_TYPE[aResType]] := aAllowed
     else
@@ -2472,45 +2570,16 @@ begin
 end;
 
 
-//* Version: 13900
-//* Sets hand (player) house lock aLock for a specified house type aHouseType
-//* if htAny is passed for house type then aLock will be applied to all house types
-procedure TKMScriptActions.HandHouseLock(aHand: Integer; aHouseType: TKMHouseType; aLock: TKMHandHouseLock);
-var
-  HT: TKMHouseType;
-begin
-  try
-    //Verify all input parameters
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-      and ((aHouseType = htAny) or (aHouseType in HOUSES_VALID)) then
-    begin
-      if aHouseType = htAny then
-      begin
-        for HT in HOUSES_VALID do
-          gHands[aHand].Locks.HouseLock[HT] := aLock;
-      end
-      else
-        gHands[aHand].Locks.HouseLock[aHouseType] := aLock;
-    end
-    else
-      LogParamWarn('Actions.HandHouseLock', [aHand, GetEnumName(TypeInfo(TKMHouseType), Integer(aHouseType))]);
-  except
-    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
-    raise;
-  end;
-end;
-
-
-//* Version: 14000
+//* Version: 14600
 //* Sets whether the player is allowed to trade the specified resource.
-//* if aHand = -1, then apply it to all hands (players)
-procedure TKMScriptActions.HandTradeAllowed(aHand: Integer; aWareType: TKMWareType; aAllowed: Boolean);
+//* if aHand = -1, then apply it to all players
+procedure TKMScriptActions.PlayerTradeAllowed(aHand: Integer; aWareType: TKMWareType; aAllowed: Boolean);
 var
   I: Integer;
 begin
   try
     //Verify all input parameters
-    if ((aHand = -1) or (InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)))
+    if ((aHand = -1) or (InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled))
       and (aWareType in WARES_VALID) then
     begin
       if aHand = HAND_NONE then
@@ -2523,7 +2592,7 @@ begin
         gHands[aHand].Locks.AllowToTrade[aWareType] := aAllowed;
     end
     else
-      LogParamWarn('Actions.HandTradeAllowed', [aHand, GetEnumName(TypeInfo(TKMWareType), Integer(aWareType)), BoolToStr(aAllowed, True)]);
+      LogParamWarn('Actions.PlayerTradeAllowed', [aHand, GetEnumName(TypeInfo(TKMWareType), Integer(aWareType)), BoolToStr(aAllowed, True)]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -2531,10 +2600,10 @@ begin
 end;
 
 
-//* Version: 14000
-//* Sets whether the specified player can train/equip the specified unit type
-//* if aHand = -1, then apply it to all hands (players)
-procedure TKMScriptActions.HandUnitCanTrain(aHand: Integer; aUnitType: TKMUnitType; aCanTrain: Boolean);
+//* Version: 14600
+//* Sets whether the specified player can train / equip the specified unit type
+//* if aHand = -1, then apply it to all players
+procedure TKMScriptActions.PlayerUnitTypeCanTrain(aHand: Integer; aUnitType: TKMUnitType; aCanTrain: Boolean);
 var
   I: Integer;
 begin
@@ -2552,35 +2621,7 @@ begin
         gHands[aHand].Locks.SetUnitBlocked(not aCanTrain, aUnitType);
     end
     else
-      LogParamWarn('Actions.HandUnitCanTrain', [aHand, GetEnumName(TypeInfo(TKMUnitType), Integer(aUnitType)), BoolToStr(aCanTrain, True)]);
-  except
-    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
-    raise;
-  end;
-end;
-
-
-//* Version: 14000
-//* Sets ware distribution for the specified resource, house and hand (player).
-//* aAmount: Distribution amount (0..5)
-//* Note: distribution should be set after 1st tick of the game,
-//* thus it will not make effect to use it in OnMissionStart event handler
-procedure TKMScriptActions.HandWareDistribution(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType; aAmount: Integer);
-begin
-  try
-    if (aWareType in WARES_VALID)
-      and (aWareType in [wtIron, wtCoal, wtTimber, wtCorn])
-      and (aHouseType in HOUSES_VALID)
-      and InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-      and InRange(aAmount, 0, 5) then
-    begin
-      gHands[aHand].Stats.WareDistribution[aWareType, aHouseType] := aAmount;
-      gHands[aHand].Houses.UpdateResRequest;
-    end
-    else
-      LogParamWarn('Actions.HandWareDistribution', [aHand,
-                                                    GetEnumName(TypeInfo(TKMWareType), Integer(aWareType)),
-                                                    GetEnumName(TypeInfo(TKMHouseType), Integer(aHouseType)), aAmount]);
+      LogParamWarn('Actions.PlayerUnitTypeCanTrain', [aHand, GetEnumName(TypeInfo(TKMUnitType), Integer(aUnitType)), BoolToStr(aCanTrain, True)]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -2593,7 +2634,7 @@ end;
 procedure TKMScriptActions.HouseAddBuildingMaterials(aHouseID: Integer);
 var
   resNeeded: Integer;
-  plannedToRemove: Word;
+  plannedToRemove: Integer;
   H: TKMHouse;
 begin
   try
@@ -2630,7 +2671,7 @@ end;
 procedure TKMScriptActions.HouseAddBuildingMaterialsEx(aHouseID, aWoodAmount, aStoneAmount: Integer);
 var
   resNeeded: Integer;
-  plannedToRemove: Word;
+  plannedToRemove: Integer;
   H: TKMHouse;
 begin
   try
@@ -3741,7 +3782,7 @@ end;
 //* Version: 6587
 //* Sets the tile type and rotation at the specified XY coordinates.
 //* Tile IDs can be seen by hovering over the tiles on the terrain tiles tab in the map editor.
-//* Returns true if the change succeeded or false if it failed.
+//* Returns True if the change succeeded or False if it failed.
 //* The change will fail if it would cause a unit to become stuck or a house/field to be damaged
 //* aType: Tile type (0..255)
 //* aRotation: Tile rotation (0..3)
@@ -3882,7 +3923,7 @@ begin
     for I := Low(aTilesS) to High(aTilesS) do
     begin
       arrElem := StrSplitA(ReplaceStr(String(aTilesS[I]), ' ', ''), ',');
-      parserError := false;
+      parserError := False;
 
       //checking params count, if count is invalid we cannot proceed
       if (Length(arrElem) <> 6) then
@@ -3895,7 +3936,7 @@ begin
         else
         begin
           LogStr(Format('Actions.MapTilesArraySetS: Parameter X = [%s] in line [%s] is not a valid integer.', [arrElem[0], aTilesS[I]]));
-          parserError := true;
+          parserError := True;
         end;
         //checking Y, if Y <= 0 we cannot proceed
         if ((TryStrToInt(string(PChar(arrElem[1])), parsedValue)) and (parsedValue > 0)) then
@@ -3903,7 +3944,7 @@ begin
         else
         begin
           LogStr(Format('Actions.MapTilesArraySetS: Parameter Y = [%s] in line [%s] is not a valid integer.', [arrElem[1], aTilesS[I]]));
-          parserError := true;
+          parserError := True;
         end;
 
         //if X and Y are correctly defined we can proceed with terrain changes
@@ -3987,7 +4028,7 @@ end;
 
 //* Version: 6587
 //* Sets the height of the terrain at the top left corner (vertex) of the tile at the specified XY coordinates.
-//* Returns true if the change succeeded or false if it failed.
+//* Returns True if the change succeeded or False if it failed.
 //* The change will fail if it would cause a unit to become stuck or a house to be damaged
 //* Height: Height (0..100)
 function TKMScriptActions.MapTileHeightSet(X, Y, Height: Integer): Boolean;
@@ -4012,7 +4053,7 @@ end;
 //* Sets the terrain object on the tile at the specified XY coordinates.
 //* Object IDs can be seen in the map editor on the objects tab.
 //* Object 61 is "block walking". To set no object, use object type 255.
-//* Returns true if the change succeeded or false if it failed.
+//* Returns True if the change succeeded or False if it failed.
 //* The change will fail if it would cause a unit to become stuck or a house/field to be damaged
 //* Obj: Object type (0..255)
 function TKMScriptActions.MapTileObjectSet(X, Y, Obj: Integer): Boolean;
@@ -4143,7 +4184,7 @@ begin
     if InRange(aHand, -1, gHands.Count - 1) then //-1 means all players
       gGame.OverlaySet(aHand, aText, [])
     else
-      LogIntParamWarn('Actions.OverlayTextSet: '+UnicodeString(aText), [aHand]);
+      LogParamWarn('Actions.OverlayTextSet: ' + UnicodeString(aText), [aHand, aText]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -4165,11 +4206,11 @@ begin
       except
         //Format may throw an exception
         on E: EConvertError do
-          LogIntParamWarn('Actions.OverlayTextSetFormatted: EConvertError: ' + E.Message, []);
+          LogParamWarn('Actions.OverlayTextSetFormatted: EConvertError: ' + E.Message, [aHand, aText], aParams);
       end;
     end
     else
-      LogIntParamWarn('Actions.OverlayTextSetFormatted: ' + UnicodeString(aText), [aHand]);
+      LogParamWarn('Actions.OverlayTextSetFormatted: ' + UnicodeString(aText), [aHand, aText], aParams);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -4223,9 +4264,18 @@ procedure TKMScriptActions.OverlayTextAppend(aHand: Shortint; const aText: AnsiS
 begin
   try
     if InRange(aHand, -1, gHands.Count - 1) then //-1 means all players
-      gGame.OverlayAppend(aHand, aText, [])
+    begin
+      try
+        gGame.OverlayAppend(aHand, aText, [])
+      except
+        // We could set or append formatted overlay markup and parameters earlier, so Format will be called for them and
+        // Format may throw an exception
+        on E: EConvertError do
+          LogParamWarn('Actions.OverlayTextAppend: EConvertError: ' + E.Message, [aHand, aText]);
+      end;
+    end
     else
-      LogIntParamWarn('Actions.OverlayTextAppend: ' + UnicodeString(aText), [aHand]);
+      LogParamWarn('Actions.OverlayTextAppend: ' + UnicodeString(aText), [aHand, aText]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -4245,13 +4295,13 @@ begin
       try
         gGame.OverlayAppend(aHand, aText, aParams);
       except
-        //Format may throw an exception
+        // Format may throw an exception
         on E: EConvertError do
-          LogIntParamWarn('Actions.OverlayTextAppendFormatted: EConvertError: ' + E.Message, []);
+          LogParamWarn('Actions.OverlayTextAppendFormatted: EConvertError: ' + E.Message, [aHand, aText], aParams);
       end;
     end
     else
-      LogIntParamWarn('Actions.OverlayTextAppendFormatted: ' + UnicodeString(aText), [aHand]);
+      LogParamWarn('Actions.OverlayTextAppendFormatted: ' + UnicodeString(aText), [aHand, aText], aParams);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -4261,7 +4311,7 @@ end;
 
 //* Version: 5057
 //* Adds a road plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddRoad(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -4301,7 +4351,7 @@ end;
 
 //* Version: 5057
 //* Adds a corn field plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddField(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -4327,7 +4377,7 @@ end;
 
 //* Version: 5057
 //* Adds a wine field plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddWinefield(aHand, X, Y: Integer): Boolean;
 begin
   try
@@ -4407,7 +4457,7 @@ end;
 
 //* Version: 5345
 //* Removes house, road or field plans from the specified tile for the specified player
-//* Returns true if the plan was successfully removed or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully removed or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanRemove(aHand, X, Y: Integer): Boolean;
 var
   housePlan: TKMHousePlan;
@@ -4441,7 +4491,7 @@ end;
 
 //* Version: 5057
 //* Adds a road plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddHouse(aHand, aHouseType, X, Y: Integer): Boolean;
 begin
   Result := False;
@@ -4468,7 +4518,7 @@ end;
 
 //* Version: 14000
 //* Adds a road plan.
-//* Returns true if the plan was successfully added or false if it failed (e.g. tile blocked)
+//* Returns True if the plan was successfully added or False if it failed (e.g. tile blocked)
 function TKMScriptActions.PlanAddHouseEx(aHand: Integer; aHouseType: TKMHouseType; X, Y: Integer): Boolean;
 begin
   Result := False;
@@ -4607,7 +4657,7 @@ end;
 //* Version: 5057
 //* Makes the specified unit face a certain direction.
 //* Note: Only works on idle units so as not to interfere with game logic and cause crashes.
-//* Returns true on success or false on failure.
+//* Returns True on success or False on failure.
 function TKMScriptActions.UnitDirectionSet(aUnitID, aDirection: Integer): Boolean;
 var
   U: TKMUnit;
@@ -4636,7 +4686,7 @@ end;
 //* Version: 14000
 //* Makes the specified unit face a certain direction.
 //* Note: Only works on idle units so as not to interfere with game logic and cause crashes.
-//* Returns true on success or false on failure.
+//* Returns True on success or False on failure.
 function TKMScriptActions.UnitDirectionSetEx(aUnitID: Integer; aDirection: TKMDirection): Boolean;
 var
   U: TKMUnit;
@@ -4731,7 +4781,7 @@ end;
 //* Version: 5057
 //* Order the specified unit to walk somewhere.
 //* Note: Only works on idle units so as not to interfere with game logic and cause crashes.
-//* Returns true on success or false on failure.
+//* Returns True on success or False on failure.
 function TKMScriptActions.UnitOrderWalk(aUnitID: Integer; X, Y: Integer): Boolean;
 var
   U: TKMUnit;
@@ -4869,7 +4919,7 @@ end;
 
 //* Version: 5993
 //* Sets whether the specified group will alert the player when they become hungry
-//* (true to disable hunger messages, false to enable them)
+//* (True to disable hunger messages, False to enable them)
 procedure TKMScriptActions.GroupDisableHungryMessage(aGroupID: Integer; aDisable: Boolean);
 var
   G: TKMUnitGroup;
@@ -4954,6 +5004,7 @@ begin
       G := fIDCache.GetGroup(aGroupID);
       H := fIDCache.GetHouse(aHouseID);
       if (G <> nil)
+        and G.CanTakeOrders
         and (H <> nil)
         and not H.IsDestroyed then
         G.OrderAttackHouse(H, True);
@@ -4981,7 +5032,7 @@ begin
       U := fIDCache.GetUnit(aUnitID);
 
       //Player can not attack animals
-      if (G <> nil) and (U <> nil) and (U.Owner <> HAND_ANIMAL) then
+      if (G <> nil) and (U <> nil) and (U.Owner <> HAND_ANIMAL) and G.CanTakeOrders then
         G.OrderAttackUnit(U, True);
     end
     else
@@ -5003,7 +5054,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) then
+      if (G <> nil) and G.CanTakeOrders then
         G.OrderFood(True);
     end
     else
@@ -5025,7 +5076,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) then
+      if (G <> nil) and G.CanTakeOrders then
         G.OrderHalt(True);
     end
     else
@@ -5048,7 +5099,7 @@ begin
     begin
       G := fIDCache.GetGroup(aGroupID);
       G2 := fIDCache.GetGroup(aDestGroupID);
-      if (G <> nil) and (G2 <> nil) and (G.Owner = G2.Owner) then  //Check group owners to prevent "DNA Modifications" ;D
+      if (G <> nil) and G.CanTakeOrders and (G2 <> nil) and (G.Owner = G2.Owner) then  //Check group owners to prevent "DNA Modifications" ;D
         G.OrderLinkTo(G2, True);
     end
     else
@@ -5072,7 +5123,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) then
+      if (G <> nil) and G.CanTakeOrders then
       begin
         G2 := G.OrderSplit;
         if G2 <> nil then
@@ -5104,6 +5155,7 @@ begin
       G := fIDCache.GetGroup(aGroupID);
       U := fIDCache.GetUnit(aUnitID);
       if (G <> nil)
+      and G.CanTakeOrders
       and (U <> nil)
       and (U is TKMUnitWarrior)
       and (G.HasMember(TKMUnitWarrior(U))) then
@@ -5132,7 +5184,7 @@ begin
     if (aGroupID > 0) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) and (G.GroupType = gtMelee) then
+      if (G <> nil) and (G.GroupType = gtMelee) and G.CanTakeOrders then
         G.OrderStorm(True);
     end
     else
@@ -5156,7 +5208,7 @@ begin
       and (TKMDirection(aDirection + 1) in [dirN..dirNW]) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) and G.CanWalkTo(KMPoint(X,Y), 0) then
+      if (G <> nil) and G.CanTakeOrders and G.CanWalkTo(KMPoint(X,Y), 0) then
         G.OrderWalk(KMPoint(X,Y), True, wtokScript, TKMDirection(aDirection+1));
     end
     else
@@ -5180,7 +5232,7 @@ begin
       and (aDirection in [dirN..dirNW]) then
     begin
       G := fIDCache.GetGroup(aGroupID);
-      if (G <> nil) and G.CanWalkTo(KMPoint(X,Y), 0) then
+      if (G <> nil) and G.CanTakeOrders and G.CanWalkTo(KMPoint(X,Y), 0) then
         G.OrderWalk(KMPoint(X,Y), True, wtokScript, aDirection);
     end
     else

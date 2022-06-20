@@ -26,7 +26,6 @@ call rsvars_local.bat
 @SET KMRPrevVersionDir=%KMRPrevVersionDir_LOCAL%
 @SET SpritesRXADir=%SpritesRXADir_LOCAL%
 @SET BuildFullDir=%BuildFullDir_LOCAL%
-@SET KMRVideosDir=%KMRVideosDir_LOCAL%
 @SET ScriptingEditorDir=%ScriptingEditorDir_LOCAL%
 @SET PATH=%FrameworkDir%;%FrameworkSDKDir%;%BDS%\bin;%BDS%\bin64;%MADEXCEPT_TOOLS%;%PATH%
 @SET kam_version=Beta

@@ -58,7 +58,8 @@ type
 implementation
 uses
   Math, TypInfo,
-  KM_HandsCollection, KM_Hand,
+  KM_Entity,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_UnitWarrior, KM_HouseInn,
   KM_UnitTaskBuild, KM_Log, KM_RenderAux;
 
@@ -137,9 +138,9 @@ end;
 procedure TKMTaskDeliver.SyncLoad;
 begin
   inherited;
-  fFrom    := gHands.GetHouseByUID(Cardinal(fFrom));
-  fToHouse := gHands.GetHouseByUID(Cardinal(fToHouse));
-  fToUnit  := gHands.GetUnitByUID(Cardinal(fToUnit));
+  fFrom    := gHands.GetHouseByUID(Integer(fFrom));
+  fToHouse := gHands.GetHouseByUID(Integer(fToHouse));
+  fToUnit  := gHands.GetUnitByUID(Integer(fToUnit));
 end;
 
 
@@ -150,7 +151,7 @@ begin
 
   if fUnit <> nil then
   begin
-    if fDeliverID <> 0 then
+    if fDeliverID <> DELIVERY_NO_ID then
       gHands[fUnit.Owner].Deliveries.Queue.AbandonDelivery(fDeliverID);
 
     if TKMUnitSerf(fUnit).Carry <> wtNone then
@@ -379,9 +380,9 @@ begin
             Exit;
           end;
           SetActionLockedStay(5,uaWalk); //Wait a moment inside
+          CheckForBetterDestination; //Must run before TakenOffer and before taking ware so Offer is still valid
           fFrom.ResTakeFromOut(fWareType);
           CarryGive(fWareType);
-          CheckForBetterDestination; //Must run before TakenOffer so Offer is still valid
           gHands[Owner].Deliveries.Queue.TakenOffer(fDeliverID);
         end;
     3:  begin
@@ -423,7 +424,7 @@ begin
 
           gHands[Owner].Deliveries.Queue.GaveDemand(fDeliverID);
           gHands[Owner].Deliveries.Queue.AbandonDelivery(fDeliverID);
-          fDeliverID := 0; //So that it can't be abandoned if unit dies while trying to GoOut
+          fDeliverID := DELIVERY_NO_ID; //So that it can't be abandoned if unit dies while trying to GoOut
 
           //If serf bring smth into the Inn and he is hungry - let him eat immidiately
           if fUnit.IsHungry
@@ -468,13 +469,13 @@ begin
             SetActionWalkToSpot(fToHouse.PointBelowEntrance);
         end;
     7:  begin
-          Direction := KMGetDirection(Position, fToHouse.Entrance);
+          Direction := KMGetDirection(PositionNext, fToHouse.Entrance);
           fToHouse.ResAddToBuild(Carry);
           gHands[Owner].Stats.WareConsumed(Carry);
           CarryTake;
           gHands[Owner].Deliveries.Queue.GaveDemand(fDeliverID);
           gHands[Owner].Deliveries.Queue.AbandonDelivery(fDeliverID);
-          fDeliverID := 0; //So that it can't be abandoned if unit dies while staying
+          fDeliverID := DELIVERY_NO_ID; //So that it can't be abandoned if unit dies while staying
           SetActionStay(1, uaWalk);
         end;
     else Result := trTaskDone;
@@ -519,7 +520,7 @@ begin
           CarryTake;
           gHands[Owner].Deliveries.Queue.GaveDemand(fDeliverID);
           gHands[Owner].Deliveries.Queue.AbandonDelivery(fDeliverID);
-          fDeliverID := 0; //So that it can't be abandoned if unit dies while staying
+          fDeliverID := DELIVERY_NO_ID; //So that it can't be abandoned if unit dies while staying
           SetActionLockedStay(5, uaWalk); //Pause breifly (like we are handing over the ware/food)
         end;
     7:  begin

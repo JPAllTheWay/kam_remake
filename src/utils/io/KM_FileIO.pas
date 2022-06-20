@@ -6,7 +6,7 @@ uses
     // windirs does not work under old lazarus (1.8.0) / FPC versions, which we use to make linux dedi server
     LazFileUtils,{ windirs,} {$ENDIF}
   {$IFDEF WDC} System.IOUtils, {$ENDIF}
-  {$IFDEF MSWindows} Windows, {$ENDIF}
+  {$IFDEF MSWindows} Windows, ShellAPI, {$ENDIF}
   {$IFDEF Unix} LCLType, {$ENDIF}
   Classes, SysUtils
   {$IFDEF WDC OR FPC_FULLVERSION >= 30200}, KM_WorkerThread{$ENDIF}
@@ -28,9 +28,15 @@ uses
   procedure KMCopyFileAsync(const aSrc, aDest: UnicodeString; aOverwrite: Boolean; aWorkerThread: TKMWorkerThread);
   {$ENDIF}
 
+  procedure KMDeleteFileToBin(const aPath: UnicodeString);
+  procedure KMDeleteFile(aFilePath: string; aDeleteToBin: Boolean = False);
+
   //Delete a folder (DeleteFolder is different between Delphi and Lazarus)
-  procedure KMDeleteFolder(const aPath: UnicodeString);
-  procedure KMDeleteFolderContent(const aPath: UnicodeString);
+  procedure KMDeleteFolderToBin(const aPath: UnicodeString);
+  procedure KMDeleteFolder(const aPath: UnicodeString); overload;
+  procedure KMDeleteFolder(const aPath: UnicodeString; aDeleteToBin: Boolean); overload;
+  procedure KMDeleteFolderContent(const aPath: UnicodeString; aDeleteToBin: Boolean = False);
+
 
   //Rename a file (RenameFile is different between Delphi and Lazarus)
   procedure KMRenamePath(const aSourcePath, aDestPath: UnicodeString);
@@ -40,6 +46,8 @@ uses
 
   //Rename all the files inside folder (MoveFolder is different between Delphi and Lazarus)
   procedure KMRenameFilesInFolder(const aPathToFolder, aFromName, aToName: UnicodeString);
+
+  function KMFileSize(const aFilename: String): Int64;
 
   function IsFilePath(const aPath: UnicodeString): Boolean;
 
@@ -183,45 +191,128 @@ end;
 {$ENDIF}
 
 
-procedure KMDeleteFolder(const aPath: UnicodeString);
-{$IFDEF WDC}
+procedure KMDeleteFileToBin(const aPath: UnicodeString);
+begin
+  KMDeleteFile(aPath, True);
+end;
+
+
+// Same as delete folder actually .. adjoin?
+procedure KMDeleteFile(aFilePath: string; aDeleteToBin: Boolean = False);
+{$IFDEF MSWINDOWS}
 var
-  S: string;
+  ShOp: TSHFileOpStruct;
+  {$IFDEF FPC}
+const
+  FOF_NO_UI = FOF_SILENT or FOF_NOCONFIRMATION or FOF_NOERRORUI or FOF_NOCONFIRMMKDIR; // don't display any UI at all
+  {$ENDIF}
+{$ENDIF}
+begin
+  {$IFDEF MSWINDOWS}
+    {$IFDEF FPC}
+  ShOp.hWnd := 0;
+    {$ELSE}
+  ShOp.Wnd := 0;
+    {$ENDIF}
+  ShOp.wFunc := FO_DELETE;
+  ShOp.pFrom := PChar(aFilePath + #0);
+  ShOp.pTo := nil;
+  ShOp.fFlags := FOF_NO_UI or (FOF_ALLOWUNDO * Ord(aDeleteToBin));
+  SHFileOperation(ShOp);
+  {$ELSE}
+  DeleteFile(aFilePath);
+  {$ENDIF}
+end;
+
+
+procedure KMDeleteFolderToBin(const aPath: UnicodeString);
+begin
+  KMDeleteFolder(aPath, True);
+end;
+
+
+procedure KMDeleteFolder(const aPath: UnicodeString);
+begin
+  KMDeleteFolder(aPath, False);
+end;
+
+
+procedure KMDeleteFolder(const aPath: UnicodeString; aDeleteToBin: Boolean);
+
+  procedure DeleteDefault;
+  {$IFDEF WDC}
+  var
+    S: string;
+  {$ENDIF}
+  begin
+    {$IFDEF FPC}
+    DeleteDirectory(aPath, False);
+    {$ENDIF}
+    {$IFDEF WDC}
+
+    //TDirectory.Delete will sometimes delay deletion due to Windows behaviour
+    //Suggested workarounds:
+    // - Empty the directory first (seems to work, commented out below)
+    // - Move the directory to a temporary name then delete it (sounds more robust)
+    //Discussions of workarounds:
+    //https://stackoverflow.com/questions/42809389/tdirectory-delete-seems-to-be-asynchronous
+    //https://github.com/dotnet/runtime/issues/27958
+
+    //Generate a temporary name based on time and random number
+    //S := TDirectory.GetParent(ExcludeTrailingPathDelimiter(aPath)) + PathDelim + IntToStr(Random(MaxInt)) + UIntToStr(TimeGet);
+    //TDirectory.Move(aPath, S);
+    //TDirectory.Delete(S, True);
+
+    // Rename folder approach could trigger antivirus sometimes (f.e. Kaspersky)
+    // so there could be many (almost) empty folders after antivirus block folders deletion
+    // "(folder deletion is potentionly dangeroues operation because of data corruption)"
+      for S in TDirectory.GetFiles(aPath) do
+        DeleteFile(S);
+      TDirectory.Delete(aPath, True);
+    //Assert(not DirectoryExists(aPath));
+    {$ENDIF}
+  end;
+
+
+{$IFDEF MSWINDOWS}
+var
+  ShOp: TSHFileOpStruct;
+  {$IFDEF FPC}
+const
+  FOF_NO_UI = FOF_SILENT or FOF_NOCONFIRMATION or FOF_NOERRORUI or FOF_NOCONFIRMMKDIR; // don't display any UI at all
+  {$ENDIF}
+{$ENDIF}
+
+{$IFNDEF MSWINDOWS}
+
 {$ENDIF}
 begin
   if DirectoryExists(aPath) then
   begin
-    {$IFDEF FPC}
-      DeleteDirectory(aPath, False);
-    {$ENDIF}
-    {$IFDEF WDC}
-
-      //TDirectory.Delete will sometimes delay deletion due to Windows behaviour
-      //Suggested workarounds:
-      // - Empty the directory first (seems to work, commented out below)
-      // - Move the directory to a temporary name then delete it (sounds more robust)
-      //Discussions of workarounds:
-      //https://stackoverflow.com/questions/42809389/tdirectory-delete-seems-to-be-asynchronous
-      //https://github.com/dotnet/runtime/issues/27958
-
-      //Generate a temporary name based on time and random number
-      //S := TDirectory.GetParent(ExcludeTrailingPathDelimiter(aPath)) + PathDelim + IntToStr(Random(MaxInt)) + UIntToStr(TimeGet);
-      //TDirectory.Move(aPath, S);
-      //TDirectory.Delete(S, True);
-
-      // Rename folder approach could trigger antivirus sometimes (f.e. Kaspersky)
-      // so there could be many (almost) empty folders after antivirus block folders deletion
-      // "(folder deletion is potentionly dangeroues operation because of data corruption)"
-      for S in TDirectory.GetFiles(aPath) do
-        DeleteFile(S);
-      TDirectory.Delete(aPath, True);
-      //Assert(not DirectoryExists(aPath));
+    {$IFDEF MSWINDOWS}
+    if aDeleteToBin then
+    begin
+        {$IFDEF FPC}
+      ShOp.hWnd := 0;
+        {$ELSE}
+      ShOp.Wnd := 0;
+        {$ENDIF}
+      ShOp.wFunc := FO_DELETE;
+      ShOp.pFrom := PChar(aPath + #0);
+      ShOp.pTo := nil;
+      ShOp.fFlags := FOF_NO_UI or (FOF_ALLOWUNDO * Ord(aDeleteToBin));
+      SHFileOperation(ShOp);
+    end
+    else
+      DeleteDefault;
+    {$ELSE}
+    DeleteDefault;
     {$ENDIF}
   end;
 end;
 
 
-procedure KMDeleteFolderContent(const aPath: UnicodeString);
+procedure KMDeleteFolderContent(const aPath: UnicodeString; aDeleteToBin: Boolean = False);
 {$IFDEF WDC}
 var
   S: string;
@@ -230,7 +321,7 @@ begin
   if DirectoryExists(aPath) then
   begin
     {$IFDEF FPC}
-      DeleteDirectory(aPath, False);
+      KMDeleteFolder(aPath, aDeleteToBin);
       ForceDirectories(aPath); // We do not care too much about FPC now, recreating directory is ok
     {$ENDIF}
     {$IFDEF WDC}
@@ -252,7 +343,7 @@ begin
       // so there could be many (almost) empty folders after antivirus block folders deletion
       // "(folder deletion is potentionly dangeroues operation because of data corruption)"
       for S in TDirectory.GetFiles(aPath) do
-        DeleteFile(S);
+        KMDeleteFile(S, aDeleteToBin);
       //Assert(not DirectoryExists(aPath));
     {$ENDIF}
   end;
@@ -344,7 +435,7 @@ begin
     or (aSourceFolder = aDestFolder)
     or not DirectoryExists(aSourceFolder) then Exit;
 
-  KMDeleteFolder(aDestFolder);
+  KMDeleteFolder(aDestFolder, False);
 
   //Move directory to dest first
   KMRenamePath(aSourceFolder, aDestFolder);
@@ -355,6 +446,23 @@ begin
   KMRenameFilesInFolder(aDestFolder, SrcName, DestName);
 
   Result := True;
+end;
+
+
+function KMFileSize(const aFilename: String): Int64;
+{$IFDEF MSWindows}
+var
+  info: TWin32FileAttributeData;
+{$ENDIF}
+begin
+  Result := -1;
+
+  {$IFDEF MSWindows}
+  if not GetFileAttributesEx(PWideChar(aFileName), GetFileExInfoStandard, @info) then
+    EXIT;
+
+  Result := Int64(info.nFileSizeLow) or Int64(info.nFileSizeHigh shl 32);
+  {$ENDIF}
 end;
 
 

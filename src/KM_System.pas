@@ -19,12 +19,12 @@ type
     {$ENDIF}
     {$ENDIF}
 
-    function GetCursor: TKMCursor;
-    procedure SetCursor(Value: TKMCursor);
+    function GetCursor: TKMCursorImageType;
+    procedure SetCursor(Value: TKMCursorImageType);
   public
     constructor Create(aFormMainHandle: HWND);
 
-    property Cursor: TKMCursor read GetCursor write SetCursor;
+    property Cursor: TKMCursorImageType read GetCursor write SetCursor;
 
     procedure MakeCursors(aSprites: TKMSpritePack);
 
@@ -49,7 +49,7 @@ const
   // New custom cursors count
   CUSTOM_CUR_CNT = 1;
 
-  CUSTOM_CURSORS: array [0..CUSTOM_CUR_CNT-1] of TKMCursor = (kmcAnimatedDirSelector);
+  CUSTOM_CURSORS: array [0..CUSTOM_CUR_CNT-1] of TKMCursorImageType = (kmcAnimatedDirSelector);
 
 
 { TKMSystem }
@@ -65,16 +65,16 @@ begin
 end;
 
 
-function TKMSystem.GetCursor: TKMCursor;
+function TKMSystem.GetCursor: TKMCursorImageType;
 begin
-  if InRange(Screen.Cursor - CURSOR_CNT_OFFSET, Ord(Low(TKMCursor)), Ord(High(TKMCursor))) then
-    Result := TKMCursor(Screen.Cursor - CURSOR_CNT_OFFSET)
+  if InRange(Screen.Cursor - CURSOR_CNT_OFFSET, Ord(Low(TKMCursorImageType)), Ord(High(TKMCursorImageType))) then
+    Result := TKMCursorImageType(Screen.Cursor - CURSOR_CNT_OFFSET)
   else
     Result := kmcDefault;
 end;
 
 
-procedure TKMSystem.SetCursor(Value: TKMCursor);
+procedure TKMSystem.SetCursor(Value: TKMCursorImageType);
 begin
   if SKIP_LOADING_CURSOR then Exit;
   Screen.Cursor := Ord(Value) + CURSOR_CNT_OFFSET;
@@ -86,12 +86,12 @@ const
   SF = 17; //Full width/height of a scroll cursor
   SH = 8; //Half width/height of a scroll cursor
   // Measured manually
-  CURSOR_OFFSET_X: array [TKMCursor] of Integer = (0,0,20, 0, 0,-8, 9,0, 1,1,1,0,-1,-1,-1,0, SH,SF,SF,SF,SH, 0, 0,0, 0,0,0,27,0);
-  CURSOR_OFFSET_Y: array [TKMCursor] of Integer = (0,9,10,18,20,44,13,0,-1,0,1,1, 1, 0,-1,0, 0 ,0 ,SH,SF,SF,SF,SH,0,28,0,0,28,0);
+  CURSOR_OFFSET_X: array [TKMCursorImageType] of Integer = (0,0,20, 0, 0,-8, 9,0, 1,1,1,0,-1,-1,-1,0, SH,SF,SF,SF,SH, 0, 0,0, 0,0,0,27,0);
+  CURSOR_OFFSET_Y: array [TKMCursorImageType] of Integer = (0,9,10,18,20,44,13,0,-1,0,1,1, 1, 0,-1,0, 0 ,0 ,SH,SF,SF,SF,SH,0,28,0,0,28,0);
 
   CUSTOM_CUR_FILENAME: array[0..CUSTOM_CUR_CNT-1] of UnicodeString = ('cur1.ani');
 var
-  C: TKMCursor;
+  C: TKMCursorImageType;
   I, sx, sy, x, y: Integer;
   bm, bm2: TBitmap;
   iconInfo: TIconInfo;
@@ -107,7 +107,7 @@ begin
   bm  := TBitmap.Create; bm.HandleType  := bmDIB; bm.PixelFormat  := pf32bit;
   bm2 := TBitmap.Create; bm2.HandleType := bmDIB; bm2.PixelFormat := pf32bit;
 
-  for C := Low(TKMCursor) to kmcPaintBucket do
+  for C := Low(TKMCursorImageType) to kmcPaintBucket do
   begin
     // Special case for invisible cursor
     if C = kmcInvisible then
@@ -120,6 +120,10 @@ begin
     end
     else
     begin
+      // Just skip missing cursor, do not crash the game
+      if CURSOR_SPRITE_INDEX[C] >= Length(rxData.Size) then
+        Continue;
+
       sx := rxData.Size[CURSOR_SPRITE_INDEX[C]].X;
       sy := rxData.Size[CURSOR_SPRITE_INDEX[C]].Y;
       bm.Width  := sx; bm.Height  := sy;
@@ -150,7 +154,7 @@ begin
     //it works only from within the loop, means mask is recreated when we access canvas or something like that
     bm2.ReleaseMaskHandle;
 
-    iconInfo.fIcon := false; //true=Icon, false=Cursor
+    iconInfo.fIcon := False; //True=Icon, False=Cursor
     iconInfo.hbmColor := bm.Handle;
 
     //I have a suspicion that maybe Windows could create icon delayed, at a time when bitmap data is

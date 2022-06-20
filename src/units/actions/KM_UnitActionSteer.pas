@@ -132,6 +132,8 @@ end;
 
 
 function TKMUnitActionSteer.Execute: TKMActionResult;
+const
+  STUCK_MAX_TIME = 200;
 var
   dx, dy: Shortint;
   walkX, walkY, distance: Single;
@@ -160,7 +162,7 @@ begin
     if not ChooseNextStep(fNextPos) then
     begin
       Inc(fStuckFor);
-      if fStuckFor > 200 then
+      if fStuckFor > STUCK_MAX_TIME then
         Result := arActAborted //We have been stuck for a while so abort and TKMUnitAnimal.UpdateState will kill us
       else
         Result := arActContinues;

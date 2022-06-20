@@ -114,6 +114,9 @@ uses
   function ToBoolean(aVal: Byte): Boolean;
   function BoolStrShort(aVal: Boolean): string;
 
+  function VarRecToStr(aVarRec: TVarRec): string;
+  function VarRecArrToStr(aVarRecArr: array of TVarRec; aSep: string = ', '): string;
+
   //Extended == Double, so already declared error
   //https://forum.lazarus.freepascal.org/index.php?topic=29678.0
   {$IFDEF WDC}
@@ -275,6 +278,40 @@ begin
     Result := '1'
   else
     Result := '0';
+end;
+
+
+function VarRecToStr(aVarRec: TVarRec): string;
+begin
+  with aVarRec do
+    case VType of
+      vtInteger:        Result := IntToStr(VInteger);
+      vtBoolean:        Result := BoolToStr(VBoolean);
+      vtChar:           Result := string(VChar);
+      vtExtended:       Result := FloatToStr(VExtended^);
+      vtString:         Result := string(VString^);
+      vtPChar:          Result := string(VPChar);
+      vtObject:         Result := VObject.ClassName;
+      vtClass:          Result := VClass.ClassName;
+      vtPWideChar:      Result := string(VPWideChar);
+      vtAnsiString:     Result := string(AnsiString(VAnsiString));
+      vtCurrency:       Result := CurrToStr(VCurrency^);
+      vtVariant:        Result := string(VVariant^);
+      vtInt64:          Result := IntToStr(VInt64^);
+      vtUnicodeString:  Result := string(VUnicodeString);
+      else              Result := '';
+  end;
+end;
+
+
+function VarRecArrToStr(aVarRecArr: array of TVarRec; aSep: string = ', '): string;
+var
+  I: Integer;
+begin
+  Result := '';
+
+  for I := Low(aVarRecArr) to High(aVarRecArr) do
+    Result := Result + VarRecToStr(aVarRecArr[I]) + IfThen(I <> High(aVarRecArr), aSep);
 end;
 
 

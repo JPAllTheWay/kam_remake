@@ -199,7 +199,7 @@ const
     {htInn}            [ htButchers,       htBakery,         htStore,          htVineyard                       ],
     {htIronMine}       [ htStore                                                                                ],
     {htIronSmithy}     [ htCoalMine,       htIronMine,       htWeaponSmithy,   htIronSmithy                     ],
-    {htMarketplace}    [ htStore,          htMetallurgists,  htMarket,    htBarracks                       ],
+    {htMarket}         [ htStore,          htMetallurgists,  htMarket,         htBarracks                       ],
     // Metallurgist must be only close to coal / gold because serfs are not able to support this extremely critical resources
     {htMetallurgists}  [ htCoalMine,       htGoldMine                                                           ],// htSchool, htStore
     {htMill}           [ htBakery,         htInn,            htMill                                             ],
@@ -221,6 +221,7 @@ const
 
 implementation
 uses
+  KM_Entity,
   KM_GameParams,
   KM_HouseCollection,
   KM_HandsCollection, KM_Hand, KM_HandTypes,
@@ -404,7 +405,7 @@ begin
   for HT := HOUSE_MIN to HOUSE_MAX do
     for K := 0 to fPlannedHouses[HT].Count - 1 do
       with fPlannedHouses[HT].Plans[K] do
-        House := gHands.GetHouseByUID(Cardinal(House));
+        House := gHands.GetHouseByUID(Integer(House));
 end;
 
 
@@ -488,7 +489,7 @@ begin
             // Make sure that reservation is no longer used
             gHands[fOwner].AI.CityManagement.Builder.UnlockHouseLoc(HT, H.Entrance);
             if (HT = htWoodcutters) then
-              gAIFields.Influences.MarkForest(fPlannedHouses[HT].Plans[K].SpecPoint, AI_Par[PLANNER_FOREST_FindPlaceForWoodcutter_Radius], Min(AI_Par[PLANNER_FOREST_FindPlaceForWoodcutter_ABRange],AVOID_BUILDING_FOREST_RANGE-1) / sqr(AI_Par[PLANNER_FOREST_FindPlaceForWoodcutter_Radius]), true);
+              gAIFields.Influences.MarkForest(fPlannedHouses[HT].Plans[K].SpecPoint, AI_Par[PLANNER_FOREST_FindPlaceForWoodcutter_Radius], Min(AI_Par[PLANNER_FOREST_FindPlaceForWoodcutter_ABRange],AVOID_BUILDING_FOREST_RANGE-1) / sqr(AI_Par[PLANNER_FOREST_FindPlaceForWoodcutter_Radius]), True);
             if (fPlannedHouses[HT].Plans[K].House <> nil) then
               gHands.CleanUpHousePointer(fPlannedHouses[HT].Plans[K].House);
             fPlannedHouses[HT].Plans[K].House := H.GetPointer;
@@ -505,7 +506,7 @@ begin
         with fPlannedHouses[HT].Plans[fPlannedHouses[HT].Count-1] do
         begin
           House := H.GetPointer;
-          Placed := true;
+          Placed := True;
         end;
       end;
     end;
@@ -979,7 +980,7 @@ begin
   //H := gHands[fOwner].Houses.FindHouse(htAny, NewLoc.X, NewLoc.Y, 1, False); // True = complete house, False = house plan
   //if (H <> nil) then
   //begin
-  //  Output := true;
+  //  Output := True;
   //  ExistLoc := H.PointBelowEntrance;
   //end;
   if Output AND fRoadPlanner.Route_Make(KMPointBelow(NewLoc), KMPointBelow(ExistLoc), aField) then
@@ -2120,7 +2121,7 @@ begin
                 Plans[ Count-1 ].HouseReservation := True; // Reserve houses so builder will init road
             end
             else
-              fStonesDepleted := true;
+              fStonesDepleted := True;
             // Demolish old quarry (in case that alternative is completed)
             if not aForceToPlaceQuarry AND (aReqQuarryCnt < 0) then
               with fPlannedHouses[HT] do
@@ -2768,7 +2769,7 @@ begin
   for HT := HOUSE_MIN to HOUSE_MAX do
   begin
     case HT of
-      htStore,htSchool,htInn,htMarket: Color := tcBlack;
+      htStore,htSchool,htInn,htMarket:  Color := tcBlack;
       htQuarry,htWoodcutters,htSawmill: Color := tcBlue;
       htGoldMine,htCoalMine,htIronMine,htMetallurgists: Color := tcYellow;
       htIronSmithy,htArmorSmithy,htWeaponSmithy,htTannery,htArmorWorkshop,htWeaponWorkshop,htBarracks: Color := tcRed;

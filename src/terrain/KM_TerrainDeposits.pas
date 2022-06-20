@@ -3,11 +3,8 @@ unit KM_TerrainDeposits;
 interface
 uses
   Classes, Math, SysUtils,
-  KM_Defaults, KM_Points, KM_Terrain, KM_Units;
+  KM_Defaults, KM_Points, KM_Terrain, KM_Units, KM_MapEdTypes;
 
-
-type
-  TKMRawDeposit = (rdStone, rdCoal, rdIron, rdGold, rdFish);
 
 const
   DEPOSIT_COLORS: array[TKMRawDeposit] of Cardinal = (
@@ -86,8 +83,8 @@ begin
     rdGold:  Result := gTerrain.TileIsGold(X, Y);
     rdFish:  begin
                curUnit := gTerrain.Land^[Y, X].IsUnit;
-               if (curUnit <> nil) and (curUnit is TKMUnitAnimal) and (curUnit.UnitType = utFish) then
-                 Result := 2 * TKMUnitAnimal(curUnit).FishCount //You get 2 fish from each trip
+               if (curUnit <> nil) and (curUnit is TKMUnitFish) then
+                 Result := TKMUnitFish(curUnit).FishCount
                else
                  Result := 0;
              end

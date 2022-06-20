@@ -27,6 +27,7 @@ type
   TKMUnitStats = packed record
     Initial,          //Provided at mission start
     Training,         //Currently in training queue
+    Dismissing,       //Currently dismissing
     Trained,          //Trained by player
     Lost,             //Died of hunger or killed
     Killed: Cardinal; //Killed (incl. self)
@@ -90,6 +91,8 @@ type
     procedure UnitCreated(aType: TKMUnitType; aWasTrained: Boolean{; aFromTownHall: Boolean = False});
     procedure UnitAddedToTrainingQueue(aType: TKMUnitType);
     procedure UnitRemovedFromTrainingQueue(aType: TKMUnitType);
+    procedure UnitDismissed(aType: TKMUnitType);
+    procedure UnitDismissCanceled(aType: TKMUnitType);
     procedure UnitLost(aType: TKMUnitType);
     procedure UnitKilled(aType: TKMUnitType);
 
@@ -104,7 +107,8 @@ type
     function GetHouseWip(const aType: array of TKMHouseType): Integer; overload;
     function GetHouseTotal(aType: TKMHouseType): Integer;
     function GetUnitQty(aType: TKMUnitType): Integer;
-    function GetUnitWip(aType: TKMUnitType): Integer;
+    function GetUnitTraining(aType: TKMUnitType): Integer;
+    function GetUnitDismissing(aType: TKMUnitType): Integer;
     function GetUnitKilledQty(aType: TKMUnitType): Integer;
     function GetUnitLostQty(aType: TKMUnitType): Integer;
     function GetWareBalance(aRT: TKMWareType): Integer;
@@ -251,6 +255,18 @@ end;
 procedure TKMHandStats.UnitRemovedFromTrainingQueue(aType: TKMUnitType);
 begin
   Dec(Units[aType].Training);
+end;
+
+
+procedure TKMHandStats.UnitDismissed(aType: TKMUnitType);
+begin
+  Inc(Units[aType].Dismissing);
+end;
+
+
+procedure TKMHandStats.UnitDismissCanceled(aType: TKMUnitType);
+begin
+  Dec(Units[aType].Dismissing);
 end;
 
 
@@ -430,7 +446,7 @@ begin
 end;
 
 
-function TKMHandStats.GetUnitWip(aType: TKMUnitType): Integer;
+function TKMHandStats.GetUnitTraining(aType: TKMUnitType): Integer;
 var
   UT: TKMUnitType;
 begin
@@ -440,6 +456,20 @@ begin
     utAny:     for UT := HUMANS_MIN to HUMANS_MAX do
                   Inc(Result, Units[UT].Training);
     else        Result := Units[aType].Training;
+  end;
+end;
+
+
+function TKMHandStats.GetUnitDismissing(aType: TKMUnitType): Integer;
+var
+  UT: TKMUnitType;
+begin
+  Result := 0;
+  case aType of
+    utNone: ;
+    utAny:      for UT := HUMANS_MIN to HUMANS_MAX do
+                  Result := Result + Units[UT].Dismissing;
+    else        Result := Units[aType].Dismissing;
   end;
 end;
 
@@ -934,6 +964,7 @@ begin
       AddField(gRes.Units[UT].GUIName);
       AddField(Initial);
       AddField(Training);
+      AddField(Dismissing);
       AddField(Trained);
       AddField(Lost);
       AddField(Killed);

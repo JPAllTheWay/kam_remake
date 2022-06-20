@@ -195,6 +195,8 @@ begin
         keyName := fTempKeys.GetKeyNameById(KF);
         if (KF = kfDebugWindow) and (keyName <> '') then
           keyName := keyName + ' / Ctrl + ' + keyName; //Also show Ctrl + F11, for debug window hotkey
+        if (KF = kfMapedSaveMap) and (keyName <> '') then
+          keyName := 'Ctrl + ' + keyName;
         ColumnBox_OptionsKeys.AddItem(MakeListRow([GetFunctionName(gResKeyFuncs[KF].TextId), keyName],
                                                   [$FFFFFFFF, $FFFFFFFF], [$FF0000FF, $FF0000FF], Integer(KF)));
       end;

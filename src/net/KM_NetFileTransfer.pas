@@ -289,7 +289,7 @@ begin
                     begin
                       repeat
                         if (F.Attr and faDirectory = 0) then
-                          DeleteFile(fileName + PathDelim + F.Name);
+                          KMDeleteFile(fileName + PathDelim + F.Name);
                       until FindNext(F) <> 0;
                     end;
                   finally

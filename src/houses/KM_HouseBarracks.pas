@@ -58,8 +58,11 @@ type
 implementation
 uses
   Math, Types,
+  KM_Entity,
   KM_Hand,
   KM_HandsCollection,
+  KM_HandTypes,
+  KM_HandEntity,
   KM_Units,
   KM_UnitWarrior,
   KM_ScriptingEvents,
@@ -104,7 +107,7 @@ begin
   inherited;
 
   for I := 0 to RecruitsCount - 1 do
-    fRecruitsList.Items[I] := gHands.GetUnitByUID(Cardinal(fRecruitsList.Items[I]));
+    fRecruitsList.Items[I] := gHands.GetUnitByUID(Integer(fRecruitsList.Items[I]));
 end;
 
 

@@ -9,10 +9,16 @@ uses
 
 
 type
+  TKMDebugFormState = ( fsNone,       // No debug panel or menu are open
+                        fsDebugMenu,  // Only debug menu is visible
+                        fsDebugFull); // Debug panel and menu are visible
+
   // Manager of F11 controls settings save/load
   TKMDevSettings = class
   private
     fSettingsPath: UnicodeString;
+
+    fDebugFormState: TKMDebugFormState; // State of the Debug form
 
     fMainGroup: TCategoryPanelGroup;
     fDontCollapse: TCategoryPanel;
@@ -22,6 +28,9 @@ type
     function GetXmlSectionName(aPanel: TCategoryPanel): string;
   public
     constructor Create(const aExeDir: string; aMainGroup: TCategoryPanelGroup; aDontCollapse: TCategoryPanel);
+
+    property DebugFormState: TKMDebugFormState read fDebugFormState write fDebugFormState;
+
     procedure Load;
     procedure Save;
   end;
@@ -102,7 +111,7 @@ var
   cp: TCategoryPanel;
   cpSurface: TCategoryPanelSurface;
   cpName: string;
-  nRoot, nSection: TKMXmlNode;
+  nRoot, nDebugForm, nSection: TKMXmlNode;
 begin
   if Self = nil then Exit;
 
@@ -123,14 +132,17 @@ begin
   newXML.LoadFromFile(fSettingsPath);
   nRoot := newXML.Root;
 
+  nDebugForm := nRoot.AddOrFindChild('DebugForm');
+  fDebugFormState := TKMDebugFormState(nDebugForm.Attributes['State'].AsInteger(0));
+
   for I := 0 to fMainGroup.Panels.Count - 1 do
   begin
     cp := TCategoryPanel(fMainGroup.Panels[I]);
     cpName := GetXmlSectionName(cp);
 
-    if nRoot.HasChild(cpName) then
+    if nDebugForm.HasChild(cpName) then
     begin
-      nSection := nRoot.FindNode(cpName);
+      nSection := nDebugForm.FindNode(cpName);
       cp.Collapsed := nSection.Attributes['Collapsed'].AsBoolean(True);
 
       if (cp.ControlCount > 0) and (cp.Controls[0] is TCategoryPanelSurface) then
@@ -194,7 +206,7 @@ var
   newXML: TKMXMLDocument;
   cp: TCategoryPanel;
   cpSurface: TCategoryPanelSurface;
-  nRoot, nSection: TKMXmlNode;
+  nRoot, nDebugForm, nSection: TKMXmlNode;
 begin
   if Self = nil then Exit;
 
@@ -205,11 +217,14 @@ begin
   newXML.LoadFromFile(fSettingsPath);
   nRoot := newXML.Root;
 
+  nDebugForm := nRoot.AddOrFindChild('DebugForm');
+  nDebugForm.Attributes['State'] := Ord(fDebugFormState);
+
   for I := 0 to fMainGroup.Panels.Count - 1 do
   begin
     cp := TCategoryPanel(fMainGroup.Panels[I]);
 
-    nSection := nRoot.AddOrFindChild(GetXmlSectionName(cp));
+    nSection := nDebugForm.AddOrFindChild(GetXmlSectionName(cp));
 
     nSection.Attributes['Collapsed'] := cp.Collapsed;
 

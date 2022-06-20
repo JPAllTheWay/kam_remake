@@ -3,6 +3,7 @@ unit KM_DevPerfLogForm;
 interface
 uses
   SysUtils, Classes, Graphics, Forms, StdCtrls, Controls, ExtCtrls, Types,
+  KM_CommonTypes,
   KM_DevPerfLog, KM_DevPerfLogTypes, Spin, KM_VclHelpers;
 
 type
@@ -28,9 +29,12 @@ type
     fUpdating: Boolean;
     fAllClicked: Boolean;
 
+    fOnFormChanged: TEvent;
+
     CheckBoxesAll: array[plkCPU..plkGFX, 0..2] of TCheckBox;
     CheckBoxes: array [Succ(Low(TPerfSectionDev))..High(TPerfSectionDev), 0..2] of TCheckBox;
   public
+    property OnFormChanged: TEvent read fOnFormChanged write fOnFormChanged;
     procedure Show(aPerfLogs: TKMPerfLogs); reintroduce;
     function FormHeight: Integer;
   end;
@@ -401,6 +405,9 @@ begin
         UpdateAllChkboxState;
     end;
   end;
+
+  if Assigned(fOnFormChanged) then
+    fOnFormChanged;
 end;
 
 

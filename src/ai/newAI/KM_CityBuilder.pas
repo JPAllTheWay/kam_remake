@@ -1594,6 +1594,8 @@ begin
     OR (gHands[fOwner].Stats.GetUnitQty(utBuilder) = 0) then
     Exit;
 
+  if Length(fBuildNodes) = 0 then Exit;
+
   // Check if there is free build node
   for NodeIdx := Low(fBuildNodes) to High(fBuildNodes) do
     if not fBuildNodes[NodeIdx].Active then
@@ -1881,7 +1883,7 @@ var
         aHT := gResHouses[aHT].ReleasedBy; // House have to be unlocked by this house
       end;
     end;
-    // Output = false only in case that house is already under construction OR is blocked by script / settings from the map editor
+    // Output = False only in case that house is already under construction OR is blocked by script / settings from the map editor
     Result := Output AND ( (initHT = aHT) OR (gHands[fOwner].Stats.GetHouseTotal(aHT) = 0) );
   end;
 
@@ -2023,7 +2025,7 @@ var
         aHT := gResHouses[aHT].ReleasedBy; // House have to be unlocked by this house
       end;
     end;
-    // Output = false only in case that house is already under construction OR is blocked by script / settings from the map editor
+    // Output = False only in case that house is already under construction OR is blocked by script / settings from the map editor
     Result := Output AND ( (initHT = aHT) OR (gHands[fOwner].Stats.GetHouseTotal(aHT) = 0) );
   end;
 

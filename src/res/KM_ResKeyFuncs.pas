@@ -84,6 +84,7 @@ const
 
     // Map Editor Keys
     TX_KEY_FUNC_MAPEDIT_EXTRA,                                                                            // Map Editor Extra's menu
+    TX_KEY_FUNC_MAPEDIT_SAVE,                                                                             // Map Editor Save map
     TX_KEY_FUNC_MAPEDIT_TERAIN_EDIT, TX_KEY_FUNC_MAPEDIT_VILLAGE_PLAN,                                    // Map Editor menus
     TX_KEY_FUNC_MAPEDIT_VISUAL_SCRIPT, TX_KEY_FUNC_MAPEDIT_GLOBAL_SCRIPT, TX_KEY_FUNC_MAPEDIT_MENU_MAIN,  // Map Editor menus
     TX_KEY_FUNC_MAPEDIT_SUBMENU_1, TX_KEY_FUNC_MAPEDIT_SUBMENU_2, TX_KEY_FUNC_MAPEDIT_SUBMENU_3,          // Map Editor sub-menus
@@ -96,7 +97,9 @@ const
     TX_KEY_FUNC_MAPEDIT_TILES_PALETTE,                                            // Map Editor show tiles palette
     TX_KEY_FUNC_MAPEDIT_UNIV_ERASOR,                                              // Map Editor universal erasor
     TX_KEY_FUNC_MAPEDIT_PAINT_BUCKET,                                             // Map Editor paint bucket
-    TX_KEY_FUNC_MAPEDIT_HISTORY                                                   // Map Editor history
+    TX_KEY_FUNC_MAPEDIT_HISTORY,                                                  // Map Editor history
+    TX_KEY_FUNC_MAPEDIT_FLAT_TERRAIN,                                             // Map Editor flat terrain
+    TX_KEY_FUNC_MAPEDIT_TILES_GRID                                                // Map Editor tiles grid
   );
 
 { TKMResKeys }

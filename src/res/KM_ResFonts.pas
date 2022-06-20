@@ -62,7 +62,7 @@ type
   TKMFontInfo = record
   public
     Pal: TKMPal; //Palette fnt needs
-    TexMode: TTexFormat; //Format font texture needs to be in
+    TexMode: TKMTexFormat; //Format font texture needs to be in
   end;
 
   TKMLetter = packed record
@@ -106,7 +106,7 @@ type
 
     procedure LoadFont(const aFileName: string; aPalette: TKMPaletteSpec);
     procedure LoadFontX(const aFileName: string; aLoadLevel: TKMFontLoadLevel = fllFull);
-    procedure GenerateTextures(aTexMode: TTexFormat);
+    procedure GenerateTextures(aTexMode: TKMTexFormat);
     procedure Compact;
     procedure ExportAtlasBmp(aBitmap: TBitmap; aIndex: Integer; aShowCells: Boolean); overload;
     procedure ExportAtlasBmp(const aPath: string; aIndex: Integer); overload;
@@ -366,7 +366,7 @@ end;
 
 
 // Generate color texture from prepared data
-procedure TKMFontSpec.GenerateTextures(aTexMode: TTexFormat);
+procedure TKMFontSpec.GenerateTextures(aTexMode: TKMTexFormat);
 {$IFNDEF NO_OGL}
 var
   I: Integer;
@@ -381,7 +381,7 @@ begin
     if fAtlases[I].TexID = 0 then //Don't load atlases twice if switching from minimal to full
       if Length(fAtlases[I].TexData) <> 0 then
       begin
-        fAtlases[I].TexID := TRender.GenTexture(fTexSizeX, fTexSizeY, @fAtlases[I].TexData[0], aTexMode, ftNearest, ftNearest);
+        fAtlases[I].TexID := TKMRender.GenTexture(fTexSizeX, fTexSizeY, @fAtlases[I].TexData[0], aTexMode, ftNearest, ftNearest);
         Inc(textureRAM, fTexSizeX * fTexSizeY * TEX_FORMAT_SIZE[aTexMode]);
       end
       else
@@ -555,6 +555,7 @@ var
   fntPath: string;
   startTime, totalTime: Cardinal;
 begin
+  gLog.AddTime('Load font started');
   fLoadLevel := aLoadLevel;
   startTime := TimeGet;
 

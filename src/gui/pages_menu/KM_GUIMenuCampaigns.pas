@@ -22,10 +22,11 @@ type
     procedure BackClick(Sender: TObject);
   protected
     Panel_CampSelect: TKMPanel;
-      ColumnBox_Camps: TKMColumnBox;
-      Image_CampsPreview: TKMImage;
-      Memo_CampDesc: TKMMemo;
-      Button_Camp_Start, Button_Camp_Back: TKMButton;
+      Panel_Campaigns: TKMPanel;
+        ColumnBox_Camps: TKMColumnBox;
+        Image_CampsPreview: TKMImage;
+        Memo_CampDesc: TKMMemo;
+        Button_Camp_Start, Button_Camp_Back: TKMButton;
   public
     constructor Create(aParent: TKMPanel; aCampaigns: TKMCampaignsCollection; aOnPageChange: TKMMenuChangeEventText);
     procedure RefreshList;
@@ -43,8 +44,23 @@ uses
 
 { TKMMainMenuInterface }
 constructor TKMMenuCampaigns.Create(aParent: TKMPanel; aCampaigns: TKMCampaignsCollection; aOnPageChange: TKMMenuChangeEventText);
-var
-  L: TKMLabel;
+const
+  PAD_W = 80;
+  PAN_W = 1024 - PAD_W * 2;
+  BTN_W = 300;
+  BTN_PAD_W = 40;
+  LIST_TOP = 30;
+  LIST_W = 505;
+  LIST_H = 540;
+  COL_PAD = 14;
+  RIGHT_W = PAN_W - LIST_W - COL_PAD;
+  MAP_IMG_W = 337;
+  MAP_IMG_H = 252;
+  MAP_PAD = 4;
+  DESC_PAD_H = 12;
+  DESC_TOP = LIST_TOP + MAP_IMG_H + DESC_PAD_H;
+  DESC_H = LIST_H - MAP_IMG_H - DESC_PAD_H;
+  DESC_W = MAP_IMG_W + 2*MAP_PAD;
 begin
   inherited Create(gpCampSelect);
 
@@ -54,39 +70,43 @@ begin
 
   Panel_CampSelect := TKMPanel.Create(aParent, 0, 0, aParent.Width, aParent.Height);
   Panel_CampSelect.AnchorsStretch;
+    Panel_Campaigns := TKMPanel.Create(Panel_CampSelect, PAD_W, 60, PAN_W, aParent.Height - 100);
+    Panel_Campaigns.AnchorsStretch;
 
-    TKMLabel.Create(Panel_CampSelect, 80, 140, 575, 20, gResTexts[TX_MENU_CAMP_HEADER], fntOutline, taCenter).AnchorsCenter;
-    ColumnBox_Camps := TKMColumnBox.Create(Panel_CampSelect, 80, 170, 575, 360, fntGrey, bsMenu);
+    TKMLabel.Create(Panel_Campaigns, 0, 0, Panel_Campaigns.Width, 20, gResTexts[TX_MENU_CAMP_HEADER], fntOutline, taCenter).AnchorsCenter;
+    ColumnBox_Camps := TKMColumnBox.Create(Panel_Campaigns, 0, LIST_TOP, LIST_W, LIST_H, fntGrey, bsMenu);
     ColumnBox_Camps.SetColumns(fntOutline, [gResTexts[TX_MENU_CAMPAIGNS_TITLE],
                                              gResTexts[TX_MENU_CAMPAIGNS_MAPS_COUNT],
                                              gResTexts[TX_MENU_CAMPAIGNS_MAPS_UNLOCKED]],
-                                             [0, 305, 440]);
+                                             [0, 305, 405]);
     ColumnBox_Camps.AnchorsCenter;
     ColumnBox_Camps.SearchColumn := 0;
     ColumnBox_Camps.OnChange := ListChange;
     ColumnBox_Camps.OnDoubleClick := StartClick;
 
-    TKMBevel.Create(Panel_CampSelect, 669, 170, 275, 208).AnchorsCenter;
-    Image_CampsPreview := TKMImage.Create(Panel_CampSelect, 673, 174, 267, 200, 0, rxGuiMain);
+    TKMBevel.Create(Panel_Campaigns, LIST_W + COL_PAD, 30, MAP_IMG_W + 2*MAP_PAD, MAP_IMG_H + 2*MAP_PAD).AnchorsCenter;
+    Image_CampsPreview := TKMImage.Create(Panel_Campaigns, LIST_W + COL_PAD + MAP_PAD, 34, MAP_IMG_W, MAP_IMG_H, 0, rxGuiMain);
     Image_CampsPreview.ImageStretch;
     Image_CampsPreview.AnchorsCenter;
 
-    Memo_CampDesc := TKMMemo.Create(Panel_CampSelect, 669, 390, 275, 140, fntGame, bsMenu);
+    Memo_CampDesc := TKMMemo.Create(Panel_Campaigns, LIST_W + COL_PAD, DESC_TOP, DESC_W, DESC_H, fntGame, bsMenu);
     Memo_CampDesc.AnchorsCenter;
     Memo_CampDesc.WordWrap := True;
     Memo_CampDesc.ItemHeight := 16;
 
-    L := TKMLabel.Create(Panel_CampSelect, 80, 540, 864, 40, gResTexts[TX_MENU_CAMP_HINT], fntGrey, taCenter);
-    L.AnchorsCenter;
-    L.WordWrap := True;
+    with TKMLabel.Create(Panel_Campaigns, 0, ColumnBox_Camps.Bottom + 15, 864, 40, gResTexts[TX_MENU_CAMP_HINT], fntGrey, taCenter) do
+    begin
+      AnchorsCenter;
+      WordWrap := True;
+    end;
 
-    Button_Camp_Start := TKMButton.Create(Panel_CampSelect, 362, 580, 300, 30, gResTexts[TX_MENU_CAMP_START], bsMenu);
-    Button_Camp_Start.AnchorsCenter;
-    Button_Camp_Start.OnClick := StartClick;
-
-    Button_Camp_Back := TKMButton.Create(Panel_CampSelect, 362, 625, 300, 30, gResTexts[TX_MENU_BACK], bsMenu);
+    Button_Camp_Back := TKMButton.Create(Panel_Campaigns, BTN_PAD_W, 620, BTN_W, 30, gResTexts[TX_MENU_BACK], bsMenu);
     Button_Camp_Back.AnchorsCenter;
     Button_Camp_Back.OnClick := BackClick;
+
+    Button_Camp_Start := TKMButton.Create(Panel_Campaigns, PAN_W - BTN_W - BTN_PAD_W, 620, BTN_W, 30, gResTexts[TX_MENU_CAMP_START], bsMenu);
+    Button_Camp_Start.AnchorsCenter;
+    Button_Camp_Start.OnClick := StartClick;
 end;
 
 

@@ -431,7 +431,7 @@ begin
 end;
 
 
-//Do something related to mouse movement in menu
+// Do something related to mouse movement in menu
 procedure TKMMainMenuInterface.MouseMove(Shift: TShiftState; X,Y: Integer; var aHandled: Boolean);
 begin
   UpdateCursor(X, Y, Shift);
@@ -447,7 +447,7 @@ end;
 procedure TKMMainMenuInterface.MouseUp(Button: TMouseButton; Shift: TShiftState; X,Y: Integer);
 begin
   fMyControls.MouseUp(X, Y, Shift, Button);
-  Exit; //We could have caused gGameApp reinit (i.e. resolution change), so exit at once
+  Exit; // We could have caused gGameApp reinit (i.e. resolution change), so exit at once
 end;
 
 
@@ -460,7 +460,7 @@ begin
 end;
 
 
-//Should update anything we want to be updated, obviously
+// Should update anything we want to be updated, obviously
 procedure TKMMainMenuInterface.UpdateState(aGlobalTickCount: Cardinal);
 begin
   inherited;

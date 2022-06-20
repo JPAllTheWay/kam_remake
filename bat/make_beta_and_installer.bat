@@ -34,11 +34,11 @@ call timecmd.bat build_installer.bat
 if errorlevel 3 (goto exit3)
 echo ######                       InnoSetup compilation completed         ######
  
-echo ######                       Tag and push revision                   ######
-call tag_and_push_revision.bat > tag_and_push_revision.log 2>&1
+echo ######                       Tag and push revision MANUALLY          ######
+REM call tag_and_push_revision.bat > tag_and_push_revision.log 2>&1
 
 echo Total build time:
-call "timer.exe" /nologo /S
+call "timer.exe" /nologo /s
 
 goto exit0
 

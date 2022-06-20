@@ -1,4 +1,4 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{261AE87C-13ED-4569-B2B9-766B02FB30D7}</ProjectGuid>
         <MainSource>RXXPacker.dpr</MainSource>

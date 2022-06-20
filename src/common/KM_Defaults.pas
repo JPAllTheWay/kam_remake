@@ -32,19 +32,9 @@ const
   {$I KM_Revision.inc};
   {$I KM_NetProtocolRevision.inc};
 
-  {$IFDEF USESECUREAUTH}
-    {$IFDEF DEBUG}
-    GAME_VERSION_POSTFIX  = ' [ DEBUG ]';
-    {$ELSE}
-    GAME_VERSION_POSTFIX  = '';
-    {$ENDIF}
-  {$ELSE}
-    {$IFDEF DEBUG}
-    GAME_VERSION_POSTFIX  = ' [ UNSECURE - DEBUG ]';
-    {$ELSE}
-    GAME_VERSION_POSTFIX  = ' [ UNSECURE ]';
-    {$ENDIF}
-  {$ENDIF}
+var
+  GAME_VERSION_POSTFIX: AnsiString = '';
+const
   GAME_VERSION_CUSTOM_POSTFIX = ''; // Custom postfix for the test builds
   GAME_VERSION_PREFIX   = ''; //Game version string displayed in menu corner
 var
@@ -94,28 +84,26 @@ var
   RESET_DEBUG_CONTROLS  :Boolean = not DEBUG_CFG; //Reset Debug controls (F11) on game start
   SKIP_LOG_TEMP_COMMANDS:Boolean = True;
   BLOCK_GAME_ON_PAUSE   :Boolean = not DEBUG_CFG; // Should we block game input, viewport scrolling etc on game pause?
+  DELETE_OLD_LOGS       :Boolean = not DEBUG_CFG; // Should we delete old logs?
 
-  //Implemented
-  FEAT_SETTINGS_IN_MYDOC:Boolean = True; //Save settings in the C:\Users\Username\My Documents\My Games\GAME_TITLE\ folder
-  DO_UNIT_INTERACTION   :Boolean = True; //Debug for unit interaction
-  DO_WEIGHT_ROUTES      :Boolean = True; //Add additional cost to tiles in A* if they are occupied by other units (IsUnit=1)
-  CUSTOM_RANDOM         :Boolean = True; //Use our custom random number generator or the built in "Random()"
-  USE_WALKING_DISTANCE  :Boolean = True; //Use the walking distance for deciding place to mine rather than direct distance
-  RANDOM_TARGETS        :Boolean = True; //Archers use random targets instead of closest
-  DISPLAY_CHARTS_RESULT :Boolean = True; //Show charts in game results screen
-  HUNGARIAN_GROUP_ORDER :Boolean = True; //Use Hungarian algorithm to reorder warrior groups when walking
-  AI_GEN_NAVMESH        :Boolean = True; //Generate navmesh for AI to plan attacks/defenses
-  AI_GEN_INFLUENCE_MAPS :Boolean = True; //Generate influence maps for AI to plan attacks/defenses
-  ALLOW_SNOW_HOUSES     :Boolean = True; //Allow to enable snow on houses in the game options or debug menu
-  //Not fully implemented yet
-  USE_CCL_WALKCONNECT   :Boolean = False; //Use CCL instead of FloodFill for walk-connect (CCL is generaly worse. It's a bit slower, counts 1 tile areas and needs more AreaIDs to work / makes sparsed IDs)
-  DYNAMIC_FOG_OF_WAR    :Boolean = False; //Whenever dynamic fog of war is enabled or not
-  SHOW_DISMISS_GROUP_BTN:Boolean = DEBUG_CFG; //The button to kill group
-  CHECK_8087CW          :Boolean = False; //Check that 8087CW (FPU flags) are set correctly each frame, in case some lib/API changed them
-  SCROLL_ACCEL          :Boolean = False; //Acceleration for viewport scrolling
-  ALLOW_INTERPOLATED_RENDER :Boolean = True; //Allow to interpolate positions/animations in render between game ticks
-  ALLOW_INTERPOLATED_ANIMS    :Boolean = True; //Allow to use interpolate animations, which are loaded from .rxa sprites atlases pack
-  PATHFINDER_TO_USE     :Byte = 1;        //Use TKMPathfindingAStarNew
+  // Implemented
+  FEAT_SETTINGS_IN_MYDOC  :Boolean = True; // Save settings in the C:\Users\Username\My Documents\My Games\GAME_TITLE\ folder
+  DO_UNIT_INTERACTION     :Boolean = True; // Debug for unit interaction
+  DO_WEIGHT_ROUTES        :Boolean = True; // Add additional cost to tiles in A* if they are occupied by other units (IsUnit=1)
+  CUSTOM_RANDOM           :Boolean = True; // Use our custom random number generator or the built in "Random()"
+  USE_WALKING_DISTANCE    :Boolean = True; // Use the walking distance for deciding place to mine rather than direct distance
+  RANDOM_TARGETS          :Boolean = True; // Archers use random targets instead of closest
+  DISPLAY_CHARTS_RESULT   :Boolean = True; // Show charts in game results screen
+  HUNGARIAN_GROUP_ORDER   :Boolean = True; // Use Hungarian algorithm to reorder warrior groups when walking
+  AI_GEN_NAVMESH          :Boolean = True; // Generate navmesh for AI to plan attacks/defenses
+  AI_GEN_INFLUENCE_MAPS   :Boolean = True; // Generate influence maps for AI to plan attacks/defenses
+  // Not fully implemented yet
+  FEAT_CCL_WALKCONNECT    :Boolean = False; // Use CCL instead of FloodFill for walk-connect (CCL is generaly worse. It's a bit slower, counts 1 tile areas and needs more AreaIDs to work / makes sparsed IDs)
+  FEAT_DYNAMIC_FOG_OF_WAR :Boolean = False; // Whenever dynamic fog of war is enabled or not
+  FEAT_DISMISS_GROUP_BTN  :Boolean = DEBUG_CFG; // The button to kill group
+  CHECK_8087CW            :Boolean = False; // Check that 8087CW (FPU flags) are set correctly each frame, in case some lib/API changed them
+  FEAT_SCROLL_ACCEL       :Boolean = False; // Acceleration for viewport scrolling
+  PATHFINDER_TO_USE       :Byte = 1;       // Use TKMPathfindingAStarNew
 
   ENABLE_VIDEOS_UNDER_WINE: Boolean = DEBUG_CFG; //Do we enable videos under wine
 
@@ -153,7 +141,6 @@ var
   ALLOW_LOAD_UNSUP_VERSION_SAVE:
                            Boolean = DEBUG_CFG; //Allow to try load saves / replay with unsupported version
   SHOW_ENEMIES_STATS      :Boolean = False; //Do we allow to show enemies stats during the game
-  SHOW_DEBUG_CONTROLS     :Boolean = False; //Show debug panel / Form1 menu (F11)
   SHOW_CONTROLS_OVERLAY   :Boolean = False; //Draw colored overlays ontop of controls! always Off here
   SHOW_CONTROLS_ID        :Boolean = False; //Draw controls ID
   SHOW_FOCUSED_CONTROL    :Boolean = False; //Outline focused control
@@ -202,6 +189,7 @@ var
   SHOW_POINTER_DOTS       :Boolean = False; //Show pointer count as small dots below unit/houses
   SHOW_GROUND_LINES       :Boolean = False; //Show a line below all sprites to mark the ground height used in Z-Order
   SHOW_UNIT_MOVEMENT      :Boolean = False; //Draw unit movement overlay (occupied tile), Only if unit interaction enabled
+  SHOW_VIEWPORT_POS       :Boolean = False; //Draw viewport position
   SHOW_JAM_METER          :Boolean = False; //Show jam meter value on terrain
   SHOW_TILE_OBJECT_ID     :Boolean = False; //Show tiles object ID
   SHOW_TILES_OWNER        :Boolean = False; //Show tiles owner
@@ -259,6 +247,7 @@ var
   INI_HITPOINT_RESTORE    :Boolean = False; //Use the hitpoint restore rate from the INI file to compare with KaM
   SLOW_MAP_SCAN           :Boolean = False; //Scan maps with a pause to emulate uncached file access
   SLOW_SAVE_SCAN          :Boolean = False; //Scan saves with a pause to emulate uncached file access
+  SLOW_GAME_SAVE_ASYNC    :Boolean = False; //Emulate slow game save (in the async save thread)
   SLOW_MAP_SAVE_LOAD      :Boolean = False; //Load map or save to emulate slow network
   SLOW_ASYNC_RES_LOADER   :Boolean = False; //Emulate slow async resource loader (slow res load in async thread)
   DO_PERF_LOGGING         :Boolean = False; //Write each ticks time to log (DEPRECATED PERF_LOGGER)
@@ -314,9 +303,9 @@ const
   MAX_WOODCUTTER_CUT_PNT_DISTANCE = 5; //Max distance for woodcutter new cutting point from his house
 
 const
-  MAX_HANDS            = 18; //Maximum players (human or AI) per map
-  MAX_LOBBY_PLAYERS    = 12;  //Maximum number of players (not spectators) allowed in the lobby. Map can have additional AI locations up to MAX_HANDS (for co-op).
-  MAX_LOBBY_SPECTATORS = 2;  //Slots available in lobby. Additional slots can be used by spectators
+  MAX_HANDS            = 27; // Maximum players (human or AI) per map
+  MAX_LOBBY_PLAYERS    = 12; // Maximum number of players (not spectators) allowed in the lobby. Map can have additional AI locations up to MAX_HANDS (for co-op).
+  MAX_LOBBY_SPECTATORS = 2;  // Slots available in lobby. Additional slots can be used by spectators
   MAX_LOBBY_SLOTS      = MAX_LOBBY_PLAYERS + MAX_LOBBY_SPECTATORS;
   MAX_TEAMS            = MAX_LOBBY_PLAYERS div 2;
 
@@ -328,30 +317,32 @@ const
 
 
   AUTOSAVE_COUNT_DEF      = 5;    //How many autosaves to backup by default - this MUST be variable (Parallel Runner)
-  AUTOSAVE_COUNT_MIN      = 2;
-  AUTOSAVE_COUNT_MAX      = 10;
-  AUTOSAVE_FREQUENCY_MIN  = 600;
-  AUTOSAVE_FREQUENCY_MAX  = 3000;
-  AUTOSAVE_FREQUENCY_DEFAULT = 600; //How often to do autosave, every N ticks
+  AUTOSAVE_COUNT_MIN      = 1;
+  AUTOSAVE_COUNT_MAX      = 50;  // 99 max, since it should be 2-digit width to cope with our rename algo
+  AUTOSAVE_FREQUENCY_MIN  = 300;  // 30 sec
+  AUTOSAVE_FREQUENCY_MAX  = 6000; // 10 minutes
+  AUTOSAVE_FREQUENCY_DEFAULT = 600; // 1 min, How often to do autosave, every N ticks
+  BASESAVE_NAME = 'basesave';
   AUTOSAVE_SAVE_NAME = 'autosave';
+  AUTOSAVE_AFTER_PT_END_SAVE_NAME = 'autosave_after_pt_end';
   CRASHREPORT_SAVE_NAME = 'crashreport';
 
   // Checkpoint, which are made in the memory while watching replay
   REPLAY_SAVEPOINT_FREQUENCY_MIN = 30*10; //30 sec
-  REPLAY_SAVEPOINT_FREQUENCY_MAX = 10*60*60; // 1 hour
+  REPLAY_SAVEPOINT_FREQUENCY_MAX = 60*60*10; // 1 hour
   REPLAY_SAVEPOINT_FREQUENCY_DEF = 5*60*10; // 5 min
-  REPLAY_SAVEPOINT_CNT_MAX       = 40; // Max number of replay autosaves
+  REPLAY_SAVEPOINT_CNT_MAX       = 60; // Max number of replay autosaves
 
-  // Checkpoints, which are made during the game and saved in the .rpl file
+  // Checkpoints, which are made during the game and saved in the .spt file
 {$IFDEF DEBUG}
 var
 {$ENDIF}
-  GAME_SAVE_CHECKPOINT_FREQ_MIN: Integer = 5*60*10; // 5 min
-  GAME_SAVE_CHECKPOINT_FREQ_MAX: Integer = 10*60*60; // 1 hour
-  GAME_SAVE_CHECKPOINT_FREQ_DEF: Integer = 10*15*60; // 15 minutes
+  GAME_SAVE_CHECKPOINT_FREQ_MIN: Integer = 5*60*10;   // 5 min
+  GAME_SAVE_CHECKPOINT_FREQ_MAX: Integer = 2*60*60*10; // 2 hours
+  GAME_SAVE_CHECKPOINT_FREQ_DEF: Integer = 15*60*10; // 15 minutes
   GAME_SAVE_CHECKPOINT_CNT_LIMIT_MIN: Integer  = 0;  // Min limit for number of game checkpoints
-  GAME_SAVE_CHECKPOINT_CNT_LIMIT_MAX: Integer  = 40; // Max limit for number of game checkpoints
-  GAME_SAVE_CHECKPOINT_CNT_LIMIT_DEF: Integer  = 20; // Def limit for number of game checkpoints
+  GAME_SAVE_CHECKPOINT_CNT_LIMIT_MAX: Integer  = 60; // Max limit for number of game checkpoints
+  GAME_SAVE_CHECKPOINT_CNT_LIMIT_DEF: Integer  = 30; // Def limit for number of game checkpoints
 {$IFDEF DEBUG}
 const
 {$ENDIF}
@@ -402,7 +393,7 @@ const
 
   FRIENDLY_FIRE = True; //Whenever archers could kill fellow men with their arrows
 
-  NET_DROP_PLAYER_MIN_WAIT = 30; //Host must wait at least this long before dropping disconnected players
+  NET_DROP_PLAYER_MIN_WAIT = 15; // in seconds. Host must wait at least this long before dropping disconnected players
   ANNOUNCE_BUILD_MAP = 30*60*10; //30 minutes
   ANNOUNCE_BATTLE_MAP = 2*60*10; //2 minutes
 
@@ -617,7 +608,7 @@ type
 
 
 const
-  UID_NONE: Integer = -1; //Would be better to have it 0. But now it's -1 for backwards compatibility
+  UID_NONE: Integer = -1; // Would be better to have it 0. But now it's -1 for backwards compatibility
 
 
 {Units}
@@ -763,7 +754,9 @@ const
 
 
 const
-  FISH_COUNT_ACT: array [1..5] of TKMUnitActionType = (uaWalk, uaWork, uaSpec, uaDie, uaWork1);
+  // Fish counts
+  FISH_CNT_DEFAULT = 10;
+  FISH_CNT_MAX = 255;
 
 
 type
@@ -933,24 +926,33 @@ const
   3,   //Black
   255  //White}
   DEFAULT_PLAYERS_COLORS: array [0..MAX_HANDS-1] of Cardinal = (
-    $FF0707FF, //Red
-    $FFE3BB5B, //Cyan
-    $FF27A700, //Green
-    $FFFF67FF, //Magenta
-    $FF07FFFF, //Yellow
-    $FF577B7B, //Grey
-    $FF2383FB, //Orange
-    $FFFF0707, //Blue
-    $FF0BE73F, //Light green
-    $FF720468, //Purple
-    $FF22B3EE, //Yellowish
-    $FF668ACC, //Peach
-    $FF1A50B2, //Brownish
-    $FFB2611A, //Blueish
-    $FF60CC00, //Greenish + blue
-    $FF4F1AB2, //Purpleish
-    $FFFFFFFF, //White
-    $FF000000  //Black
+    $FF0000EB, // 1 Red
+    $FF076CF8, // 2 Orange
+    $FF00B5FF, // 3 Gold
+    $FF07FFFF, // 4 Lauenburg yellow
+    $FF0EC5A2, // 5 Lime green
+    $FF88FF88, // 6 Light green
+    $FF07FF07, // 7 Neon green
+    $FF00A100, // 8 Bright green
+    $FF134B00, // 9 Dark green
+    $FF7A9E00, // 10 Teal
+    $FFFACE64, // 11 Sky blue
+    $FFFB886D, // 12 Light violet blue
+    $FFCC6600, // 13 Medium blue
+    $FF581F00, // 14 Dark blue
+    $FFCB3972, // 15 Violet (Amethyst)
+    $FF720468, // 16 Purple
+    $FFDE8FFB, // 17 Pink
+    $FFFF07FF, // 18 Magenta
+    $FF9DB4FB, // 27 Light Light Red
+    $FF4A00A8, // 19 Dark pink
+    $FF00005E, // 20 Maroon
+    $FF666690, // 21 Light brown
+    $FF103C52, // 22 Brown
+    $FF519EC9, // 23 Tan
+    $FFFFFFFF, // 24 White
+    $FF838383, // 25 Grey
+    $FF1B1B1B  // 26 Black
   );
 
   // Colors which are used for an MP teams
@@ -1123,6 +1125,18 @@ implementation
 
 initialization
 begin
+  {$IFNDEF USESECUREAUTH}
+  GAME_VERSION_POSTFIX := GAME_VERSION_POSTFIX + ' [ UNSECURE ]';
+  {$ENDIF}
+
+  {$IFDEF DEBUG}
+  GAME_VERSION_POSTFIX := GAME_VERSION_POSTFIX + ' [ DEBUG ]';
+  {$ENDIF}
+
+  {$IFDEF WDC64}
+  GAME_VERSION_POSTFIX := GAME_VERSION_POSTFIX + ' [x64]';
+  {$ENDIF}
+
   GAME_REVISION := AnsiString('r' + IntToStr(GAME_REVISION_NUM));
   GAME_VERSION := GAME_VERSION_PREFIX + GAME_REVISION + GAME_VERSION_POSTFIX + GAME_VERSION_CUSTOM_POSTFIX;
   //Clients of this net protocol version may connect to the dedicated server

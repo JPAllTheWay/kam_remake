@@ -846,6 +846,12 @@ end;
 
 
 //Try to detect which kind it is
+
+//Todo: we should probably refactor it to TryDetectMapType, and add checks if Map / Save is valid, f.e.
+// if   ((gNetworking.SelectGameKind = ngkMap) and gNetworking.MapInfo.IsValid)
+//   or ((gNetworking.SelectGameKind = ngkSave) and gNetworking.SaveInfo.IsValid)
+// Its not good to just return 0 (which is Build map),
+// since we could get into situation when ngkNone is map type and we had some other Radio.ItemIndex, f.e. 'Save'
 function TKMMenuLobby.DetectMapType: Integer;
 begin
   //Default
@@ -1658,7 +1664,7 @@ var
   myNik, canEdit, hostCanEdit, isSave, isValid: Boolean;
   curPlayer: TKMNetPlayerInfo;
   firstUnused: Boolean;
-  aiOnlyColors: TKMCardinalArray;
+  fixedLocsColors: TKMCardinalArray;
   colorDist: Single;
   players: set of Byte;
   playersCnt, startLoc, rngPlayersTeam: Integer;
@@ -1678,7 +1684,10 @@ begin
 
   UpdateGameOptionsUI;
 
-  aiOnlyColors := gNetworking.MapInfo.AIOnlyLocsColors; // save it locally to avoid multiple calculations
+  if gNetworking.IsSave then
+    fixedLocsColors := gNetworking.SaveInfo.GameInfo.FixedLocsColors
+  else
+    fixedLocsColors := gNetworking.MapInfo.FixedLocsColors;
 
   firstUnused := True;
   for I := 1 to MAX_LOBBY_SLOTS do
@@ -1726,6 +1735,7 @@ begin
       DropBox_Loc[I].ItemIndex := 0;
       DropBox_Team[I].ItemIndex := 0;
       DropBox_Colors[I].ItemIndex := 0;
+      ResetDropColorRandom(I);
       Image_Ready[I].TexID := 0; //Hidden
       DropBox_Loc[I].Disable;
       DropBox_Team[I].Disable;
@@ -1830,7 +1840,7 @@ begin
 
       colorID := FindMPColor(curPlayer.FlagColor);
       // Reset color to random, in case our color was too close to AI only locs colors
-      if (colorID <> 0) and IsColorCloseToColors(MP_PLAYER_COLORS[colorID], aiOnlyColors, MIN_PLAYER_COLOR_DIST) then
+      if (colorID <> 0) and IsColorCloseToColors(MP_PLAYER_COLORS[colorID], fixedLocsColors, MIN_PLAYER_COLOR_DIST) then
         colorID := 0;
       
       if (gNetworking.SelectGameKind <> ngkMap)
@@ -1847,7 +1857,7 @@ begin
           if (K <> colorID) and (K <> 0)
           and (not gNetworking.NetPlayers.ColorAvailable(MP_PLAYER_COLORS[K])
                or ((gNetworking.SelectGameKind = ngkSave) and gNetworking.SaveInfo.GameInfo.ColorUsed(K))
-               or IsColorCloseToColors(MP_PLAYER_COLORS[K], aiOnlyColors, MIN_PLAYER_COLOR_DIST)) then // Disable for AIOnly locs color (close to them)
+               or IsColorCloseToColors(MP_PLAYER_COLORS[K], fixedLocsColors, MIN_PLAYER_COLOR_DIST)) then // Disable for AIOnly locs color (close to them)
             DropBox_Colors[I].List.Rows[K].Cells[0].Enabled := False
           else
           begin
@@ -1880,7 +1890,8 @@ begin
       DropBox_Colors[I].Enabled := (canEdit or (myNik and not curPlayer.ReadyToStart))
                                         and (not isSave or curPlayer.IsSpectator)
                                         and (    (gNetworking.SelectGameKind <> ngkMap)
-                                           or not gNetworking.MapInfo.TxtInfo.BlockColorSelection);
+                                           or not gNetworking.MapInfo.TxtInfo.BlockColorSelection
+                                           or curPlayer.IsSpectator);
       if myNik and not gNetworking.IsHost then
       begin
         if curPlayer.ReadyToStart then
@@ -2658,7 +2669,7 @@ begin
 
                   if M.HasReadme then
                   begin
-                    Memo_MapDesc.Height := Panel_SetupDesc.Height - 25;
+                    Memo_MapDesc.Height := Panel_SetupDesc.Height - 30;
                     Button_SetupReadme.Show;
                   end;
 
@@ -2984,8 +2995,12 @@ begin
   if gNetworking.IsHost then
   begin
     gNetworking.SelectSave(aSaveName);
+
     //Make sure the save was successfully selected
-    Radio_MapType.ItemIndex := DetectMapType;
+    if ((gNetworking.SelectGameKind = ngkMap) and gNetworking.MapInfo.IsValid)
+      or ((gNetworking.SelectGameKind = ngkSave) and gNetworking.SaveInfo.IsValid) then
+      Radio_MapType.ItemIndex := DetectMapType;
+
     if gNetworking.SelectGameKind = ngkSave then
       Lobby_OnMapName(aSaveName);
   end;
@@ -2995,8 +3010,8 @@ end;
 //Should update anything we want to be updated, obviously
 procedure TKMMenuLobby.UpdateState;
 begin
-  if fMapsMP <> nil then fMapsMP.UpdateState;
-  if fSavesMP <> nil then fSavesMP.UpdateState;
+  fMapsMP.UpdateState;
+  fSavesMP.UpdateState;
 
   if (fLastTimeResetBans <> 0) and (TimeSince(fLastTimeResetBans) > RESET_BANS_COOLDOWN) then
   begin

@@ -13,6 +13,9 @@ uses
   {$IFDEF FPC}
   Interfaces,
   {$ENDIF }
+  {$IFDEF WDC}
+    WinApi.Windows, // To allow to set {$SetPEFlags IMAGE_FILE_LARGE_ADDRESS_AWARE} for 3Gb or 4Gb RAM usage for Win32 Delphi app
+  {$ENDIF}
   Unit1 in 'Unit1.pas' {Form2},
   Unit_Runner in 'Unit_Runner.pas',
   Runner_Game in 'Runner_Game.pas',
@@ -22,6 +25,12 @@ uses
   GeneticAlgorithmParameters in 'GeneticAlgorithmParameters.pas';
 
 {$R *.res}
+
+{$IFDEF WDC}
+  // Enable usage of 3Gb or 4Gb of RAM for Win32 Delphi application
+  // https://docwiki.embarcadero.com/RADStudio/Alexandria/en/Increasing_the_Memory_Address_Space
+  {$SetPEFlags IMAGE_FILE_LARGE_ADDRESS_AWARE}
+{$ENDIF}
 
 procedure DebugLogString();
 var

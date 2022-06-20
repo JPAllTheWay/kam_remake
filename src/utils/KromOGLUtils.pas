@@ -83,18 +83,18 @@ begin
 
   if nPixelFormat = 0 then begin
     MessageBox(0, 'Unable to find a suitable pixel format', 'Error', MB_OK or MB_ICONERROR);
-    Result := false;
+    Result := False;
     Exit;
   end;
 
   //Even with known pixel format we still need to supply some PFD structure
   if not SetPixelFormat(h_DC, nPixelFormat, @pfd) then begin
     MessageBox(0, 'Unable to set the pixel format', 'Error', MB_OK or MB_ICONERROR);
-    Result := false;
+    Result := False;
     Exit;
   end;
 
-  Result := true;
+  Result := True;
   {$ENDIF}
   //glXChooseVisual() should be on Uni insted of ChoosePixelFormatx
 end;

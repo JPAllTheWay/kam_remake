@@ -21,6 +21,7 @@ type
     function _ClosestUnit(aHand, X, Y: Integer; aUnitType: TKMUnitType; out aSucceed: Boolean): Integer;
     function _ClosestUnitMultipleTypes(aHand, X, Y: Integer; aUnitTypes: TKMUnitTypeSet; out aSucceed: Boolean): Integer;
   public
+    function AAIAttackHouseTypesGet(aHand: Byte): TKMHouseTypeSet;
     function AIArmyType(aHand: Byte): TKMArmyType;
     function AIAutoAttack(aHand: Byte): Boolean;
     function AIAutoAttackRange(aHand: Byte): Integer;
@@ -39,6 +40,7 @@ type
     function AISerfsPerHouse(aHand: Byte): Single;
     function AISoldiersLimit(aHand: Byte): Integer;
     function AIStartPosition(aHand: Byte): TKMPoint;
+    function AIUnlimitedEquip(aHand: Byte): Boolean;
     function AIWorkerLimit(aHand: Byte): Integer;
 
     function CampaignMissionID: Integer;
@@ -81,11 +83,6 @@ type
     function GroupType(aGroupID: Integer): Integer;
     function GroupTypeEx(aGroupID: Integer): TKMGroupType;
 
-    function HandHouseCanBuild(aHand: Integer; aHouseType: TKMHouseType): Boolean;
-    function HandHouseLock(aHand: Integer; aHouseType: TKMHouseType): TKMHandHouseLock;
-    function HandUnitCanTrain(aHand: Integer; aUnitType: TKMUnitType): Boolean;
-    function HandWareDistribution(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType): Integer;
-
     function HouseAllowAllyToSelect(aHouseID: Integer): Boolean;
     function HouseAt(aX, aY: Integer): Integer;
     function HouseBarracksRallyPointX(aBarracks: Integer): Integer;
@@ -121,6 +118,7 @@ type
     function HouseTypeToOccupantType(aHouseType: Integer): Integer;
     function HouseTypeToWorkerType(aHouseType: TKMHouseType): TKMUnitType;
     function HouseUnlocked(aHand, aHouseType: Integer): Boolean;
+    function HouseWareAmount(aHouseID: Integer; aWare: TKMWareType): Integer;
     function HouseWareBlocked(aHouseID, aWareType: Integer): Boolean;
     function HouseWareBlockedEx(aHouseID: Integer; aWareType: TKMWareType): Boolean;
     function HouseWareBlockedTakeOut(aHouseID: Integer; aWareType: TKMWareType): Boolean;
@@ -201,13 +199,19 @@ type
     function PlayerColorText(aHand: Byte): AnsiString;
     function PlayerDefeated(aHand: Byte): Boolean;
     function PlayerEnabled(aHand: Byte): Boolean;
+    function PlayerHouseTypeCanBuild(aHand: Integer; aHouseType: TKMHouseType): Boolean;
+    function PlayerHouseTypeLock(aHand: Integer; aHouseType: TKMHouseType): TKMHandHouseLock;
     function PlayerGetAllUnits(aHand: Byte): TIntegerArray;
     function PlayerGetAllHouses(aHand: Byte): TIntegerArray;
     function PlayerGetAllGroups(aHand: Byte): TIntegerArray;
     function PlayerIsAI(aHand: Byte): Boolean;
+    function PlayerIsAdvancedAI(aHand: Byte): Boolean;
+    function PlayerIsClassicAI(aHand: Byte): Boolean;
     function PlayerName(aHand: Byte): AnsiString;
+    function PlayerUnitTypeCanTrain(aHand: Integer; aUnitType: TKMUnitType): Boolean;
     function PlayerVictorious(aHand: Byte): Boolean;
     function PlayerWareDistribution(aHand, aWareType, aHouseType: Byte): Byte;
+    function PlayerWareDistributionEx(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType): Integer;
 
     function StatAIDefencePositionsCount(aHand: Byte): Integer;
     function StatArmyCount(aHand: Byte): Integer;
@@ -275,12 +279,13 @@ type
 implementation
 uses
   TypInfo,
+  KM_Entity,
   KM_AI, KM_ArmyDefence, KM_AIDefensePos,
   KM_Game, KM_GameApp, KM_GameParams,
   KM_UnitsCollection, KM_UnitWarrior, KM_UnitTaskSelfTrain,
   KM_HouseBarracks, KM_HouseSchool, KM_HouseMarket, KM_HouseStore, KM_HouseTownHall,
   KM_Resource, KM_ResUnits,
-  KM_Hand,
+  KM_Hand, KM_HandEntity,
   KM_Terrain,
   KM_CommonUtils;
 
@@ -299,6 +304,28 @@ end;
 
 
 { TKMScriptStates }
+
+
+//* Version: 14600
+//* Gets set of house types, houses of which Advanced AI should attack
+//* aHand: HandID
+//* Returns empty set if wrong handId was passed
+function TKMScriptStates.AAIAttackHouseTypesGet(aHand: Byte): TKMHouseTypeSet;
+begin
+  try
+    Result := [];
+    if InRange(aHand, 0, gHands.Count - 1)
+      and gHands[aHand].Enabled
+      and gHands[aHand].AI.Setup.NewAI then
+      Result := gHands[aHand].AI.ArmyManagement.ArmyVectorFieldScanHouses
+    else
+      LogIntParamWarn('States.AAIAttackHouseTypesGet', [aHand]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
 
 //* Version: 7000+
 //* Gets AI army type
@@ -683,10 +710,27 @@ function TKMScriptStates.AIStartPosition(aHand: Byte): TKMPoint;
 begin
   Result := KMPOINT_INVALID_TILE;
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled) then
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
       Result := gHands[aHand].AI.Setup.StartPosition
     else
       LogIntParamWarn('States.AIStartPosition', [aHand]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Version: 14800
+//* Gets AI unlimited equip parameter or False if aHand parameter is not valid
+function TKMScriptStates.AIUnlimitedEquip(aHand: Byte): Boolean;
+begin
+  Result := False;
+  try
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
+      Result := gHands[aHand].AI.Setup.UnlimitedEquip
+    else
+      LogIntParamWarn('States.AIUnlimitedEquip', [aHand]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -701,7 +745,7 @@ function TKMScriptStates.AIWorkerLimit(aHand: Byte): Integer;
 begin
   Result := -1;
   try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled) then
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
       Result := gHands[aHand].AI.Setup.WorkerCount
     else
       LogIntParamWarn('States.AIWorkerLimit', [aHand]);
@@ -1427,7 +1471,7 @@ end;
 
 
 //* Version: 11000
-//* Return true if game speed change is allowed
+//* Return True if game speed change is allowed
 //* Result: Is game speed change allowed
 function TKMScriptStates.GameSpeedChangeAllowed: Boolean;
 begin
@@ -1470,7 +1514,7 @@ end;
 
 //* Version: 5057
 //* Check how player 1 feels towards player 2 (order matters).
-//* Returns true for ally, false for enemy
+//* Returns True for ally, False for enemy
 //* Result: Allied
 function TKMScriptStates.PlayerAllianceCheck(aHand1, aHand2: Byte): Boolean;
 begin
@@ -1741,6 +1785,29 @@ begin
 end;
 
 
+//* Version: 14600
+//* Returns the ware distribution for the specified resource, house and player
+//* Result: Ware distribution [0..5]
+function TKMScriptStates.PlayerWareDistributionEx(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType): Integer;
+begin
+  try
+    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+      and (aWareType in WARES_VALID)
+      and (aHouseType in HOUSES_VALID) then
+      Result := gHands[aHand].Stats.WareDistribution[aWareType, aHouseType]
+    else
+    begin
+      Result := 0;
+      LogParamWarn('States.PlayerWareDistributionEx', [aHand, GetEnumName(TypeInfo(TKMWareType), Integer(aWareType)),
+                                                              GetEnumName(TypeInfo(TKMHouseType), Integer(aHouseType))]);
+    end;
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
 //* Version: 5165
 //* Returns an array with IDs for all the units of the specified player
 //* Result: Array of unit IDs
@@ -1871,6 +1938,46 @@ begin
     begin
       Result := False;
       LogIntParamWarn('States.PlayerIsAI', [aHand]);
+    end;
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Version: 14600
+//* Wherever player is controlled by Advanced AI
+//* Result: Player is Advanced AI
+function TKMScriptStates.PlayerIsAdvancedAI(aHand: Byte): Boolean;
+begin
+  try
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
+      Result := gHands[aHand].IsAdvancedAI
+    else
+    begin
+      Result := False;
+      LogParamWarn('States.PlayerIsAdvancedAI', [aHand]);
+    end;
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Verson: 14600
+//* Wherever player is controlled by Classic AI
+//* Result: Player is Classic AI
+function TKMScriptStates.PlayerIsClassicAI(aHand: Byte): Boolean;
+begin
+    try
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled then
+      Result := gHands[aHand].IsClassicAI
+    else
+    begin
+      Result := False;
+      LogParamWarn('States.PlayerIsClassicAI', [aHand]);
     end;
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
@@ -2389,7 +2496,7 @@ end;
 
 
 //* Version: 5057
-//* Will be false if nobody selected that location in multiplayer
+//* Will be False if nobody selected that location in multiplayer
 //* Result: Enabled
 function TKMScriptStates.PlayerEnabled(aHand: Byte): Boolean;
 begin
@@ -2401,6 +2508,46 @@ begin
       Result := False;
       LogIntParamWarn('States.PlayerEnabled', [aHand]);
     end;
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Version: 14600
+//* Returns True if the specified player can build the specified house type
+//* Result: House can be build
+function TKMScriptStates.PlayerHouseTypeCanBuild(aHand: Integer; aHouseType: TKMHouseType): Boolean;
+begin
+  try
+    if InRange(aHand, 0, gHands.Count - 1) and gHands[aHand].Enabled
+    and (aHouseType in HOUSES_VALID) then
+      Result := gHands[aHand].Locks.HouseCanBuild(aHouseType)
+    else
+    begin
+      Result := False;
+      LogIntParamWarn('States.PlayerHouseTypeCanBuild', [aHand, Ord(aHouseType)]);
+    end;
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Version: 14600
+//* Returns player house type lock as enum value of TKMHandHouseLock = (hlDefault, hlBlocked, hlGranted)
+//* Result: Player house type lock
+function TKMScriptStates.PlayerHouseTypeLock(aHand: Integer; aHouseType: TKMHouseType): TKMHandHouseLock;
+begin
+  Result := hlNone;
+  try
+    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
+    and (aHouseType in HOUSES_VALID) then
+      Result := gHands[aHand].Locks.HouseLock[aHouseType]
+    else
+      LogIntParamWarn('States.PlayerHouseTypeLock', [aHand, Ord(aHouseType)]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -2430,50 +2577,10 @@ begin
 end;
 
 
-//* Version: 13900
-//* Returns true if the specified hand (player) can build the specified house type
-//* Result: House can build
-function TKMScriptStates.HandHouseCanBuild(aHand: Integer; aHouseType: TKMHouseType): Boolean;
-begin
-  try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-    and (aHouseType in HOUSES_VALID) then
-      Result := gHands[aHand].Locks.HouseCanBuild(aHouseType)
-    else
-    begin
-      Result := False;
-      LogIntParamWarn('States.HandHouseCanBuild', [aHand, Ord(aHouseType)]);
-    end;
-  except
-    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
-    raise;
-  end;
-end;
-
-
-//* Version: 13900
-//* Returns hand (player) house lock as enum value of TKMHandHouseLock = (hlDefault, hlBlocked, hlGranted)
-//* Result: Hand house lock
-function TKMScriptStates.HandHouseLock(aHand: Integer; aHouseType: TKMHouseType): TKMHandHouseLock;
-begin
-  Result := hlNone;
-  try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-    and (aHouseType in HOUSES_VALID) then
-      Result := gHands[aHand].Locks.HouseLock[aHouseType]
-    else
-      LogIntParamWarn('States.HandHouseLock', [aHand, Ord(aHouseType)]);
-  except
-    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
-    raise;
-  end;
-end;
-
-
-//* Version: 13900
-//* Returns true if the specified player can train/equip the specified unit type
-//* Result: Unit unlocked
-function TKMScriptStates.HandUnitCanTrain(aHand: Integer; aUnitType: TKMUnitType): Boolean;
+//* Version: 14600
+//* Returns True if the specified player can train / equip the specified unit type
+//* Result: Unit could be trained / equipped
+function TKMScriptStates.PlayerUnitTypeCanTrain(aHand: Integer; aUnitType: TKMUnitType): Boolean;
 begin
   try
     if InRange(aHand, 0, gHands.Count - 1)
@@ -2483,37 +2590,13 @@ begin
     else
     begin
       Result := False;
-      LogParamWarn('States.UnitUnlocked', [aHand, GetEnumName(TypeInfo(TKMUnitType), Integer(aUnitType))]);
+      LogParamWarn('States.PlayerUnitTypeCanTrain', [aHand, GetEnumName(TypeInfo(TKMUnitType), Integer(aUnitType))]);
     end;
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
   end;
 end;
-
-
-//* Version: 13900
-//* Returns the ware distribution for the specified resource, house and player
-//* Result: Ware distribution [0..5]
-function TKMScriptStates.HandWareDistribution(aHand: Integer; aWareType: TKMWareType; aHouseType: TKMHouseType): Integer;
-begin
-  try
-    if InRange(aHand, 0, gHands.Count - 1) and (gHands[aHand].Enabled)
-      and (aWareType in WARES_VALID)
-      and (aHouseType in HOUSES_VALID) then
-      Result := gHands[aHand].Stats.WareDistribution[aWareType, aHouseType]
-    else
-    begin
-      Result := 0;
-      LogParamWarn('States.PlayerWareDistributionEx', [aHand, GetEnumName(TypeInfo(TKMWareType), Integer(aWareType)),
-                                                                GetEnumName(TypeInfo(TKMHouseType), Integer(aHouseType))]);
-    end;
-  except
-    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
-    raise;
-  end;
-end;
-
 
 
 //* Version: 10940
@@ -2782,7 +2865,7 @@ end;
 
 
 //* Version: 5993
-//* Returns true if the specified house can reach the resources that it mines (coal, stone, fish, etc.)
+//* Returns True if the specified house can reach the resources that it mines (coal, stone, fish, etc.)
 //* Result: Reachable
 function TKMScriptStates.HouseCanReachResources(aHouseID: Integer): Boolean;
 var
@@ -2830,7 +2913,7 @@ end;
 
 
 //* Version: 5057
-//* Returns true if the specified house has delivery disabled
+//* Returns True if the specified house has delivery disabled
 //* Result: Blocked
 function TKMScriptStates.HouseDeliveryBlocked(aHouseID: Integer): Boolean;
 var
@@ -2879,7 +2962,7 @@ end;
 
 
 //* Version: 5057
-//* Returns true if the house is destroyed
+//* Returns True if the house is destroyed
 //* Result: Destroyed
 function TKMScriptStates.HouseDestroyed(aHouseID: Integer): Boolean;
 var
@@ -2905,7 +2988,7 @@ end;
 //* Version: 5057
 //* Status: Deprecated
 //* Replacement: HouseHasWorker
-//* Returns true if the specified house currently has a worker
+//* Returns True if the specified house currently has a worker
 //* Result: Has worker
 function TKMScriptStates.HouseHasOccupant(aHouseID: Integer): Boolean;
 var
@@ -2929,7 +3012,7 @@ end;
 
 
 //* Version: 13050
-//* Returns true if the specified house currently has a worker
+//* Returns True if the specified house currently has a worker
 //* Result: Has worker
 function TKMScriptStates.HouseHasWorker(aHouseID: Integer): Boolean;
 var
@@ -2953,7 +3036,7 @@ end;
 
 
 //* Version: 5345
-//* Returns true if the specified house is fully built
+//* Returns True if the specified house is fully built
 //* Result:
 function TKMScriptStates.HouseIsComplete(aHouseID: Integer): Boolean;
 var
@@ -3073,7 +3156,7 @@ end;
 
 
 //* Version: 5057
-//* Returns true if the specified house has repair enabled
+//* Returns True if the specified house has repair enabled
 //* Result: Repair enabled
 function TKMScriptStates.HouseRepair(aHouseID: Integer): Boolean;
 var
@@ -3098,7 +3181,7 @@ end;
 
 //* Version: 5057
 //* Returns the amount of the specified resource in the specified house
-//* Result: Number of resources
+//* Result: Number of resources or -1 if aHouseID is invalid
 function TKMScriptStates.HouseResourceAmount(aHouseID, aResource: Integer): Integer;
 var
   H: TKMHouse;
@@ -3115,6 +3198,30 @@ begin
     end
     else
       LogIntParamWarn('States.HouseResourceAmount', [aHouseID, aResource]);
+  except
+    gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
+    raise;
+  end;
+end;
+
+
+//* Version: 14800
+//* Returns the amount of the specified ware in the specified house
+//* Result: Number of wares or -1 if aHouseID is invalid
+function TKMScriptStates.HouseWareAmount(aHouseID: Integer; aWare: TKMWareType): Integer;
+var
+  H: TKMHouse;
+begin
+  try
+    Result := -1; //-1 if house id is invalid
+    if aHouseID > 0 then
+    begin
+      H := fIDCache.GetHouse(aHouseID);
+      if H <> nil then
+        Result := H.CheckResIn(aWare) + H.CheckResOut(aWare); //Count both in and out
+    end
+    else
+      LogParamWarn('States.HouseWareAmount', [aHouseID, GetEnumName(TypeInfo(TKMWareType), Integer(aWare))]);
   except
     gScriptEvents.ExceptionOutsideScript := True; //Don't blame script for this exception
     raise;
@@ -3150,7 +3257,7 @@ end;
 
 
 //* Version: 6510
-//* Returns true if specified WIP house area is digged
+//* Returns True if specified WIP house area is digged
 //* Result: Digged
 function TKMScriptStates.HouseSiteIsDigged(aHouseID: Integer): Boolean;
 var
@@ -3369,7 +3476,7 @@ end;
 
 
 //* Version: 6220
-//* Returns true if the specified player can build the specified house type (unlocked and allowed).
+//* Returns True if the specified player can build the specified house type (unlocked and allowed).
 //* Result: House unlocked
 function TKMScriptStates.HouseUnlocked(aHand, aHouseType: Integer): Boolean;
 begin
@@ -3390,7 +3497,7 @@ end;
 
 
 //* Version: 5099
-//* Returns true if the specified ware in the specified storehouse or barracks is blocked
+//* Returns True if the specified ware in the specified storehouse or barracks is blocked
 //* Result: Ware blocked
 function TKMScriptStates.HouseWareBlocked(aHouseID, aWareType: Integer): Boolean;
 var
@@ -3418,7 +3525,7 @@ end;
 
 
 //* Version: 13900
-//* Returns true if the specified ware in the specified storehouse or barracks is blocked
+//* Returns True if the specified ware in the specified storehouse or barracks is blocked
 //* Result: Ware blocked
 function TKMScriptStates.HouseWareBlockedEx(aHouseID: Integer; aWareType: TKMWareType): Boolean;
 var
@@ -3444,7 +3551,7 @@ end;
 
 
 //* Version: 13900
-//* Returns true if the specified ware in the specified storehouse or barracks is blocked for taking out (yellow triangle)
+//* Returns True if the specified ware in the specified storehouse or barracks is blocked for taking out (yellow triangle)
 //* Result: Ware blocked for taking out
 function TKMScriptStates.HouseWareBlockedTakeOut(aHouseID: Integer; aWareType: TKMWareType): Boolean;
 var
@@ -3532,7 +3639,7 @@ end;
 
 
 //* Version: 5099
-//* Returns true if the specified woodcutter's hut is on chop-only mode
+//* Returns True if the specified woodcutter's hut is on chop-only mode
 //* Result: Chop-only
 function TKMScriptStates.HouseWoodcutterChopOnly(aHouseID: Integer): Boolean;
 var
@@ -3603,8 +3710,8 @@ end;
 
 
 //* Version: 5345
-//* Returns true if the specified player has a corn field at the specified location.
-//* If player index is -1 it will return true if any player has a corn field at the specified tile
+//* Returns True if the specified player has a corn field at the specified location.
+//* If player index is -1 it will return True if any player has a corn field at the specified tile
 //* Result: Is field
 function TKMScriptStates.IsFieldAt(aHand: ShortInt; X, Y: Integer): Boolean;
 begin
@@ -3624,8 +3731,8 @@ end;
 
 
 //* Version: 5345
-//* Returns true if the specified player has a road at the specified location.
-//* If player index is -1 it will return true if any player has a road at the specified tile
+//* Returns True if the specified player has a road at the specified location.
+//* If player index is -1 it will return True if any player has a road at the specified tile
 //* Result: Is road
 function TKMScriptStates.IsRoadAt(aHand: ShortInt; X, Y: Integer): Boolean;
 begin
@@ -3645,8 +3752,8 @@ end;
 
 
 //* Version: 5345
-//* Returns true if the specified player has a winefield at the specified location.
-//* If player index is -1 it will return true if any player has a winefield at the specified tile
+//* Returns True if the specified player has a winefield at the specified location.
+//* If player index is -1 it will return True if any player has a winefield at the specified tile
 //* Result: Is winefield
 function TKMScriptStates.IsWinefieldAt(aHand: ShortInt; X, Y: Integer): Boolean;
 begin
@@ -3666,8 +3773,8 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if the specified player has a field plan of the specified type at the specified location.
-//* If aHand index is -1 it will return true if any player has plan of the specified type at the specified location.
+//* Returns True if the specified player has a field plan of the specified type at the specified location.
+//* If aHand index is -1 it will return True if any player has plan of the specified type at the specified location.
 //* If aFieldType is ftNone it will return if the specified player has a field plan of the any type (ftCorn, ftRoad, ftWine) at the specified location.
 //* If aHand index is -1 and aFieldType is ftNone it will return if any player has a field plan of the any type (ftCorn, ftRoad, ftWine) at the specified location.
 //* If Plan found then aHand will contain its player id and aFieldType its type
@@ -3734,8 +3841,8 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if the specified player has a field plan (ftCorn) at the specified location.
-//* If aHand index is -1 it will return true if any player has field plan at the specified location.
+//* Returns True if the specified player has a field plan (ftCorn) at the specified location.
+//* If aHand index is -1 it will return True if any player has field plan at the specified location.
 //* If Corn (Field) Plan found then aHand will contain its player id
 //* Result: Is field plan found
 function TKMScriptStates.IsFieldPlanAt(var aHand: Integer; X, Y: Integer): Boolean;
@@ -3777,8 +3884,8 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if the specified player has a house plan of the specified type at the specified location.
-//* If aHand index is -1 it will return true if any player has house plan of the specified type at the specified location.
+//* Returns True if the specified player has a house plan of the specified type at the specified location.
+//* If aHand index is -1 it will return True if any player has house plan of the specified type at the specified location.
 //* If aHouseType is htAny it will return if the specified player has a house plan of the any type at the specified location.
 //* If aHand index is -1 and aHouseType is htNone it will return if any player has a house plan of the any type at the specified location.
 //* If house plan found then after execution aHand will contain its player id and aHouseType its type
@@ -3845,8 +3952,8 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if the specified player has a field plan (ftRoad) at the specified location.
-//* If aHand index is -1 it will return true if any player has road plan at the specified location.
+//* Returns True if the specified player has a field plan (ftRoad) at the specified location.
+//* If aHand index is -1 it will return True if any player has road plan at the specified location.
 //* If Road plan found then aHand will contain its player id
 //* Result: Is road plan found
 function TKMScriptStates.IsRoadPlanAt(var aHand: Integer; X, Y: Integer): Boolean;
@@ -3888,8 +3995,8 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if the specified player has a field plan (ftWine) at the specified location.
-//* If aHand index is -1 it will return true if any player has winefield plan at the specified location.
+//* Returns True if the specified player has a field plan (ftWine) at the specified location.
+//* If aHand index is -1 it will return True if any player has winefield plan at the specified location.
 //* If Winefield Plan found then aHand will contain its player id
 //* Result: Is winefield plan found
 function TKMScriptStates.IsWinefieldPlanAt(var aHand: Integer; X, Y: Integer): Boolean;
@@ -4297,7 +4404,7 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if specified tile has requested passability.
+//* Returns True if specified tile has requested passability.
 //* aPassability: passability index as listed in KM_Defaults (starts from 0)
 //* Result: True or False
 function TKMScriptStates.MapTilePassability(X, Y: Integer; aPassability: Byte): Boolean;
@@ -4319,7 +4426,7 @@ end;
 
 
 //* Version: 13900
-//* Returns true if specified tile has requested passability.
+//* Returns True if specified tile has requested passability.
 //* aPassability: TKMTerrainPassability
 //* Result: True or False
 function TKMScriptStates.MapTilePassabilityEx(X, Y: Integer; aPassability: TKMTerrainPassability): Boolean;
@@ -4958,7 +5065,7 @@ end;
 
 
 //* Version: 5057
-//* Returns true if the unit is dead
+//* Returns True if the unit is dead
 //* Result: Dead
 function TKMScriptStates.UnitDead(aUnitID: Integer): Boolean;
 var
@@ -5218,7 +5325,7 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if specified warrior is in fight
+//* Returns True if specified warrior is in fight
 //* aCountCitizens: including fights with citizens
 //* Result: InFight
 function TKMScriptStates.WarriorInFight(aUnitID: Integer; aCountCitizens: Boolean): Boolean;
@@ -5292,7 +5399,7 @@ end;
 
 //* Version: 7000+
 //* See if unit is invulnerable
-//* Result: true or false
+//* Result: True or False
 function TKMScriptStates.UnitHPInvulnerable(aUnitID: Integer): Boolean;
 var
   U: TKMUnit;
@@ -5419,7 +5526,7 @@ end;
 
 
 //* Version: 6523
-//* Returns true if specified unit is idle (has no orders/action)
+//* Returns True if specified unit is idle (has no orders/action)
 //* Result: Idle
 function TKMScriptStates.UnitIdle(aUnitID: Integer): Boolean;
 var
@@ -5518,7 +5625,7 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if target Group is assigned to the Defence Position at coordinates X, Y
+//* Returns True if target Group is assigned to the Defence Position at coordinates X, Y
 //* if X = -1, or Y = -1, then those coordinates does not used to filter defence position
 //* Result: Group assigned to Defence position
 function TKMScriptStates.GroupAssignedToDefencePosition(aGroupID, X, Y: Integer): Boolean;
@@ -5613,7 +5720,7 @@ end;
 
 
 //* Version: 5057
-//* Returns true if the group is dead (all members dead or joined other groups)
+//* Returns True if the group is dead (all members dead or joined other groups)
 //* Result: Dead
 function TKMScriptStates.GroupDead(aGroupID: Integer): Boolean;
 var
@@ -5637,7 +5744,7 @@ end;
 
 
 //* Version: 6523
-//* Returns true if specified group is idle (has no orders/action)
+//* Returns True if specified group is idle (has no orders/action)
 //* Result: Idle
 function TKMScriptStates.GroupIdle(aGroupID: Integer): Boolean;
 var
@@ -5661,7 +5768,7 @@ end;
 
 
 //* Version: 7000+
-//* Returns true if specified group is in fight
+//* Returns True if specified group is in fight
 //* aCountCitizens: including fights with citizens
 //* Result: InFight
 function TKMScriptStates.GroupInFight(aGroupID: Integer; aCountCitizens: Boolean): Boolean;
@@ -5758,7 +5865,7 @@ end;
 
 
 //* Version: 11200
-//* Returns the manual formation parameter of the specified group (false for new group, true if player changed formation manually at least once)
+//* Returns the manual formation parameter of the specified group (False for new group, True if player changed formation manually at least once)
 //* Result: manual formation
 function TKMScriptStates.GroupManualFormation(aGroupID: Integer): Boolean;
 var

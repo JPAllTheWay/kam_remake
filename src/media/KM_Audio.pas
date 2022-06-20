@@ -19,8 +19,8 @@ class procedure TKMAudio.PauseMusicToPlayFile(const aFileName: UnicodeString);
 begin
   if not FileExists(aFileName) then Exit;
 
-  gSoundPlayer.AbortAllFadeSounds; //Victory/defeat sounds also fade music, so stop those in the rare chance they might still be playing
-  gMusic.PauseToPlayFile(aFileName, gGameSettings.SoundFXVolume);
+  gSoundPlayer.AbortAllFadeSounds; // Victory/defeat sounds also fade music, so stop those in the rare chance they might still be playing
+  gMusic.PauseToPlayFile(aFileName, gGameSettings.SFX.SoundFXVolume);
 end;
 
 

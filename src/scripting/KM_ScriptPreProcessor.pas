@@ -30,7 +30,8 @@ type
     procedure AfterPreProcess;
     procedure BeforePreProcess(const aMainFileName: UnicodeString; const aMainFileText: AnsiString);
 
-    function ScriptOnNeedFile(Sender: TPSPreProcessor; const aCallingFileName: AnsiString; var aFileName, aOutput: AnsiString): Boolean;
+    function ScriptOnNeedFile(Sender: TPSPreProcessor; const aCallingFileName: UnicodeString;
+                              var aFileName: UnicodeString; var aOutput: AnsiString): Boolean;
     procedure ScriptOnProcessDirective(Sender: TPSPreProcessor; Parser: TPSPascalPreProcessorParser; const Active: Boolean;
                                         const DirectiveName, DirectiveParam: tbtString; var aContinue: Boolean);
   protected
@@ -178,7 +179,7 @@ begin
 
   mainScriptCode := ReadTextA(aFileName);
 
-  fPSPreProcessor.MainFileName := AnsiString(aFileName);
+  fPSPreProcessor.MainFileName := aFileName;
   fPSPreProcessor.MainFile := mainScriptCode;
   BeforePreProcess(aFileName, mainScriptCode);
   try
@@ -205,7 +206,7 @@ begin
 end;
 
 
-// Returns true if we will handle directive
+// Returns True if we will handle directive
 function TKMScriptPreProcessor.TryLoadCustomEventDirectives(const aDirectiveName, aDirectiveParam: string; aParser: TPSPascalPreProcessorParser): Boolean;
 const
   CUSTOM_EVENT_DIRECTIVE = 'EVENT';
@@ -214,7 +215,7 @@ begin
 end;
 
 
-// Returns true if we will handle directive
+// Returns True if we will handle directive
 function TKMScriptPreProcessor.TryLoadCustomConsoleCommands(const aDirectiveName, aDirectiveParam: string; aParser: TPSPascalPreProcessorParser): Boolean;
 const
   CUSTOM_CONSOLE_COMMAND_DIRECTIVE = 'COMMAND';
@@ -402,10 +403,11 @@ begin
 end;
 
 
-function TKMScriptPreProcessor.ScriptOnNeedFile(Sender: TPSPreProcessor; const aCallingFileName: AnsiString; var aFileName, aOutput: AnsiString): Boolean;
+function TKMScriptPreProcessor.ScriptOnNeedFile(Sender: TPSPreProcessor; const aCallingFileName: UnicodeString;
+                                                var aFileName: UnicodeString; var aOutput: AnsiString): Boolean;
 var
   path, fileName, fileExt, errorStr: string;
-  inclFile: AnsiString;
+  inclFile: string;
   includedScriptFileInfo: TKMScriptFileInfo;
   isCmpScript: Boolean;
 begin
@@ -419,7 +421,7 @@ begin
   // But if main script folder contains other B.script, then it should be used instead of Scripts/B.script
   path := fScriptFilesInfo.MainFilePath;
 
-  inclFile := AnsiString(Trim(aFileName));
+  inclFile := Trim(aFileName);
 
   fileName := path + inclFile;
 
@@ -458,17 +460,17 @@ begin
     raise Exception.Create(errorStr); // We should raise Exception here, to stop Including process by PascalScript
   end;
 
-  aFileName := AnsiString(fileName);
+  aFileName := fileName;
 
   // If file not found in the main script folder and main script is from campaign mission (checked via folder path),
   // then we should try to find this script in the 'Scripts' folder inside campaign main folder
   if isCmpScript and not FileExists(aFileName) then
   begin
-    fileName := AnsiString(path) + '..' + PathDelim + CAMPAIGN_SCRIPTS_FOLDER_NAME + PathDelim + inclFile;
+    fileName := path + '..' + PathDelim + CAMPAIGN_SCRIPTS_FOLDER_NAME + PathDelim + inclFile;
 
     // If not found, then set aFileName to an initial name
     if FileExists(fileName) then
-      aFileName := AnsiString(fileName);
+      aFileName := fileName;
   end;
 
   if FileExists(aFileName) then

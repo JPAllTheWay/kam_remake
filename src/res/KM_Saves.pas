@@ -180,7 +180,7 @@ var
 begin
   if not FileExists(fPath + fFileName + EXT_SAVE_MAIN_DOT) then
   begin
-    fSaveError.ErrorString := 'File not exists';
+    fSaveError.ErrorString := gResTexts[TX_SAVE_SAVE_FILE_NOT_EXISTS];
     fSaveError.ErrorType := sietFileNotExist;
     Exit;
   end;
@@ -451,7 +451,7 @@ begin
   Lock;
   try
     Assert(InRange(aIndex, 0, fCount-1));
-    KMDeleteFolder(fSaves[aIndex].Path);
+    KMDeleteFolderToBin(fSaves[aIndex].Path);
     fSaves[aIndex].Free;
     for I := aIndex to fCount - 2 do
       fSaves[I] := fSaves[I+1]; //Move them down
@@ -589,13 +589,14 @@ end;
 
 procedure TKMSavesCollection.UpdateState;
 begin
-  if fUpdateNeeded then
-  begin
-    if Assigned(fOnRefresh) then
-      fOnRefresh(Self);
+  if Self = nil then Exit;
 
-    fUpdateNeeded := False;
-  end;
+  if not fUpdateNeeded then Exit;
+
+  if Assigned(fOnRefresh) then
+    fOnRefresh(Self);
+
+  fUpdateNeeded := False;
 end;
 
 
@@ -668,7 +669,7 @@ begin
     fSaves[fCount] := aSave;
     Inc(fCount);
 
-    //Set the scanning to false so we could Sort
+    //Set the scanning to False so we could Sort
     fScanning := False;
 
     //Keep the saves sorted

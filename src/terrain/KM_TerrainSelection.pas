@@ -136,7 +136,7 @@ end;
 
 procedure TKMSelection.Resize;
 var
-  RectO: TKMRect;
+  RectO, rectOld: TKMRect;
   CursorFloat: TKMPointF;
   CursorCell: TKMPoint;
   MoveX, MoveY: Integer;
@@ -146,6 +146,8 @@ begin
   CursorFloat.Y := EnsureRange(gCursor.Float.Y, 0.1, gTerrain.MapY-1 - 0.1);
   CursorCell.X := EnsureRange(gCursor.Cell.X, 1, gTerrain.MapX-1);
   CursorCell.Y := EnsureRange(gCursor.Cell.Y, 1, gTerrain.MapY-1);
+
+  rectOld := KMRectGrow(fSelectionRect, 2);
 
   case fSelectionEdit of
     seNone:       ;
@@ -177,6 +179,8 @@ begin
   begin
     DuplicateLandToTemp;
     CopyBufferToTempLand;
+    // Update everything on old selection rect to fix old tempLand
+    gTerrain.UpdateAll(rectOld);
   end;
 end;
 
@@ -349,11 +353,10 @@ begin
   // todo: optimise copying process
   for I := 1 to gTerrain.MapY do
     for K := 1 to gTerrain.MapX do
+    begin
       fLandTemp[I,K] := gTerrain.MainLand^[I,K];
-
-  for I := 1 to gTerrain.MapY do
-    for K := 1 to gTerrain.MapX do
       fLandMapEdTemp[I,K] := gGame.MapEditor.MainLandMapEd^[I,K];
+    end;
 
   for I := 0 to gTerrain.MapY do
     fLandTerKindTemp[I] := Copy(gGame.TerrainPainter.MainLandTerKind[I], 0, gTerrain.MapX);
@@ -528,8 +531,7 @@ begin
 
   DuplicateLandToTemp;
 
-  gTerrain.UpdateFences;
-  gTerrain.UpdateLighting;
+  gTerrain.UpdateAll;
 end;
 
 
@@ -559,6 +561,8 @@ procedure TKMSelection.Flip(aAxis: TKMFlipAxis);
       tmpHeight := gTerrain.Land^[aY1,aX1].Height;
       gTerrain.Land^[aY1,aX1].Height := gTerrain.Land^[aY2,aX2].Height;
       gTerrain.Land^[aY2,aX2].Height := tmpHeight;
+      gTerrain.UpdateRenderHeight(aX1, aY1);
+      gTerrain.UpdateRenderHeight(aX2, aY2);
     end;
 
   var
@@ -809,6 +813,7 @@ begin
     for K := SX downto 1 do
       FixTerrain(fSelectionRect.Left + K, fSelectionRect.Top + I);
 
+  gTerrain.UpdateRenderHeight(fSelectionRect);
   gTerrain.UpdateLighting(fSelectionRect);
   // Grow rect by 1, cause of possible Tree's on the edges, which could affect passability
   gTerrain.UpdatePassability(KMRectGrow(fSelectionRect, 1));
@@ -890,7 +895,6 @@ begin
 end;
 
 
-
 procedure TKMSelection.CopyBufferToTempLand(aUpdateMainLand: Boolean = False; aUpdateAll: Boolean = True);
 var
   I, K: Integer;
@@ -931,14 +935,15 @@ begin
           else
             fLandTemp[Ly,Lx].Height := fSelectionBuffer[I,K].Height;
         end;
+
+        gTerrain.UpdateRenderHeight(Lx, Ly);
       end;
     end;
 
   if aUpdateAll then
   begin
     updateRect := KMRectGrow(fSelectionRect, 2); // 2 - just in case
-    gTerrain.UpdateFences(updateRect);
-    gTerrain.UpdateLighting(updateRect);
+    gTerrain.UpdateAll(updateRect);
   end;
 end;
 

@@ -88,7 +88,7 @@ begin
     Map_PasteType[PT] := TKMButtonFlat.Create(Panel_Selection, 17 + 50 * Ord(PT), 150, 34, 34, PAST_TYPE_RX_INDEX[PT], rxGui);
     Map_PasteType[PT].OnClick := SelectionClick;
     Map_PasteType[PT].Hint := gResTexts[PAST_TYPE_HINT[PT]];
-    Map_PasteType[PT].Down := true;
+    Map_PasteType[PT].Down := True;
   end;
 
   Button_SelectFlipH := TKMButton.Create(Panel_Selection, 9, 210, Panel_Selection.Width - 9, 20, gResTexts[TX_MAPED_COPY_PASTE_HFLIP], bsGame);

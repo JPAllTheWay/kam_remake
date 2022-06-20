@@ -253,29 +253,29 @@ begin
 
   if Key = gResKeys[kfMusicVolumeUp] then
   begin
-    gGameSettings.MusicVolume := gGameSettings.MusicVolume + 1 / OPT_SLIDER_MAX;
-    gMusic.Volume := gGameSettings.MusicVolume;
+    gGameSettings.SFX.MusicVolume := gGameSettings.SFX.MusicVolume + 1 / OPT_SLIDER_MAX;
+    gMusic.Volume := gGameSettings.SFX.MusicVolume;
     aHandled := True;
   end;
 
   if Key = gResKeys[kfMusicVolumeDown] then
   begin
-    gGameSettings.MusicVolume := gGameSettings.MusicVolume - 1 / OPT_SLIDER_MAX;
-    gMusic.Volume := gGameSettings.MusicVolume;
+    gGameSettings.SFX.MusicVolume := gGameSettings.SFX.MusicVolume - 1 / OPT_SLIDER_MAX;
+    gMusic.Volume := gGameSettings.SFX.MusicVolume;
     aHandled := True;
   end;
 
   if Key = gResKeys[kfSoundVolumeUp] then
   begin
-    gGameSettings.SoundFXVolume := gGameSettings.SoundFXVolume + 1 / OPT_SLIDER_MAX;
-    gSoundPlayer.UpdateSoundVolume(gGameSettings.SoundFXVolume);
+    gGameSettings.SFX.SoundFXVolume := gGameSettings.SFX.SoundFXVolume + 1 / OPT_SLIDER_MAX;
+    gSoundPlayer.UpdateSoundVolume(gGameSettings.SFX.SoundFXVolume);
     aHandled := True;
   end;
 
   if Key = gResKeys[kfSoundVolumeDown] then
   begin
-    gGameSettings.SoundFXVolume := gGameSettings.SoundFXVolume - 1 / OPT_SLIDER_MAX;
-    gSoundPlayer.UpdateSoundVolume(gGameSettings.SoundFXVolume);
+    gGameSettings.SFX.SoundFXVolume := gGameSettings.SFX.SoundFXVolume - 1 / OPT_SLIDER_MAX;
+    gSoundPlayer.UpdateSoundVolume(gGameSettings.SFX.SoundFXVolume);
     aHandled := True;
   end;
 end;
@@ -301,29 +301,29 @@ begin
 
   if Key = gResKeys[kfMusicDisable] then
   begin
-    gGameSettings.MusicOff := not gGameSettings.MusicOff;
-    gMusic.ToggleEnabled(not gGameSettings.MusicOff);
+    gGameSettings.SFX.MusicEnabled := not gGameSettings.SFX.MusicEnabled;
+    gMusic.ToggleEnabled(gGameSettings.SFX.MusicEnabled);
     aHandled := True;
   end;
 
   if Key = gResKeys[kfMusicShuffle] then
   begin
-    gGameSettings.ShuffleOn := not gGameSettings.ShuffleOn;
-    gMusic.ToggleShuffle(gGameSettings.ShuffleOn);
+    gGameSettings.SFX.ShuffleOn := not gGameSettings.SFX.ShuffleOn;
+    gMusic.ToggleShuffle(gGameSettings.SFX.ShuffleOn);
     aHandled := True;
   end;
 
   if Key = gResKeys[kfMusicMute] then
   begin
     gMusic.ToggleMuted;
-    gGameSettings.MusicVolume := gMusic.Volume;
+    gGameSettings.SFX.MusicVolume := gMusic.Volume;
     aHandled := True;
   end;
 
   if Key = gResKeys[kfSoundMute] then
   begin
     gSoundPlayer.ToggleMuted;
-    gGameSettings.SoundFXVolume := gSoundPlayer.Volume;
+    gGameSettings.SFX.SoundFXVolume := gSoundPlayer.Volume;
     aHandled := True;
   end;
 
@@ -333,8 +333,8 @@ begin
 
     gSoundPlayer.Muted := not mutedAll;
     gMusic.Muted := not mutedAll;
-    gGameSettings.SoundFXVolume := gSoundPlayer.Volume;
-    gGameSettings.MusicVolume := gMusic.Volume;
+    gGameSettings.SFX.SoundFXVolume := gSoundPlayer.Volume;
+    gGameSettings.SFX.MusicVolume := gMusic.Volume;
     aHandled := True;
   end;
 end;

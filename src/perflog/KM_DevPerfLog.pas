@@ -4,6 +4,7 @@ interface
 uses
   Classes, Math, StrUtils, SysUtils,
   Forms, Controls,
+  KM_CommonTypes,
   KM_DevPerfLogSingle, KM_DevPerfLogStack, KM_DevPerfLogTypes;
 
 
@@ -19,6 +20,8 @@ type
     function GetItem(aSection: TPerfSectionDev): TKMPerfLogSingle;
     function GetStackCPU: TKMPerfLogStackCPU;
     function GetStackGFX: TKMPerfLogStackGFX;
+
+    procedure SetOnFormChanged(const aValue: TEvent);
 
     procedure SectionEnter(aSection: TPerfSectionDev; aTick: Integer; aTag: Integer = 0); overload;
   public
@@ -46,7 +49,9 @@ type
 
     procedure Render(aLeft, aWidth, aHeight: Integer);
     procedure SaveToFile(const aFilename: string; aSaveThreshold: Integer = 10);
+
     procedure ShowForm(aContainer: TWinControl);
+    property OnFormChanged: TEvent write SetOnFormChanged;
     function FormHeight: Integer;
 
     procedure TickBegin(aTick: Integer);
@@ -63,7 +68,7 @@ var
 implementation
 uses
   KM_DevPerfLogForm,
-  TypInfo, KM_Defaults, KM_CommonTypes, KM_RenderUI, KM_RenderAux, KM_ResFonts;
+  TypInfo, KM_Defaults, KM_RenderUI, KM_RenderAux, KM_ResFonts;
 
 
 { TKMPerfLogs }
@@ -192,6 +197,12 @@ begin
     fStackCPU.SectionRollback(aSection)
   else
     fStackGFX.SectionRollback(aSection);
+end;
+
+
+procedure TKMPerfLogs.SetOnFormChanged(const aValue: Tevent);
+begin
+  TFormPerfLogs(fPerfLogForm).OnFormChanged := aValue;
 end;
 
 

@@ -422,13 +422,13 @@ begin
 
 // DEBUG (COLUMN 3)
   {$IFDEF DEBUG_RMG}
-    Check_Decomposition := TKMCheckBox.Create(Panel_Settings, Column_X, NextLine(Column_Y,40), BOX_X, BOX_Y, 'Decomposition', fntMetal);
+    Check_Decomposition := TKMCheckBox.Create(panelSettings, columnX, NextLine(columnY,40), BOX_X, BOX_Y, 'Decomposition', fntMetal);
     Check_Decomposition.Checked := fRMG.RMGSettings.Decomposition;
     Check_Decomposition.Enabled := not aMP;
-    Check_BasicTiles := TKMCheckBox.Create(Panel_Settings, Column_X, NextLine(Column_Y,40), BOX_X, BOX_Y, 'Basic tiles', fntMetal);
+    Check_BasicTiles := TKMCheckBox.Create(panelSettings, columnX, NextLine(columnY,40), BOX_X, BOX_Y, 'Basic tiles', fntMetal);
     Check_BasicTiles.Checked := fRMG.RMGSettings.BasicTiles;
     Check_BasicTiles.Enabled := not aMP;
-    Check_CA := TKMCheckBox.Create(Panel_Settings, Column_X, NextLine(Column_Y), BOX_X, BOX_Y, 'Cellular automaton', fntMetal);
+    Check_CA := TKMCheckBox.Create(panelSettings, columnX, NextLine(columnY), BOX_X, BOX_Y, 'Cellular automaton', fntMetal);
     Check_CA.Checked := fRMG.RMGSettings.CA;
     Check_CA.Enabled := not aMP;
   {$ENDIF}
@@ -719,7 +719,7 @@ begin
   if fMPLobby AND (gGame = nil) then
   begin
     // Create fake game
-    gGame := TKMGame.Create(gmMapEd, nil, nil, nil, nil, nil);
+    gGame := TKMGame.Create(gmMapEd, nil, nil, nil, nil, nil, nil);
     try
       mapX := 192;
       mapY := 192;

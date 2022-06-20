@@ -134,7 +134,7 @@ function TKMWareSpec.GetGUIColor: Cardinal;
 const
   //Resources colors for Results charts
   //Made by naospor from kamclub.ru
-  WareColor: array [WARE_MIN..WARE_MAX] of Cardinal = (
+  WARE_COLOR: array [WARE_MIN..WARE_MAX] of Cardinal = (
     $004080, $BFBFBF, $0080BF, $BF4040, $00FFFF,
     $606060, $BF0000, $00BFFF, $000080, $80FFFF,
     $80BFFF, $FFFFFF, $4040BF, $0000FF, $0040BF,
@@ -142,7 +142,7 @@ const
     $FF0040, $00FF40, $FFFF40, $FF0080, $FFFF80,
     $101080, $0080FF, $FFBF00);
 begin
-  Result := WareColor[fType];
+  Result := WARE_COLOR[fType];
 end;
 
 

@@ -4,21 +4,21 @@ uses
   KM_CommonClasses;
 
 type
+  // Units-Houses tracker, to issue unique IDs
   TKMGameUIDTracker = class
   private
     fUIDTracker: Integer;
   public
     constructor Create;
-    destructor Destroy; override;
 
-    constructor Load(LoadStream: TKMemoryStream);
+    procedure Load(LoadStream: TKMemoryStream);
     procedure Save(SaveStream: TKMemoryStream);
 
     function GetNewUID: Integer;
   end;
 
 var
-  gGameUIDTracker: TKMGameUIDTracker;
+  gUIDTracker: TKMGameUIDTracker;
 
 
 implementation
@@ -30,31 +30,19 @@ begin
   inherited;
 
   fUIDTracker := 0;
-
-  gGameUIDTracker := Self;
 end;
 
 
-destructor TKMGameUIDTracker.Destroy;
+procedure TKMGameUIDTracker.Load(LoadStream: TKMemoryStream);
 begin
-  gGameUIDTracker := nil;
-
-  inherited;
-end;
-
-
-constructor TKMGameUIDTracker.Load(LoadStream: TKMemoryStream);
-begin
-  inherited Create;
-
+  LoadStream.CheckMarker('UIDTracker');
   LoadStream.Read(fUIDTracker);
-
-//  gGameUIDTracker := Self;
 end;
 
 
 procedure TKMGameUIDTracker.Save(SaveStream: TKMemoryStream);
 begin
+  SaveStream.PlaceMarker('UIDTracker');
   SaveStream.Write(fUIDTracker);
 end;
 

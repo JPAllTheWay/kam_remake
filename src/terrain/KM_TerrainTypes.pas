@@ -123,10 +123,10 @@ type
 
     function HasLayers: Boolean;
     function HasNoLayers: Boolean;
-    function RenderHeight: Byte; inline;
+    function GetRenderHeight: Byte; inline;
     procedure SetHeightExact(aValue: Byte);
     procedure IncJamMeter(aValue: Integer);
-    function RenderLight: Single;
+    function GetRenderLight: Single;
     function GetBasic: TKMTerrainTileBasic;
   end;
 
@@ -144,9 +144,17 @@ type
 
   TKMTerrainTileBriefArray = array of TKMTerrainTileBrief;
 
+  TKMTerrainTileExt = record
+    RenderLight: Single;
+    RenderHeight: Byte;
+  end;
+
   TKMLand = array [1..MAX_MAP_SIZE, 1..MAX_MAP_SIZE] of TKMTerrainTile;
 
   PKMLand = ^TKMLand;
+
+  TKMLandExt = array [1..MAX_MAP_SIZE, 1..MAX_MAP_SIZE] of TKMTerrainTileExt;
+  PKMLandExt = ^TKMLandExt;
 
   TKMTerrainSelectionPasteType = (ptTerrain, ptHeight, ptObject, ptOverlay);
 
@@ -296,7 +304,7 @@ begin
 end;
 
 
-function TKMTerrainTile.RenderHeight: Byte;
+function TKMTerrainTile.GetRenderHeight: Byte;
 begin
   if mlFlatTerrain in gGameParams.VisibleLayers then
     Result := HEIGHT_DEFAULT
@@ -323,7 +331,7 @@ end;
 
 
 // Returns Light in -1..1 range
-function TKMTerrainTile.RenderLight: Single;
+function TKMTerrainTile.GetRenderLight: Single;
 begin
   Result := Light / 127.5 - 1;
 end;

@@ -36,12 +36,12 @@ type
     fScripting: TKMScripting;
     fOnDestroy: TEvent;
 
-    fIsExiting: Boolean; //Set this to true on Exit and unit/house pointers will be released without cross-checking
+    fIsExiting: Boolean; //Set this to True on Exit and unit/house pointers will be released without cross-checking
     fIsPaused: Boolean;
     fSpeedActual: Single; //Actual speedup value, used to play the game
     fSpeedMultiplier: Word; //How many ticks are compressed into one
     fWaitingForNetwork: Boolean; //Indicates that we are waiting for other players commands in MP
-    fAdvanceFrame: Boolean; //Replay variable to advance 1 frame, afterwards set to false
+    fAdvanceFrame: Boolean; //Replay variable to advance 1 frame, afterwards set to False
     fLockedMutex: Boolean;
     fIgnoreConsistencyCheckErrors: Boolean; // User can ignore all consistency check errors while watching SP replay
 
@@ -60,8 +60,6 @@ type
     fCampaignName: TKMCampaignId;  //Is this a game part of some campaign
     fSpeedGIP: Single; //GameSpeed, recorded to GIP, could be requested by scripts
     fSpeedChangeAllowed: Boolean; //Is game speed change allowed?
-
-    fUIDTracker: TKMGameUIDTracker;       //Units-Houses tracker, to issue unique IDs
 
     //Saved to local data
     fLastReplayTickLocal: Cardinal; // stored / loaded in the .sloc file, if available
@@ -98,6 +96,10 @@ type
     fSaveWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for normal saves and save at the end of PT
     fBaseSaveWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for base save only
     fAutoSaveWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for autosaves only
+    fSavePointWorkerThreadHolder: TKMWorkerThreadHolder; // Worker thread for savepoints only
+
+    fMapEdMapSaveStarted: TEvent;
+    fMapEdMapSaveEnded: TEvent;
 
     procedure IssueAutosaveCommand(aAfterPT: Boolean);
     function FindHandToSpec: Integer;
@@ -113,6 +115,8 @@ type
     procedure GameMPDisconnect(const aData: UnicodeString);
     procedure OtherPlayerDisconnected(aDefeatedPlayerHandId: Integer);
     function GetActiveHandIDs: TKMByteSet;
+
+    procedure VisibleLayersWereSet;
 
     procedure RecalcMapCRC;
 
@@ -136,9 +140,11 @@ type
     function DoRenderGame: Boolean;
 
     procedure MultiplayerRig(aNewGame: Boolean);
+
+    procedure PrepareSaveFolder(const aPathName: String; aSaveByPlayer: Boolean; aSaveWorkerThread: TKMWorkerThread);
     procedure SaveGameToStream(aTimestamp: TDateTime; aSaveStream: TKMemoryStream); overload;
     procedure SaveGameToStream(aTimestamp: TDateTime; aHeaderStream, aBodyStream: TKMemoryStream); overload;
-    procedure SaveGameToFile(const aPathName: String; aSaveWorkerThread: TKMWorkerThread; aTimestamp: TDateTime; const aMPLocalDataPathName: String = '');
+    procedure SaveGameToFile(const aPathName: String; aSaveByPlayer: Boolean; aSaveWorkerThread: TKMWorkerThread; aTimestamp: TDateTime; const aMPLocalDataPathName: String = '');
 
     function PlayGameTick: Boolean;
     function PlayReplayTick: Boolean;
@@ -152,10 +158,11 @@ type
     StartedFromMapEditor: Boolean;    // True if we start game from map editor ('Quick Play')
     StartedFromMapEdAsMPMap: Boolean; // True if we start game from map editor ('Quick Play') with MP map
 
-    constructor Create(aGameMode: TKMGameMode; aRender: TRender; aOnDestroy: TEvent;
+    constructor Create(aGameMode: TKMGameMode; aRender: TKMRender; aOnDestroy: TEvent;
                        aSaveWorkerThreadHolder,
                        aBaseSaveWorkerThreadHolder,
-                       aAutoSaveWorkerThreadHolder: TKMWorkerThreadHolder);
+                       aAutoSaveWorkerThreadHolder,
+                       aSavePointWorkerThreadHolder: TKMWorkerThreadHolder);
     destructor Destroy; override;
 
     procedure Start(const aMissionFullFilePath, aName: UnicodeString; aFullCRC, aSimpleCRC: Cardinal; aCampaign: TKMCampaign;
@@ -173,6 +180,8 @@ type
     procedure Save(const aSaveName: UnicodeString; aTimestamp: TDateTime); overload;
     procedure Save(const aSaveName: UnicodeString; aTimestamp: TDateTime; aSaveWorkerThread: TKMWorkerThread); overload;
     procedure SaveAndWait(const aSaveName: UnicodeString);
+    procedure WaitForSaveToBeDone;
+    procedure WaitForAllSavesToBeDone;
 
     procedure AutoSave(aTimestamp: TDateTime);
     procedure AutoSaveAfterPT(aTimestamp: TDateTime);
@@ -217,7 +226,7 @@ type
     procedure DebugControlsUpdated(Sender: TObject; aSenderTag: Integer);
 
     property MapTxtInfo: TKMMapTxtInfo read fMapTxtInfo;
-    procedure ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal; aHandIndex: TKMHandID);
+    procedure ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer; aHandIndex: TKMHandID);
     procedure ShowMessageLocal(aKind: TKMMessageKind; const aText: UnicodeString; const aLoc: TKMPoint);
 
     procedure OverlayUpdate;
@@ -254,7 +263,6 @@ type
 
     property LockedMutex: Boolean read fLockedMutex write fLockedMutex;
 
-    function GetNewUID: Integer;
     function GetNormalSpeed: Single;
     function GetToggledNormalSpeed: Single;
     procedure StepOneFrame;
@@ -294,7 +302,7 @@ type
     procedure ReplayInconsistency(aCommand: TKMStoredGIPCommand; aMyRand: Cardinal);
     procedure SaveCampaignScriptData(SaveStream: TKMemoryStream);
 
-    procedure Render(aRender: TRender);
+    procedure Render(aRender: TKMRender);
     procedure UpdateGame;
     procedure UpdateState(aGlobalTickCount: Cardinal);
     procedure UpdateStateIdle(aFrameTime: Cardinal);
@@ -337,10 +345,11 @@ const
 //Create template for the Game
 //aRender - who will be rendering the Game session
 //aNetworking - access to MP stuff
-constructor TKMGame.Create(aGameMode: TKMGameMode; aRender: TRender; aOnDestroy: TEvent;
+constructor TKMGame.Create(aGameMode: TKMGameMode; aRender: TKMRender; aOnDestroy: TEvent;
                            aSaveWorkerThreadHolder,
                            aBaseSaveWorkerThreadHolder,
-                           aAutoSaveWorkerThreadHolder: TKMWorkerThreadHolder);
+                           aAutoSaveWorkerThreadHolder,
+                           aSavePointWorkerThreadHolder: TKMWorkerThreadHolder);
 const
   UIMode: array[TKMGameMode] of TUIMode = (umSP, umSP, umMP, umSpectate, umSP, umReplay, umReplay);
 begin
@@ -350,16 +359,18 @@ begin
   if gMain <> nil then
     gMain.FormMain.SuppressAltForMenu := True;
 
-  fParams := TKMGameParams.Create(aGameMode, RecalcMapCRC, fSetGameTickEvent, fSetGameTickFracEvent, fSetGameModeEvent, fSetMissionFileSP, fSetBlockPointer);
+  fParams := TKMGameParams.Create(aGameMode, RecalcMapCRC, VisibleLayersWereSet, fSetGameTickEvent, fSetGameTickFracEvent,
+                                  fSetGameModeEvent, fSetMissionFileSP, fSetBlockPointer);
 
   fSaveWorkerThreadHolder := aSaveWorkerThreadHolder;
   fBaseSaveWorkerThreadHolder := aBaseSaveWorkerThreadHolder;
   fAutoSaveWorkerThreadHolder := aAutoSaveWorkerThreadHolder;
+  fSavePointWorkerThreadHolder := aSavePointWorkerThreadHolder;
 
   fOnDestroy := aOnDestroy;
 
   fAdvanceFrame := False;
-  fUIDTracker   := TKMGameUIDTracker.Create;
+  gUIDTracker := TKMGameUIDTracker.Create;
   GameResult   := grCancel;
   fDoHold    := False;
   fSkipReplayEndCheck := False;
@@ -396,7 +407,7 @@ begin
   begin
     if fParams.IsMapEditor then
     begin
-      fMapEditorInterface := TKMMapEdInterface.Create(aRender);
+      fMapEditorInterface := TKMMapEdInterface.Create(aRender, fMapEdMapSaveStarted, fMapEdMapSaveEnded);
       fActiveInterface := fMapEditorInterface;
     end
     else
@@ -487,7 +498,7 @@ begin
     FreeAndNil(fGameInputProcess);
 
   FreeAndNil(fOptions);
-  FreeAndNil(fUIDTracker);
+  FreeAndNil(gUIDTracker);
   FreeAndNil(fTextMission);
 
   //When leaving the game we should always reset the cursor in case the user had beacon or linking selected
@@ -714,13 +725,15 @@ begin
                 begin
                   fGameInputProcess := TKMGameInputProcess_Multi.Create(gipRecording);
                   fTextMission := TKMTextLibraryMulti.Create;
-                  fTextMission.LoadLocale(ChangeFileExt(aMissionFullFilePath, '.%s.libx'));
+                  // Make a full scan for Libx top ID, to allow unordered Libx ID's by not carefull mapmakers
+                  fTextMission.LoadLocale(ChangeFileExt(aMissionFullFilePath, '.%s.libx'), True);
                 end;
       gmSingle, gmCampaign:
                 begin
                   fGameInputProcess := TKMGameInputProcess_Single.Create(gipRecording);
                   fTextMission := TKMTextLibraryMulti.Create;
-                  fTextMission.LoadLocale(ChangeFileExt(aMissionFullFilePath, '.%s.libx'));
+                  // Make a full scan for Libx top ID, to allow unordered Libx ID's by not carefull mapmakers
+                  fTextMission.LoadLocale(ChangeFileExt(aMissionFullFilePath, '.%s.libx'), True);
                 end;
       gmMapEd:  ;
     end;
@@ -760,9 +773,9 @@ begin
   //Basesave is sort of temp we save to HDD instead of keeping in RAM
   if fParams.Mode in [gmSingle, gmCampaign, gmMulti, gmMultiSpectate] then
     {$IFDEF PARALLEL_RUNNER}
-      SaveGameToFile(SaveName('basesave_thread_'+IntToStr(THREAD_NUMBER), EXT_SAVE_BASE, fParams.IsMultiplayerOrSpec), fBaseSaveWorkerThreadHolder.Worker, UTCNow);
+      SaveGameToFile(SaveName('basesave_thread_' + IntToStr(THREAD_NUMBER), EXT_SAVE_BASE, fParams.IsMultiplayerOrSpec), False, fBaseSaveWorkerThreadHolder.Worker, UTCNow);
     {$ELSE}
-      SaveGameToFile(SaveName('basesave', EXT_SAVE_BASE, fParams.IsMultiplayerOrSpec), fBaseSaveWorkerThreadHolder.Worker, UTCNow);
+      SaveGameToFile(SaveName(BASESAVE_NAME, EXT_SAVE_BASE, fParams.IsMultiplayerOrSpec), False, fBaseSaveWorkerThreadHolder.Worker, UTCNow);
     {$ENDIF}
 
   if fParams.IsMapEditor then
@@ -1321,7 +1334,7 @@ end;
 
 procedure TKMGame.RequestHold(Msg: TKMGameResultMsg);
 begin
-  fDoHold := true;
+  fDoHold := True;
   fDoHoldState := Msg;
 end;
 
@@ -1345,7 +1358,7 @@ begin
     Exit;
 
   if (aHandIndex = gMySpectator.HandID)
-    and not gGameSettings.VideoOn then // Don't play victory sound if videos are on
+  and not gGameSettings.Video.Enabled then // Don't play victory sound if videos are on
     gSoundPlayer.Play(sfxnVictory, 1, True); //Fade music
 
   if fParams.IsMultiplayerGame then
@@ -1378,7 +1391,7 @@ procedure TKMGame.PlayerDefeat(aPlayerIndex: TKMHandID; aShowDefeatMessage: Bool
 
   procedure PlayDefeatSound;
   begin
-    if not gGameSettings.VideoOn then // Don't play defeat sound if videos are on
+    if not gGameSettings.Video.Enabled then // Don't play defeat sound if videos are on
       gSoundPlayer.Play(sfxnDefeat, 1, True); //Fade music
   end;
 
@@ -1507,7 +1520,7 @@ end;
 
 procedure TKMGame.AutoSaveAfterPT(aTimestamp: TDateTime);
 begin
-  Save('autosave_after_pt_end', aTimestamp);
+  Save(AUTOSAVE_AFTER_PT_END_SAVE_NAME, aTimestamp);
 end;
 
 
@@ -1568,6 +1581,9 @@ var
   oldSimpleCRC, oldFullCRC: Cardinal;
 begin
   if aPathName = '' then Exit;
+
+  if Assigned(fMapEdMapSaveStarted) then
+    fMapEdMapSaveStarted;
 
   // Store old values, cause they will be updated after save
   oldSimpleCRC := fParams.MapSimpleCRC;
@@ -1657,10 +1673,13 @@ begin
   gHands.AddPlayers(MAX_HANDS - gHands.Count);
   for I := 0 to gHands.Count - 1 do
     gHands[I].FogOfWar.RevealEverything;
+
+  if Assigned(fMapEdMapSaveEnded) then
+    fMapEdMapSaveEnded;
 end;
 
 
-procedure TKMGame.Render(aRender: TRender);
+procedure TKMGame.Render(aRender: TKMRender);
 var
   tickLag: Single;
 begin
@@ -1668,8 +1687,8 @@ begin
   gPerfLogs.SectionEnter(psFrameFullC);
   {$ENDIF}
   try
-    //How far in the past should we render? (0.0=Current tick, 1.0=Previous tick)
-    if gGameSettings.InterpolatedRender then
+    // How far in the past should we render? (0.0=Current tick, 1.0=Previous tick)
+    if gGameSettings.GFX.InterpolatedRender then
     begin
       tickLag := TimeSince(fLastUpdateState) / gMain.GameTickInterval;
       tickLag := 1.0 - tickLag;
@@ -1821,7 +1840,7 @@ begin
 end;
 
 
-procedure TKMGame.ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal; aHandIndex: TKMHandID);
+procedure TKMGame.ShowMessage(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer; aHandIndex: TKMHandID);
 begin
   //Once you have lost no messages can be received
   if gHands[aHandIndex].AI.HasLost then Exit;
@@ -1882,7 +1901,7 @@ begin
 
     // Update text to show
     gHands[I].OverlayText := TextMission.ParseTextMarkup(UnicodeString(gHands[I].OverlayMarkup),
-                                                            gHands[I].OverlayParams.ToVarRecArray);
+                                                         gHands[I].OverlayParams.ToVarRecArray);
   end;
 
   OverlayUpdate;
@@ -1934,12 +1953,6 @@ begin
     gSoundPlayer.Play(sfxnPeacetime, 1, True); //Fades music
     gScriptEvents.ProcPeacetimeEnd;
   end;
-end;
-
-
-function TKMGame.GetNewUID: Integer;
-begin
-  Result := fUIDTracker.GetNewUID;
 end;
 
 
@@ -2184,7 +2197,7 @@ var
   sizeToAllocate: Cardinal;
   isMulti: Boolean;
 begin
-  gameInfo := TKMGameInfo.Create;
+  gameInfo := TKMGameInfo.Create(fMapTxtInfo);
 
   // Pre-allocate memory for save stream, could save up to 25% of save time
   // Even if we make a bad guess, Stream will reallocate more by itself, if needed
@@ -2210,8 +2223,6 @@ begin
     gameInfo.MissionDifficulty := fParams.MissionDifficulty;
     gameInfo.MapSizeX := gTerrain.MapX;
     gameInfo.MapSizeY := gTerrain.MapY;
-    gameInfo.TxtInfo := fMapTxtInfo;
-    gameInfo.MapTxtInfoNasToBeFreed := False; // Don't Free MapTxtInfo object in gameInfo, its used by our game
     gameInfo.PlayerCount := gHands.Count;
     for I := 0 to gHands.Count - 1 do
     begin
@@ -2219,17 +2230,22 @@ begin
       begin
         gameInfo.Enabled[I] := False;
         gameInfo.CanBeHuman[I] := False;
+        gameInfo.CanBeClassicAI[I] := False;
+        gameInfo.CanBeAdvancedAI[I] := False;
         gameInfo.OwnerNickname[I] := '';
         gameInfo.HandTypes[I] := hndHuman;
         gameInfo.Color[I] := 0;
         gameInfo.Team[I] := 0;
-      end else
+      end
+      else
       begin
         netIndex := gNetworking.NetPlayers.PlayerIndexToLocal(I);
         if netIndex <> -1 then
         begin
           gameInfo.Enabled[I] := True;
           gameInfo.CanBeHuman[I] := gNetworking.NetPlayers[netIndex].IsHuman;
+          gameInfo.CanBeClassicAI[I] := gNetworking.NetPlayers[netIndex].IsClassicComputer;
+          gameInfo.CanBeAdvancedAI[I] := gNetworking.NetPlayers[netIndex].IsAdvancedComputer;
           gameInfo.OwnerNickname[I] := gNetworking.NetPlayers[netIndex].Nickname;
           gameInfo.HandTypes[I] := gNetworking.NetPlayers[netIndex].GetPlayerType;
           gameInfo.Color[I] := gNetworking.NetPlayers[netIndex].FlagColor;
@@ -2239,6 +2255,8 @@ begin
         begin
           gameInfo.Enabled[I] := gHands[I].Enabled;
           gameInfo.CanBeHuman[I] := gHands[I].IsHuman;
+          gameInfo.CanBeClassicAI[I] := aitClassic in gHands[I].CanBeAITypes;
+          gameInfo.CanBeAdvancedAI[I] := aitAdvanced in gHands[I].CanBeAITypes;
           gameInfo.OwnerNickname[I] := gHands[I].OwnerNickname; //MP nickname, not translated OwnerName
           gameInfo.HandTypes[I] := gHands[I].HandType;
           gameInfo.Color[I] := gHands[I].FlagColor;
@@ -2248,6 +2266,7 @@ begin
     end;
 
     gameInfo.Save(aHeaderStream); // Saved to header stream (uncompressed)
+    gameInfo.TxtInfo := nil; // Don't Free MapTxtInfo object in gameInfo, its used by our game
   finally
     FreeAndNil(gameInfo);
   end;
@@ -2279,7 +2298,7 @@ begin
   if not isMulti then
     aBodyStream.WriteW(fParams.MissionFileRelSP);
 
-  fUIDTracker.Save(aBodyStream); //Units-Houses ID tracker
+  gUIDTracker.Save(aBodyStream); //Units-Houses ID tracker
   aBodyStream.Write(GetKaMSeed); //Include the random seed in the save file to ensure consistency in replays
 
   if not isMulti then
@@ -2337,45 +2356,63 @@ begin
 end;
 
 
-//Saves the game in all its glory
-procedure TKMGame.SaveGameToFile(const aPathName: String; aSaveWorkerThread: TKMWorkerThread; aTimestamp: TDateTime;
-                                 const aMPLocalDataPathName: String = '');
+procedure TKMGame.PrepareSaveFolder(const aPathName: String; aSaveByPlayer: Boolean; aSaveWorkerThread: TKMWorkerThread);
 var
-  mainStream, headerStream, bodyStream, saveStreamTxt: TKMemoryStream;
-  gameMPLocalData: TKMGameMPLocalData;
+  path: string;
 begin
-  if BLOCK_SAVE then Exit; // This must be here because of paraller Runner
-
-  gLog.AddTime(Format('Saving game at tick %d to ''%s''', [fParams.Tick, aPathName]));
-
-  Assert(not fParams.IsMapEditor and (ALLOW_SAVE_IN_REPLAY or not fParams.IsReplay), 'Saving from wrong state');
-
-  saveStreamTxt := nil;
-  if DoSaveGameAsText then
-    saveStreamTxt := TKMemoryStreamText.Create;
-
-  mainStream := TKMemoryStreamBinary.Create(False); // Not compressed
-  headerStream := TKMemoryStreamBinary.Create(False); // Not compressed
-  bodyStream := TKMemoryStreamBinary.Create(True);    // Compressed
-
-  SaveGameToStream(aTimestamp, headerStream, bodyStream);
-
+  path := aPathName;
   //Makes the folders in case they were deleted.
   //Should do before save Minimap file for MP game
   if (aPathName <> '') then
   begin
     // We can make directories in async too, since all save parts are made in async now
     aSaveWorkerThread.QueueWork(procedure
-    var
-      path: string;
     begin
-      path := ExtractFilePath(aPathName);
+      path := ExtractFilePath(path);
       if DirectoryExists(path) then
-        KMDeleteFolderContent(path) // Delete save folder content, since we want to overwrite old saves
+      begin
+        // Delete save folder content, since we want to overwrite old saves
+        if aSaveByPlayer then
+        begin
+          // Delete whole folder to the bin
+          // It looks better have one folder in the bin, than many files
+          KMDeleteFolderToBin(path);
+          ForceDirectories(path);
+        end
+        else
+          // Delete all files
+          KMDeleteFolderContent(path);
+      end
       else
         ForceDirectories(path);
     end, 'Prepare save dir');
   end;
+end;
+
+
+//Saves the game in all its glory
+procedure TKMGame.SaveGameToFile(const aPathName: String; aSaveByPlayer: Boolean; aSaveWorkerThread: TKMWorkerThread;
+                                 aTimestamp: TDateTime; const aMPLocalDataPathName: String = '');
+var
+  mainStream, headerStream, bodyStream, saveStreamTxt: TKMemoryStream;
+  gameMPLocalData: TKMGameMPLocalData;
+begin
+  if BLOCK_SAVE then Exit; // This must be here because of paraller Runner
+
+  // We have to wait until basesave is made before first game save
+  fBaseSaveWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
+
+  gLog.AddTime(Format('Saving game at tick %d to ''%s''', [fParams.Tick, aPathName]));
+
+  Assert(not fParams.IsMapEditor and (ALLOW_SAVE_IN_REPLAY or not fParams.IsReplay), 'Saving from wrong state');
+
+  PrepareSaveFolder(aPathName, aSaveByPlayer, aSaveWorkerThread);
+
+  mainStream    := TKMemoryStreamBinary.Create(False); // Not compressed
+  headerStream  := TKMemoryStreamBinary.Create(False); // Not compressed
+  bodyStream    := TKMemoryStreamBinary.Create(True);  // Compressed
+
+  SaveGameToStream(aTimestamp, headerStream, bodyStream);
 
   //In MP each player has his own perspective, hence we dont save minimaps in the main save file to avoid cheating,
   //but save minimap in separate file with local game data
@@ -2399,11 +2436,29 @@ begin
 
   mainStream.Write(True); // Save is compressed
   TKMemoryStream.AsyncSaveStreamsToFileAndFree(mainStream, headerStream, bodyStream, aPathName, SAVE_HEADER_MARKER, SAVE_BODY_MARKER, aSaveWorkerThread);
+
+  // Save .sav.txt file
   if DoSaveGameAsText then
   begin
+    saveStreamTxt := TKMemoryStreamText.Create;
     SaveGameToStream(aTimestamp, saveStreamTxt);
     TKMemoryStream.AsyncSaveToFileAndFree(saveStreamTxt, aPathName + EXT_SAVE_TXT_DOT, aSaveWorkerThread);
   end;
+end;
+
+
+procedure TKMGame.WaitForSaveToBeDone;
+begin
+  fSaveWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
+end;
+
+
+procedure TKMGame.WaitForAllSavesToBeDone;
+begin
+  fSaveWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
+  fBaseSaveWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
+  fAutoSaveWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
+  fSavePointWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
 end;
 
 
@@ -2434,16 +2489,17 @@ procedure TKMGame.Save(const aSaveName: UnicodeString; aTimestamp: TDateTime; aS
 var
   I, index: Integer;
   fullPath, rngPath, mpLocalDataPath, newSaveName, loadFrom: UnicodeString;
+  saveByPlayer: Boolean;
 begin
   {$IFDEF PERFLOG}
   gPerfLogs.SectionEnter(psGameSaveWait);
   {$ENDIF}
   try
-    if (aSaveWorkerThread <> fBaseSaveWorkerThreadHolder.Worker) then
-      // We have to wait until basesave is made before first game save
-      fBaseSaveWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
-
-    //Wait for previous save async tasks to complete before proceeding
+    // Wait for previous save async tasks to complete before proceeding
+    // We don't really need to wait here, since worker will wait automatically anyway in his queue
+    // But if saves are made too often (f.e. on a very high game speed)
+    // then waiting here will force worker to finish all of his previous jobs in his queue,
+    // which is better than waiting a lot of time at the 'final save'
     aSaveWorkerThread.WaitForAllWorkToComplete;
   finally
     {$IFDEF PERFLOG}
@@ -2455,11 +2511,21 @@ begin
   gPerfLogs.SectionEnter(psGameSave);
   {$ENDIF}
   try
+    // Emulate slow save in the async save thread
+    if SLOW_GAME_SAVE_ASYNC then
+      aSaveWorkerThread.QueueWork(procedure
+        begin
+          Sleep(10000);
+        end,
+        'Slow Game Save'
+      );
+
     //Convert name to full path+name
     fullPath := SaveName(aSaveName, EXT_SAVE_MAIN, fParams.IsMultiplayer);
     mpLocalDataPath := SaveName(aSaveName, EXT_SAVE_MP_LOCAL, fParams.IsMultiplayer);
 
-    SaveGameToFile(fullPath, aSaveWorkerThread, aTimestamp, mpLocalDataPath);
+    saveByPlayer := (aSaveName <> AUTOSAVE_SAVE_NAME) and (aSaveName <> AUTOSAVE_AFTER_PT_END_SAVE_NAME);
+    SaveGameToFile(fullPath, saveByPlayer, aSaveWorkerThread, aTimestamp, mpLocalDataPath);
 
     if not fParams.IsMultiPlayerOrSpec then
       // Update GameSettings for saved positions in lists of saves and replays
@@ -2489,7 +2555,12 @@ begin
 
     // Save checkpoints
     if gGameSettings.SaveCheckpoints and not SKIP_SAVE_SAVPTS_TO_FILE then
+    begin
+      // Wait till all of the savepoints will be created
+      fSavePointWorkerThreadHolder.Worker.WaitForAllWorkToComplete;
+      // We can save savepoints by our savepoints worker, since we save to the different file anyway
       fSavePoints.SaveToFileAsync(ChangeFileExt(fullPath, EXT_SAVE_GAME_SAVEPTS_DOT), aSaveWorkerThread);
+    end;
 
     if DoSaveRandomChecks then
       try
@@ -2570,8 +2641,9 @@ begin
       fSetGameTickEvent(gameInfo.TickCount);
       fParams.MissionMode := gameInfo.MissionMode;
       fParams.MissionDifficulty := gameInfo.MissionDifficulty;
+      fMapTxtInfo.Free; // Free previously create gGame's fMapTxtInfo, which was created in TKMGame.Create
       fMapTxtInfo := gameInfo.TxtInfo;
-      gameInfo.MapTxtInfoNasToBeFreed := False; // Don't Free MapTxtInfo object in gameInfo, its used by our game now
+      gameInfo.TxtInfo := nil; // Don't Free MapTxtInfo object in gameInfo, its used by our game
     finally
       FreeAndNil(gameInfo);
     end;
@@ -2634,7 +2706,7 @@ begin
       fSetMissionFileSP(missionFileSP);
     end;
 
-    fUIDTracker.Load(bodyStream);
+    gUIDTracker.Load(bodyStream);
     bodyStream.Read(loadedSeed);
 
     if not saveIsMultiplayer then
@@ -2719,6 +2791,10 @@ begin
 
   gLog.AddTime('Loading game from: ' + aPathName);
 
+  // We should wait for the all of save workers to complete their jobs until we load a next save.
+  // Otherwise we could end up loading some corrupted save data if saving is not done yet and we load in the middle of the save process
+  WaitForAllSavesToBeDone;
+
   loadStream := TKMemoryStreamBinary.Create;
   try
     if not FileExists(aPathName) then
@@ -2769,7 +2845,7 @@ end;
 
 procedure TKMGame.LoadSavePoint(aTick: Cardinal; const aSaveFile: UnicodeString);
 var
-  loadStream: TKMemoryStream;
+  spStream, decompStream: TKMemoryStream;
   lastReplayTick: Cardinal;
   skipReplayEndCheck: Boolean;
 begin
@@ -2781,9 +2857,16 @@ begin
     lastReplayTick := fLastReplayTickLocal;
     skipReplayEndCheck := fSkipReplayEndCheck;
 
-    loadStream := TKMemoryStreamBinary(fSavePoints[aTick]);
-    loadStream.Position := 0;
-    LoadFromStream(loadStream);
+    spStream := TKMemoryStreamBinary(fSavePoints[aTick]);
+    spStream.Position := 0;
+
+    decompStream := TKMemoryStreamBinary.Create;
+    try
+      decompStream.LoadFromStreamCompressed(spStream);
+      LoadFromStream(decompStream);
+    finally
+      decompStream.Free;
+    end;
 
     // Restore game (replay) parameters, that are shared among all game savepoints
     gGame.LastReplayTickLocal := lastReplayTick;
@@ -2810,7 +2893,7 @@ begin
     saveStream := TKMemoryStreamBinary.Create;
     SaveGameToStream(0, saveStream); // Date is not important
 
-    fSavePoints.NewSavePoint(saveStream, fParams.Tick);
+    fSavePoints.NewSavePointAsyncAndFree(saveStream, fParams.Tick, fSavePointWorkerThreadHolder.Worker);
   finally
     {$IFDEF PERFLOG}
     gPerfLogs.SectionLeave(psGameSavePoint);
@@ -2841,7 +2924,7 @@ begin
 
   if fParams.Mode in [gmSingle, gmCampaign, gmMulti, gmMultiSpectate] then
   begin
-    DeleteFile(SaveName('basesave', EXT_SAVE_BASE, fParams.IsMultiPlayerOrSpec));
+    KMDeleteFile(SaveName('basesave', EXT_SAVE_BASE, fParams.IsMultiPlayerOrSpec));
     ForceDirectories(SavePath('basesave', fParams.IsMultiPlayerOrSpec)); //basesave directory could not exist at this moment, if this is the first game ever, f.e.
     KMCopyFile(ChangeFileExt(ExeDir + fLoadFromFileRel, EXT_SAVE_BASE_DOT), SaveName('basesave', EXT_SAVE_BASE, fParams.IsMultiPlayerOrSpec));
   end;
@@ -2895,7 +2978,7 @@ var
   calculatedTick: Single;
   timeS: Cardinal;
 begin
-  if Self = nil then Exit(0);
+  if (Self = nil) or (fParams = nil) then Exit(0);
 
   //Lets calculate tick, that shoud be at that moment in theory, depending of speed multiplier and game duration
   timeS := TimeSince(fSpeedChangeTime);
@@ -3308,6 +3391,7 @@ begin
                             {$ENDIF}
                             gTerrain.IncAnimStep;
                             gHands.IncAnimStep;
+                            gHands.PlayerAnimals.UpdateVisualState;
                             gHands.UpdateVisualState;
                             {$IFDEF PERFLOG}
                             gPerfLogs.TickEnd;
@@ -3363,6 +3447,12 @@ end;
 procedure TKMGame.UserAction(aActionType: TKMUserActionType);
 begin
   fLastTimeUserAction := Max(fLastTimeUserAction, TimeGet);
+end;
+
+
+procedure TKMGame.VisibleLayersWereSet;
+begin
+  gTerrain.UpdateRenderHeight;
 end;
 
 

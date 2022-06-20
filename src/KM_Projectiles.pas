@@ -56,9 +56,11 @@ var
 implementation
 uses
   Math, KromUtils,
+  KM_Entity,
   KM_Terrain, KM_RenderAux,
   KM_Resource, KM_ResSound, KM_ResUnits,
-  KM_Hand, KM_HandsCollection, KM_Sound,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Sound,
   KM_CommonUtils, KM_Defaults;
 
 
@@ -457,7 +459,7 @@ begin
   inherited;
 
   for I := 0 to Length(fItems) - 1 do
-    fItems[I].fOwner := gHands.GetUnitByUID(Cardinal(fItems[I].fOwner));
+    fItems[I].fOwner := gHands.GetUnitByUID(Integer(fItems[I].fOwner));
 end;
 
 

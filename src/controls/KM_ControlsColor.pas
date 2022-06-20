@@ -50,7 +50,7 @@ begin
   fColumnCount  := aColumnCount;
   fRowCount     := aRowCount;
   fCellSize     := aSize;
-  fInclRandom   := false;
+  fInclRandom   := False;
   fColorIndex   := -1;
 
   Width  := fColumnCount * fCellSize;

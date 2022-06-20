@@ -2,9 +2,8 @@ unit KM_HouseTownHall;
 {$I KaM_Remake.inc}
 interface
 uses
-  KM_Houses,
-
   KM_CommonClasses, KM_Defaults,
+  KM_Houses,
   KM_ResTypes;
 
 const
@@ -19,26 +18,29 @@ type
     function GetTHUnitOrderIndex(aUnitType: TKMUnitType): Integer;
     procedure SetGoldCnt(aValue: Word); overload;
     procedure SetGoldCnt(aValue: Word; aLimitMaxGoldCnt: Boolean); overload;
-    procedure UpdateDemands;
+
 
     procedure SetGoldMaxCnt(aValue: Word);
 
     function GetGoldDeliveryCnt: Word;
     procedure SetGoldDeliveryCnt(aCount: Word);
 
+    function GetGoldDemandsClosing: Word;
+    procedure SetGoldDemandsClosing(aCount: Word);
+
     property GoldDeliveryCnt: Word read GetGoldDeliveryCnt write SetGoldDeliveryCnt;
+    property GoldDemandsClosing: Word read GetGoldDemandsClosing write SetGoldDemandsClosing;
   protected
     function GetFlagPointTexId: Word; override;
     procedure AddDemandsOnActivate(aWasBuilt: Boolean); override;
     function GetResIn(aI: Byte): Word; override;
     procedure SetResIn(aI: Byte; aValue: Word); override;
+
+    function TryDecResourceDelivery(aWare: TKMWareType; aDeleteCanceled: Boolean): Boolean; override;
   public
     constructor Create(aUID: Integer; aHouseType: TKMHouseType; PosX, PosY: Integer; aOwner: TKMHandID; aBuildState: TKMHouseBuildState);
     constructor Load(LoadStream: TKMemoryStream); override;
     procedure Save(SaveStream: TKMemoryStream); override;
-
-
-    procedure DecResourceDelivery(aWare: TKMWareType); override;
 
     property GoldCnt: Word read fGoldCnt write SetGoldCnt;
     property GoldMaxCnt: Word read fGoldMaxCnt write SetGoldMaxCnt;
@@ -49,6 +51,7 @@ type
     function CanEquip(aUnitType: TKMUnitType): Boolean;
 
     procedure PostLoadMission; override;
+    procedure UpdateDemands; override;
 
     procedure ResTake(aWare: TKMWareType; aCount: Word = 1; aFromScript: Boolean = False); override;
     procedure ResAddToIn(aWare: TKMWareType; aCount: Integer = 1; aFromScript: Boolean = False); override;
@@ -63,24 +66,25 @@ type
 implementation
 uses
   Math,
-  KM_Hand, KM_HandsCollection, KM_HandLogistics,
+  KM_Hand, KM_HandsCollection, KM_HandLogistics, KM_HandTypes, KM_HandEntity,
   KM_UnitWarrior, KM_ResUnits, KM_ScriptingEvents,
   KM_InterfaceGame;
 
-{TKMHouseTownHall}
+
+{ TKMHouseTownHall }
 constructor TKMHouseTownHall.Create(aUID: Integer; aHouseType: TKMHouseType; PosX, PosY: Integer; aOwner: TKMHandID; aBuildState: TKMHouseBuildState);
 var
   I, M: Integer;
 begin
-  inherited;
-  
   M := MAX_WARES_IN_HOUSE;
   //Get max troop cost and set GoldMaxCnt to it
   for I := Low(TH_TROOP_COST) to High(TH_TROOP_COST) do
-    if TH_TROOP_COST[I] > M then 
+    if TH_TROOP_COST[I] > M then
       M := TH_TROOP_COST[I];
   fGoldCnt := 0;
   fGoldMaxCnt := M;
+
+  inherited;
 end;
 
 
@@ -125,9 +129,15 @@ begin
 end;
 
 
-procedure TKMHouseTownHall.DecResourceDelivery(aWare: TKMWareType);
+function TKMHouseTownHall.TryDecResourceDelivery(aWare: TKMWareType; aDeleteCanceled: Boolean): Boolean;
 begin
-  GoldDeliveryCnt := GoldDeliveryCnt - 1;
+  Assert(GoldDemandsClosing > 0);
+
+  if not aDeleteCanceled then
+    GoldDeliveryCnt := GoldDeliveryCnt - 1;
+  GoldDemandsClosing := GoldDemandsClosing - 1;
+
+  Result := True;
 end;
 
 
@@ -219,14 +229,15 @@ end;
 
 procedure TKMHouseTownHall.PostLoadMission;
 begin
-  UpdateDemands;
+  // House could be destroyed on the game start if placed with 0 health in the MapEd
+  if not IsDestroyed then
+    UpdateDemands;
 end;
 
 
 procedure TKMHouseTownHall.AddDemandsOnActivate(aWasBuilt: Boolean);
 begin
-  if aWasBuilt then
-    UpdateDemands;
+  UpdateDemands;
 end;
 
 
@@ -255,7 +266,7 @@ end;
 
 procedure TKMHouseTownHall.ResAddToIn(aWare: TKMWareType; aCount: Integer = 1; aFromScript: Boolean = False);
 var
-  ordersRemoved : Integer;
+  ordersRemoved, plannedToRemove: Integer;
 begin
   Assert(aWare = wtGold, 'Invalid resource added to TownHall');
 
@@ -268,8 +279,9 @@ begin
   if aFromScript then
   begin
     GoldDeliveryCnt := GoldDeliveryCnt + aCount;
-    ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, aWare, aCount);
+    ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, aWare, aCount, plannedToRemove);
     GoldDeliveryCnt := GoldDeliveryCnt - ordersRemoved;
+    GoldDemandsClosing := GoldDemandsClosing + plannedToRemove;
   end;
 
   UpdateDemands;
@@ -288,13 +300,26 @@ begin
 end;
 
 
+function TKMHouseTownHall.GetGoldDemandsClosing: Word;
+begin
+  Result := ResDemandsClosing[1];
+end;
+
+
+procedure TKMHouseTownHall.SetGoldDemandsClosing(aCount: Word);
+begin
+  ResDemandsClosing[1] := aCount;
+end;
+
+
 procedure TKMHouseTownHall.UpdateDemands;
 const
   MAX_GOLD_DEMANDS = 20; //Limit max number of demands by townhall to not to overfill demands list
 var
-  goldToOrder, ordersRemoved: Integer;
+  goldToOrder, ordersRemoved, plannedToRemove, deliveringGold: Integer;
 begin
-  goldToOrder := Min(MAX_GOLD_DEMANDS - (GoldDeliveryCnt - fGoldCnt), fGoldMaxCnt - GoldDeliveryCnt);
+  deliveringGold := GoldDeliveryCnt - GoldDemandsClosing;
+  goldToOrder := Min(MAX_GOLD_DEMANDS - (deliveringGold - fGoldCnt), fGoldMaxCnt - deliveringGold);
   if goldToOrder > 0 then
   begin
     gHands[Owner].Deliveries.Queue.AddDemand(Self, nil, wtGold, goldToOrder, dtOnce, diNorm);
@@ -303,8 +328,9 @@ begin
   else
   if goldToOrder < 0 then
   begin
-    ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, wtGold, -goldToOrder);
+    ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, wtGold, -goldToOrder, plannedToRemove);
     GoldDeliveryCnt := GoldDeliveryCnt - ordersRemoved;
+    GoldDemandsClosing := GoldDemandsClosing + plannedToRemove;
   end;
 end;
 
@@ -315,7 +341,6 @@ begin
     ResTakeFromOut(aWare, aCount, aFromScript)
   else
     ResTakeFromIn(aWare, aCount, aFromScript);
-
 end;
 
 

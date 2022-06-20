@@ -305,7 +305,7 @@ end;
 //  f: file;
 //  s: Word;
 //begin
-//  Result := false;
+//  Result := False;
 //  if not FileExists(FileName) then
 //    Exit;
 //  AssignFile(f, FileName);
@@ -324,7 +324,7 @@ end;
 //  if WriteResourceInfoToTXT then
 //    ExportPatternDat(ExeDir + 'Export'+PathDelim+'Pattern.csv');
 //
-//  Result := true;
+//  Result := True;
 //end;
 
 

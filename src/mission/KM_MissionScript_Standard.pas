@@ -45,7 +45,8 @@ type
 implementation
 uses
   Classes, SysUtils, Math, KromUtils,
-  KM_Hand, KM_Game, KM_GameParams, KM_GameTypes, KM_HandsCollection,
+  KM_Hand, KM_HandEntity,
+  KM_Game, KM_GameParams, KM_GameTypes, KM_HandsCollection,
   KM_UnitsCollection, KM_UnitWarrior,
   KM_HouseCollection, KM_HouseBarracks, KM_HouseStore,
   KM_AI,
@@ -192,6 +193,7 @@ procedure TKMMissionParserStandard.ProcessCommand(CommandType: TKMCommandType; P
 var
   I: Integer;
   qty, HandI: Integer;
+  U: TKMUnit;
   H: TKMHouse;
   HT: TKMHouseType;
   UT: TKMUnitType;
@@ -359,11 +361,11 @@ begin
                           if PointInMap(P[1]+1, P[2]+1) and InRange(P[0], Low(HOUSE_ID_TO_TYPE), High(HOUSE_ID_TO_TYPE)) then
                             if gTerrain.CanPlaceHouseFromScript(HOUSE_ID_TO_TYPE[P[0]], KMPoint(P[1]+1, P[2]+1)) then
                               fLastHouse := gHands[fLastHand].AddHouse(
-                                HOUSE_ID_TO_TYPE[P[0]], P[1]+1, P[2]+1, false)
+                                HOUSE_ID_TO_TYPE[P[0]], P[1]+1, P[2]+1, False)
                             else
                               AddError('ct_SetHouse failed, can not place house at ' + TypeToString(KMPoint(P[1]+1, P[2]+1)));
 
-    ctSetHouseDamage:   if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+    ctSetHouseDamage:   if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                           begin
                             if not fLastHouse.IsDestroyed then //Could be destroyed already by damage
@@ -373,7 +375,7 @@ begin
                             AddError('ct_SetHouseDamage without prior declaration of House');
 
     ctSetHouseDeliveryMode:
-                        if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+                        if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                           begin
                             if InRange(P[0], Byte(Low(TKMDeliveryMode)), Byte(High(TKMDeliveryMode))) then //Check allowed range for delivery mode value
@@ -389,14 +391,14 @@ begin
                             AddError('ct_SetHouseDeliveryMode without prior declaration of House');
 
     ctSetHouseRepairMode:
-                        if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+                        if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                             fLastHouse.BuildingRepair := True
                           else
                             AddError('ct_SetHouseRepairMode without prior declaration of House');
 
     ctSetHouseClosedForWorker:
-                        if fLastHand <> HAND_NONE then //Skip false-positives for skipped players
+                        if fLastHand <> HAND_NONE then //Skip False-positives for skipped players
                           if fLastHouse <> nil then
                             fLastHouse.IsClosedForWorker := True
                           else
@@ -404,12 +406,17 @@ begin
 
     ctSetUnit:          if PointInMap(P[1]+1, P[2]+1) then
                         begin
+                          UT := UNIT_OLD_ID_TO_TYPE[P[0]];
                           //Animals should be added regardless of current player
-                          if UNIT_OLD_ID_TO_TYPE[P[0]] in [ANIMAL_MIN..ANIMAL_MAX] then
-                            gHands.PlayerAnimals.AddUnit(UNIT_OLD_ID_TO_TYPE[P[0]], KMPoint(P[1]+1, P[2]+1))
+                          if UT in [ANIMAL_MIN..ANIMAL_MAX] then
+                          begin
+                            U := gHands.PlayerAnimals.AddUnit(UT, KMPoint(P[1]+1, P[2]+1));
+                            if (U is TKMUnitFish) and InRange(P[3], 1, FISH_CNT_MAX) then
+                              TKMUnitFish(U).FishCount := P[3];
+                          end
                           else
-                          if (fLastHand <> HAND_NONE) and (UNIT_OLD_ID_TO_TYPE[P[0]] in [HUMANS_MIN..HUMANS_MAX]) then
-                            fLastUnit := gHands[fLastHand].AddUnit(UNIT_OLD_ID_TO_TYPE[P[0]], KMPoint(P[1]+1, P[2]+1));
+                          if (fLastHand <> HAND_NONE) and (UT in [HUMANS_MIN..HUMANS_MAX]) then
+                            fLastUnit := gHands[fLastHand].AddUnit(UT, KMPoint(P[1]+1, P[2]+1));
                         end;
 
     ctSetUnitByStock:   if fLastHand <> HAND_NONE then
@@ -835,6 +842,7 @@ var
   releaseAllHouses: Boolean;
   saveString: AnsiString;
   saveStream: TFileStream;
+  params: TIntegerArray;
 
   procedure AddData(const aText: AnsiString);
   begin
@@ -1050,13 +1058,13 @@ begin
       if gHands[I].Locks.HouseBlocked[HT] then
       begin
         AddCommand(ctBlockHouse, [HOUSE_TYPE_TO_ID[HT]-1]);
-        releaseAllHouses := false;
+        releaseAllHouses := False;
       end
       else
         if gHands[I].Locks.HouseGranted[HT] then
           AddCommand(ctReleaseHouse, [HOUSE_TYPE_TO_ID[HT]-1])
         else
-          releaseAllHouses := false;
+          releaseAllHouses := False;
     end;
     if releaseAllHouses then
       AddCommand(ctReleaseAllHouses, []);
@@ -1115,7 +1123,7 @@ begin
 
         //Set Delivery mode after Wares, so in case there are some wares and delivery mode TakeOut, then we will need to add proper Offers
         if H.DeliveryMode <> dmDelivery then //Default delivery mode is dmDelivery
-          AddCommand(ctSetHouseDeliveryMode, [Byte(H.DeliveryMode)]);
+          AddCommand(ctSetHouseDeliveryMode, [Ord(H.DeliveryMode)]);
       end;
     end;
     AddData(''); //NL
@@ -1185,7 +1193,19 @@ begin
   for I := 0 to gHands.PlayerAnimals.Units.Count - 1 do
   begin
     U := gHands.PlayerAnimals.Units[I];
-    AddCommand(ctSetUnit, [UNIT_TYPE_TO_OLD_ID[U.UnitType], U.Position.X-1 + aLeftInset, U.Position.Y-1 + aTopInset]);
+    SetLength(params, 3);
+    params[0] := UNIT_TYPE_TO_OLD_ID[U.UnitType];
+    params[1] := U.Position.X - 1 + aLeftInset;
+    params[2] := U.Position.Y - 1 + aTopInset;
+
+    // Also save fish count to dat
+    if U is TKMUnitFish then
+    begin
+      SetLength(params, 4);
+      params[3] := TKMUnitFish(U).FishCount;
+    end;
+
+    AddCommand(ctSetUnit, params);
   end;
   AddData(''); //NL
 

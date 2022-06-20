@@ -35,7 +35,7 @@ type
 implementation
 uses
   KM_Houses, KM_HouseWoodcutters, KM_HouseSwineStable,
-  KM_HandsCollection,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
   KM_Resource, KM_ResMapElements, KM_ResTexts,
   KM_Hand, KM_ResUnits, KM_ScriptingEvents, KM_Terrain;
 
@@ -76,7 +76,7 @@ end;
 //Note: Phase is -1 because it will have been increased at the end of last Execute
 function TKMTaskMining.WalkShouldAbandon: Boolean;
 begin
-  Result := false;
+  Result := False;
   Assert(fUnit is TKMUnitCitizen);
   if fPhase = 2 then //Unit is walking to mine-position
     Result := ResourceTileIsLocked or //If someone takes our place
@@ -137,7 +137,7 @@ end;
 
 //Try to find alternative target for our WorkPlan
 //Happens when we discover that resource is gone or is occupied by another busy unit
-//Return false if new plan could not be found
+//Return False if new plan could not be found
 procedure TKMTaskMining.FindAnotherWorkPlan;
 var OldLoc: TKMPoint; OldDir: TKMDirection;
 begin
@@ -160,16 +160,14 @@ end;
 
 
 function TKMTaskMining.ResourceTileIsLocked: Boolean;
-var P: TKMPoint;
+var
+  P: TKMPoint;
 begin
   if WorkPlan.GatheringScript = gsWoodCutterCut then
   begin
     P := KMGetVertexTile(WorkPlan.Loc, WorkPlan.WorkDir);
-    //Check all tiles around the tree, like we do in TKMTerrain.FindTree
-    Result := not gTerrain.TileIsGoodToCutTree(P)
-      or ((P.X > 1) and not gTerrain.TileIsGoodToCutTree(KMPoint(P.X-1, P.Y))) //if K=1, K-1 will be off map
-      or ((P.Y > 1) and not gTerrain.TileIsGoodToCutTree(KMPoint(P.X, P.Y-1)))
-      or ((P.X > 1) and (P.Y > 1) and not gTerrain.TileIsGoodToCutTree(KMPoint(P.X-1, P.Y-1)))
+    // Check all tiles around the tree, same as we do in TKMTerrain.FindTree
+    Result := not gTerrain.CanCutTreeAtVertex(fUnit.PositionNext, P);
   end
   else
     Result := gTerrain.TileIsLocked(WorkPlan.Loc);
@@ -200,7 +198,7 @@ begin
                             end;
                         end;
     gsFarmerWine:      Result := TileIsWineField(WorkPlan.Loc) and (Land^[WorkPlan.Loc.Y, WorkPlan.Loc.X].FieldAge = CORN_AGE_MAX);
-    gsFisherCatch:     Result := CatchFish(KMPointDir(WorkPlan.Loc,WorkPlan.WorkDir),true);
+    gsFisherCatch:     Result := CatchFish(KMPointDir(WorkPlan.Loc,WorkPlan.WorkDir),True);
     gsWoodCutterPlant: Result := TileGoodToPlantTree(WorkPlan.Loc.X, WorkPlan.Loc.Y);
     gsWoodCutterCut:   begin
                           P := KMGetVertexTile(WorkPlan.Loc, WorkPlan.WorkDir);
@@ -278,7 +276,7 @@ begin
        if WorkPlan.GatheringScript = gsFisherCatch then
        begin
          Direction := WorkPlan.WorkDir;
-         SetActionLockedStay(13, uaWork1, false); //Throw the line out
+         SetActionLockedStay(13, uaWork1, False); //Throw the line out
        end else
          SetActionLockedStay(0, WorkPlan.ActionWalkTo);
 
@@ -300,8 +298,8 @@ begin
        end;
     5: //After work tasks for specific mining jobs
        case WorkPlan.GatheringScript of
-         gsWoodCutterCut:  SetActionLockedStay(10, WorkPlan.ActionWorkType, true, 5, 5); //Wait for the tree to start falling down
-         gsFisherCatch:    SetActionLockedStay(15, uaWork, false); //Pull the line in
+         gsWoodCutterCut:  SetActionLockedStay(10, WorkPlan.ActionWorkType, True, 5, 5); //Wait for the tree to start falling down
+         gsFisherCatch:    SetActionLockedStay(15, uaWork, False); //Pull the line in
          else              SetActionLockedStay(0, WorkPlan.ActionWorkType);
        end;
     6: begin

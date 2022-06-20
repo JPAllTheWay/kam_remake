@@ -56,7 +56,7 @@ type
     procedure HandleScrollKeysDown(Key: Word; var aHandled: Boolean);
     procedure HandleScrollKeysUp(Key: Word; var aHandled: Boolean);
   public
-    constructor Create(aRender: TRender); reintroduce;
+    constructor Create(aRender: TKMRender); reintroduce;
     destructor Destroy; override;
 
     property Minimap: TKMMinimapGame read fMinimap;
@@ -164,7 +164,7 @@ const
     (HouseType: (htCoalMine, htIronMine, htGoldMine, htNone);           UnitType: (utMiner, utNone)),
     (HouseType: (htSawmill, htWeaponWorkshop, htArmorWorkshop, htNone); UnitType: (utCarpenter, utNone)),
     (HouseType: (htBarracks, htTownHall, htWatchTower, htNone);         UnitType: (utRecruit, utNone)),
-    (HouseType: (htStore, htSchool, htInn, htMarket);              UnitType: (utSerf, utBuilder))
+    (HouseType: (htStore, htSchool, htInn, htMarket);                   UnitType: (utSerf, utBuilder))
     );
 
   MapEd_Order: array [0..13] of TKMUnitType = (
@@ -214,7 +214,7 @@ uses
 
 
 { TKMUserInterfaceGame }
-constructor TKMUserInterfaceGame.Create(aRender: TRender);
+constructor TKMUserInterfaceGame.Create(aRender: TKMRender);
 begin
   inherited Create(aRender.ScreenX, aRender.ScreenY);
 
@@ -231,7 +231,7 @@ begin
 
   fPaintDefences := False;
 
-  gRenderPool := TRenderPool.Create(fViewport, aRender);
+  gRenderPool := TKMRenderPool.Create(fViewport, aRender);
 end;
 
 
@@ -367,6 +367,13 @@ var
 {$ENDIF}
 begin
   aHandled := True;
+
+  if gMySpectator.Hand.InCinematic then
+  begin
+    aHandled := False;
+    Exit;
+  end;
+
   //Scrolling
   if Key = gResKeys[kfScrollLeft]       then
     fViewport.ScrollKeyLeft  := True
@@ -427,6 +434,13 @@ end;
 procedure TKMUserInterfaceGame.HandleScrollKeysUp(Key: Word; var aHandled: Boolean);
 begin
   aHandled := True;
+
+  if gMySpectator.Hand.InCinematic then
+  begin
+    aHandled := False;
+    Exit;
+  end;
+
   //Scrolling
   if Key = gResKeys[kfScrollLeft]       then
     fViewport.ScrollKeyLeft := False
@@ -626,6 +640,8 @@ procedure TKMUserInterfaceGame.SyncUI(aMoveViewport: Boolean = True);
 begin
   fMinimap.LoadFromTerrain;
   fMinimap.Update;
+
+  gTerrain.OnTopHillChanged := fViewport.TopHillChanged;
 
   if aMoveViewport then
   begin

@@ -126,7 +126,7 @@ type
 
     fEnabled: Boolean;
     fVisible: Boolean;
-    fFocusable: Boolean; //Can this control have focus (e.g. TKMEdit sets this true)
+    fFocusable: Boolean; //Can this control have focus (e.g. TKMEdit sets this True)
     fHitable: Boolean; //Can this control be hit with the cursor?
     fControlIndex: Integer; //Index number of this control in his Parent's (TKMPanel) collection
     fID: Integer; //Control global ID
@@ -806,6 +806,9 @@ end;
 
 function TKMControl.GetMasterPanel: TKMPanel;
 begin
+  // Parent is nil only for MasterPanel itself
+  if Parent = nil then Exit(TKMPanel(Self));
+
   Result := Parent.MasterControl.MasterPanel;
 end;
 
@@ -1876,7 +1879,7 @@ end;
 
 procedure TKMMasterControl.UpdateState(aGlobalTickCount: Cardinal);
 begin
-  if Self = nil then Exit;
+  if (Self = nil) or (fMasterPanel = nil) then Exit;
 
   fMasterPanel.UpdateState(aGlobalTickCount);
 end;

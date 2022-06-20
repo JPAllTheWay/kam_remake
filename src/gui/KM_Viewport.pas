@@ -57,11 +57,15 @@ type
     procedure PanTo(const aLoc: TKMPointF; aTicksCnt: Cardinal);
     procedure CinematicReset;
 
+    procedure TopHillChanged(aValue: Single);
+
     procedure Save(SaveStream: TKMemoryStream);
     procedure Load(LoadStream: TKMemoryStream);
 
     procedure UpdateStateIdle(aFrameTime: Cardinal; aAllowMouseScrolling: Boolean; aInCinematic: Boolean);
     function ToStr: string;
+
+    procedure Paint;
   end;
 
 
@@ -70,6 +74,7 @@ uses
   Math, SysUtils,
   KromUtils, KM_InterfaceTypes,
   KM_Resource, KM_ResTypes,
+  KM_RenderAux,
   KM_Main, KM_System, KM_GameApp, KM_GameSettings,
   KM_Defaults, KM_CommonUtils;
 
@@ -226,7 +231,7 @@ begin
                                    fMapX - 1); // Max visible map coordinate is fMapX - 1
         //Top row should be visible
         fPosition.Y := EnsureRange(Value.Y,
-                                   - TopPad,     // Min visible map coordinate is -TopPad
+                                   0,     // Min visible map coordinate is -TopPad
                                    fMapY - 1); // Max visible map coordinate is fMapY - 1
       end;
   end;
@@ -346,7 +351,7 @@ procedure TKMViewport.UpdateStateIdle(aFrameTime: Cardinal; aAllowMouseScrolling
 const
   SCROLL_ACCEL_TIME = 400; // Time in ms that scrolling will be affected by acceleration
   SCROLL_FLEX = 4;         // Number of pixels either side of the edge of the screen which will count as scrolling
-  DIRECTIONS_BITFIELD: array [0..15] of TKMCursor = (
+  DIRECTIONS_BITFIELD: array [0..15] of TKMCursorImageType = (
     kmcDefault, kmcScroll6, kmcScroll0, kmcScroll7,
     kmcScroll2, kmcDefault, kmcScroll1, kmcDefault,
     kmcScroll4, kmcScroll5, kmcDefault, kmcDefault,
@@ -431,7 +436,7 @@ begin
 
   zoomAdv := (0.2 + gGameSettings.ScrollSpeed / 20) * aFrameTime / 1000;
 
-  if SCROLL_ACCEL then
+  if FEAT_SCROLL_ACCEL then
   begin
     if fScrollStarted = 0 then
       fScrollStarted := TimeGet;
@@ -490,6 +495,18 @@ begin
   LoadStream.Read(fPosition);
 
   SetPosition(fPosition); //EnsureRanges
+end;
+
+
+procedure TKMViewport.TopHillChanged(aValue: Single);
+begin
+  fTopHill := aValue / CELL_SIZE_PX;
+end;
+
+
+procedure TKMViewport.Paint;
+begin
+  gRenderAux.CircleOnTerrain(fPosition.X, fPosition.Y, 0.5, icCyan, icRed);
 end;
 
 

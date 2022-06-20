@@ -17,6 +17,7 @@ const
 
 
   function GetShiftState(aButton: TMouseButton): TShiftState;
+  function IsRMBInShiftState(aShift: TShiftState): Boolean;
   function GetMultiplicator(aButton: TMouseButton): Word; overload;
   function GetMultiplicator(aShift: TShiftState; const aMultiplier: Integer = 10): Word; overload;
   function IntToKStr(const aValue: Integer; aLimit: Integer = DEF_K_LIMIT): String;
@@ -27,7 +28,14 @@ uses
   SysUtils,
   KM_Defaults;
 //  {$IFDEF FPC} FileUtil, {$ENDIF}
-//  {$IFDEF WDC} IOUtils {$ENDIF};   const
+//  {$IFDEF WDC} IOUtils {$ENDIF};
+
+
+const
+  // Alt + LMB is considered as RMB
+  // We can use it when hotkey is pressed (which is considered as LMB)
+  RMB_ALTERNATIVE_SHIFT_STATE: TShiftState = [ssAlt, ssLeft];
+
 
 function GetShiftState(aButton: TMouseButton): TShiftState;
 begin
@@ -39,6 +47,18 @@ begin
 
   if GetKeyState(VK_SHIFT) < 0 then
     Include(Result, ssShift);
+
+  if GetKeyState(VK_MENU) < 0 then
+    Include(Result, ssAlt);
+
+  if GetKeyState(VK_CONTROL) < 0 then
+    Include(Result, ssCtrl);
+end;
+
+
+function IsRMBInShiftState(aShift: TShiftState): Boolean;
+begin
+  Result := (ssRight in aShift) or (RMB_ALTERNATIVE_SHIFT_STATE <= aShift);
 end;
 
 
@@ -51,6 +71,10 @@ end;
 function GetMultiplicator(aShift: TShiftState; const aMultiplier: Integer = 10): Word;
 begin
   Exclude(aShift, ssCtrl); //Ignore Ctrl
+  // Consider Alt + LMB as a replacer for RMB
+  if IsRMBInShiftState(aShift) then
+    aShift := aShift + [ssRight] - [ssAlt, ssLeft];
+
   Result := Byte(aShift = [ssLeft])
           + Byte(aShift = [ssRight]) * aMultiplier
           + Byte(aShift = [ssShift,ssLeft]) * aMultiplier * aMultiplier

@@ -11,7 +11,7 @@ uses
 
 implementation
 uses
-  SysUtils
+  SysUtils, KM_FileIO
 {$IFDEF WDC}, Dialogs, KM_Log{$ENDIF}
   ;
 
@@ -68,7 +68,7 @@ begin
         ShowMessage('Error saving image. Try to reduce max image size or choose other image format');
 
         if FileExists(filePath) then
-          DeleteFile(filePath);
+          KMDeleteFile(filePath);
       end;
     end;
   finally

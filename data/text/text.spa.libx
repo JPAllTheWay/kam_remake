@@ -95,8 +95,8 @@
 94:El panadero cuece el pan en la panadería.||Además produce harina moliendo el trigo en el molino.
 95:El carnicero produce chorizos en la carnicería y cuero en la curtiduría.
 96:El pescador pesca peces en las aguas cercanas.
-97:El albañil construye casas y calles. Indíquele, situando las marcas en el lugar deseado, donde ha de construír. Además repara las casas dañadas.
-98:Para que los albañiles tengan suficientes piedras para construír calles y casas, el cantero labra las piedras.
+97:El albañil construye casas y calles. Indíquele, situando las marcas en el lugar deseado, donde ha de construir. Además repara las casas dañadas.
+98:Para que los albañiles tengan suficientes piedras para construir calles y casas, el cantero labra las piedras.
 99:El herrero elabora armaduras pesadas y armas en la herreía de armas y de armaduras.
 100:El fundidor produce hierro, arcas de oro y de hierro.
 101:El recluta en el cuartel es equipado con las armas necesarias para luchar como soldado.||Además ocupa la atalaya.
@@ -123,11 +123,11 @@
 122:Música si/no.
 123:Autoguardado
 124:Canción:
-125:Canción anterior
-126:Próxima canción
+125:Anterior canción
+126:Siguiente canción
 127:Derribar
 128:Derribar casas/marcas
-129:Construír camino
+129:Construir camino
 130:Construcción de caminos
 131:Campos de trigo
 132:Campos de trigo
@@ -143,12 +143,12 @@
 144:Derribar edificio seleccionado.
 145:Reducir pedido
 146:Aumentar pedido
-147:Anterior tipo de unidad.
-148:Próximo tipo de unidad.
-149:Equipar unidad actual.
-150:Siguiente profesión.
-151:Anterior profesión.
-152:Añadir a la cola. Usa Botón derecho del ratón, Shift o Ctrl para modificar la cola
+147:Anterior tipo de soldado. Use Shift para llegar al primer tipo de soldado
+148:Siguiente tipo de soldado. Use Shift para llegar al último tipo de soldado
+149:Equipar unidad actual. Usa Shift para equipar a 10 soldados.
+150:Siguiente profesión. Usa Shift para llegar a la última profesión.
+151:Anterior profesión. Usa Shift para llegar a la primera profesión.
+152:Añadir a la cola.|Usa Botón derecho del ratón, Ctrl o Alt para modificar la cola y Shift para llenarla
 153:Cambia el modo de entrega de mercancia a las casas: Abierto / Cerrado / Vaciar las existencias de suministros. Usa Botón derecho del ratón / Botón izquierdo ratón para cambiar hacia un modo u otro
 154:Coste de producción:
 155:ACTIVADO/DESACTIVADO Reparación del edificio.
@@ -263,16 +263,16 @@
 264:Materiales|Producidos
 265:Armas|Producidas
 266:Ejército
-267:Ciudadanos
+267:Población
 268:Edificios
 269:Recursos
-270:Recursos producidos
+270:Cantidad producida
 271:Sin datos
 272:Tú
 273:Jugador %d
 274:Volver a Multijugador
 275:Volver a Repeticiones
-276:Todas las mercancias
+276:Todos los recursos
 277:Guerra
 278:Comida
 279:JOYMANIA ENTERTAINMENT||PROGRAMACIÓN:|Peter Ohlmann||GRAFICOS DEL JUEGO:|Adam Sprys||DISEÑO DE NIVEL:|Adam Sprys|Andre Quaß||MÚSICA DEL JUEGO:|Gerd Hofmann|Joachim Schäfer|Jürgen Rebhann|Klaus Staendike|Steffen Schüngel||ILUSTRACIONES:|Boleslaw Kasza|Christoph Werner||ZUXXEZ ENTERTAINMENT AG||PRODUCTOR:|Uwe Schäfer||MANUAL:|Peter Ohlmann|Uwe Schäfer||PRUEBAS BETA:|Alexandra Constandache|Dirk P. Hassinger|Achim Heidelauf|Uwe Schäfer|Ingrid Schäfer|Dirk U. Jantz|Ion Constandache|Yaman Egeli|Roman Eich|Iris Mocsnek|Anke Jantz|Liza Hassinger|Paul Hassinger||DIRECTOR:|Achim Heidelauf||ESCENAS CINEMÁTICAS:||Slawomir Jedrzejewski||Kajetan Czarnecki|Wojciech Drazek|Daniel Duplaga|Rafal Januszkiewicz|Andrzej Rams|Piotr Rulka|Krzysztof Rybczynski|Grzegorz Wisniwski||VOCES:|Claus Boyen (Storyteller)||Tim Timmermann|Peter Houska|Dirk Mühlbach|Ralf Ditze|Gerhard Piske|Gernot Wassmann||ILUSTRACIONES:|Boleslaw Kasza|Adam Sprys||ANIMACIÓN DE INTRUDUCCIÓN:|Uwe Schäfer|Christian Bigalk|MODELADO 3D ADICIONAL:|Niels Horstmann||GRACIAS A:|Tadeusz Zuber|Dieter Ohlmann|Alexandra Constandache|Ingrid Schäfer
@@ -303,7 +303,7 @@
 304:Apagar música
 305:Gráficos:
 306:Brillo
-307:Sinc. Vertical
+307:Sincronización Vertical
 308:Pantalla completa
 309:Aplicar
 310:Idioma:
@@ -380,7 +380,7 @@
 384:Aleatorio / Igualar
 385:Elevar (clic izquierdo) / Baja (clic derecho)
 386:Igualar (clic izquierdo) / Acoplar (clic derecho)
-387:Pincel
+387:Pincel y Máscaras
 388:Elementos aleatorios
 389:Dirección aleatoria
 390:Señal para direccionar las baldosas al azar o utilizar el botón derecho para girar la pieza seleccionada
@@ -405,7 +405,7 @@
 410:Sobrescribir
 411:El mapa ya existe
 412:Jugadores:
-413:Defecto
+413:Jugador humano por defecto
 414:Tipo de Jugadores
 415:Simetrico
 416:Alianzas
@@ -447,14 +447,14 @@
 454:Establecer un límite en el número de soldados de la AI puede tener
 455:Cuántos soldados AI puede tener a la vez
 456:Ajuste máx. soldados
-457:Cuantos reclutas debe la Ai tener en los barracones
+457:IA clásica: cuántos reclutas debe tener la IA en los cuarteles|IA avanzada: parámetro no utilizado
 458:Reclutas en Barracas
 460:Posición personalizada
 463:Unidad más cercana
 465:Recuento de grupo
 466:Información de Ataque
 468:Repitiendo
-469:Una vez
+469:Solo un Ataque
 470:Caballería
 471:Ballesteros
 472:Piqueros
@@ -469,8 +469,8 @@
 481:Equipar tasa de cuero
 482:Equipar tasa de hierro
 483:Autodefensa
-484:La AI crea y gestiona la posición de defensa automaticamente
-485:Lugar de la posición de la defensa para la AI
+484:La AI crea y gestiona la posición de defensa automáticamente
+485:Coloque la posición de defensa para la IA.|Para cambiar los parámetros de la posición de defensa, use:|RMB - dirección, Ctrl + RMB - tipo de grupo, Alt + RMB - defensivo / atacante
 486:Defensa de posición IA
 487:Trabajadores
 488:Sirvientes por 10 casas
@@ -497,7 +497,7 @@
 509:Encuentra servidor por IP
 510:ENCONTRAR SERVIDOR
 511:Dirección
-512:Puerta
+512:Puerto
 513:Sala
 514:Conectar
 515:Cancelar
@@ -533,8 +533,8 @@
 545:Listo
 546:No estoy listo
 547:¡Empezar!
-548:Velocidad (tiempo de paz)
-549:Velocidad de juego
+548:Velocidad (tiempo de paz)  [real]
+549:Velocidad de juego [real]
 550:OK
 551:Cancelar
 552:Descripción
@@ -556,7 +556,7 @@
 569:Mapas de Construcción
 570:Mapas de Batalla
 571:Mapa cooperativo
-572:Mapas especiales
+572:Mapas Especiales
 573:Opciones de juego:
 574:Tiempo de paz (en minutos)
 575:Cerrado
@@ -577,7 +577,7 @@
 590:Mapas de un solo jugador
 591:Vel. desplazamiento
 592:Servidores no encontrados
-593:Músi. Aleatoria
+593:Música aleatoria
 594:Información de la partida:
 595:-
 596:En la Sala
@@ -608,7 +608,7 @@
 621:Tiempo de juego:|%s
 622:Parar tropas
 623:Unir tropas
-624:Separar tropas
+624:Separar tropa (%s). Separa una unidad de la tropa (Ctrl + %s)
 625:Ver Repeticiones
 626:Ver Repetición
 627:Formato no válido %s
@@ -626,7 +626,9 @@
 639:Partida guardada no encontrada: %s
 640:El archivo del mapa no corresponde con el del Anfitrión: %s
 641:El archivo guardado no coincide con el archivo guardado del Anfitrión: %s
-642:La repetición ha fallado en una comprobación de coherencia. Este es un problema conocido que afecta la reproducción de algunas repeticiones. ¿Desea continuar viendo?
+642:La repetición ha fallado en una comprobación de coherencia. Este es un problema conocido que afecta la reproducción de algunas repeticiones. ¿Desea continuar viendo?\nLa reproducción falló una comprobación de coherencia. Este es un error conocido que afecta la reproducción de algunas repeticiones.
+Si sigues viendo, la repetición ya no será precisa y el juego puede bloquearse.
+¿Quieres seguir viendo? Elija 'Sí a todo' para ignorar futuras fallas de verificación de coherencia.
 643:Sólo puede tener una instancia del juego en el modo multijugador a la vez
 644:Las modificaciones en el juego no se permite en el modo multijugador |. Vuelva a instalar para restaurar los archivos originales.
 645:Se ha producido un error en la aplicación. Por favor, haga clic en Enviar informe de errores para que podamos investigar este asunto. ¡Gracias por su ayuda!
@@ -751,8 +753,8 @@
 799:%s votaron para regresar a la sala (Aprobado)
 800:La votación no aceptada para volver a la sala
 801:Eliminando una repetición tambien eliminas todo lo guardado con la repetición. ¿estás seguro de que quieres eleminar lo guardado?
-802:Al Azar
-803:Número de soldados a atacar
+802:Tomar todo
+803:Número mínimo de unidades para atacar
 804:Eliminar repetición
 805:Eliminar Mapa
 806:¿Estás seguro de que quieres eliminar este mapa?
@@ -772,6 +774,7 @@
 820:Cuero
 821:Mixto
 822:Mapas descargados
+823:Aviso: el primer ataque "Repetido" enviará todas las tropas que tiene el jugador AI. Sin embargo, para cada próximo ataque "Repetido" (así como para "Ataque único"), envía suficientes grupos para exceder el "Número mínimo de unidades para atacar".
 824:Mover
 825:Ver el leeame PDF
 826:Error al iniciar el reproductor de PDF
@@ -785,13 +788,10 @@
 834:Borrar esta repetición
 835:Nombre:
 836:Confirmar
-837:Editar Atajos del teclado
 838:Atajos de teclado
 839:Aceptar
 840:Fución
 841:Tecla
-842:Vinculación a teclas especiales no son editables
-843:Vinculación a teclas especiales\n
 844:Teclas por defecto
 845:Desplazar izquierda
 846:Desplazar derecha
@@ -1038,7 +1038,7 @@
 1088:Cerrar
 1089:Eliminar unidades/grupos
 1090:Reproducir Pausa automática
-1091:Automaticamente pausa la repetición cuando el tiempo de paz termina
+1091:Automáticamente pausa la repetición cuando el tiempo de paz termina
 1092:Mostrar balizas
 1093:Mostrar las balizas de los jugadores
 1094:Silenciar jugador
@@ -1070,8 +1070,8 @@
 1120:Músi. Aleatoria
 1121:Activar/desactivar Pistas aleatoriamente
 1122:Tipo de mapa
-1123:Mapa de escenario
-1124:Jugable en modo un solo jugador
+1123:Mapa de Escenario
+1124:Jugable en modo un jugador
 1125:Se puede talar
 1126:Impide caminar en diagonal
 1127:Impide todo excepto construir
@@ -1194,7 +1194,7 @@
 1247:Cargando repetición en %s
 1248:Color de jugadores:
 1249:Defecto
-1250:Aliador / Enemigo
+1250:Aliado / Enemigo
 1251:Equipos
 1252:Muestra los colores de los jugadores según su elección en la sala
 1253:Muestra 3 colores diferentes (tuyo, aliado, enemigo) para ciudadanos y edificios.
@@ -1234,7 +1234,7 @@
 1287:Cantidad de recursos: oro
 1288:Cantidad de recursos: hierro
 1289:Obstaculos
-1290:Activar Obstaculos (montañas, rios, pantanos, etc.)
+1290:Activar Obstaculos (montañas, ríos, pantanos, etc.)
 1291:Tamaño
 1292:El tamaño medio de los obstáculos generados.
 1293:Densidad obstaculos
@@ -1310,8 +1310,8 @@
 1363:Todos
 1364:Permitir '%s' para todos las localizaciones
 1365:Prohibir '%s' para todos las localizaciones
-1366:Diseño del algoritmo de altura (1 = pequeño, 10 = grande)
-1367:Pendiente de la elevación de la altura (0 = meseta, 15 = pico)
+1366:Medida del algoritmo de altura
+1367:Pendiente de la evaluación de la altura (0 = meseta, 100 = pico)
 1368:Altura máxima de baldosas transitables
 1369:Mapa aleatorio
 1370:El mapa fue generado automáticamente con el generador de mapas aleatorio
@@ -1339,7 +1339,7 @@
 1392:Nivel de suavizado
 1393:Nivel de suavizado: permite suavizar las transiciones de los diferentes biomas y cambios de terreno de forma automática
 1394:Impide construir edificios
-1395:Impide andar y construir
+1395:Impide cominar y construir
 1396:Losas de caminos
 1397:Establecer superposiciones de losas.|Usa botón izquierdo del ratón para el modo seguro y botón izquierdodel ratón + Shift para sobrescribir en carreteras
 1398:Videos del juego
@@ -1412,3 +1412,123 @@
 1465:Bajar volumen de sonido
 1466:Silenciar Ambientación
 1467:Silenciar todo (musica y ambientación)
+1468:Pincel de los objetos
+1469:Árboles
+1470:Todos los objetos excepto árboles
+1471:Piedras
+1472:Flores
+1473:Setas
+1474:Tocones
+1475:Árbol muerto
+1476:Cactus
+1477:Plantas del desierto
+1478:Ruinas
+1479:Objetos de terreno
+1480:Al pintar, coloque objetos que coincidan con el pincel de terreno seleccionado
+1481:Densidad
+1482:Objetos / densidad del bosque
+1483:Edad del bosque
+1484:Pincel de limpieza, elimina todos los objetos
+1485:Todos
+1486:Joven
+1487:Medio
+1488:Cortar
+1489:Todas las edades
+1490:Árboles jovenes
+1491:Árboles medianos
+1492:Árboles listos para cortar
+1493:Aplicar terreno desde el área copiada
+1494:Aplicar la elevacción desde el área copiada
+1495:Aplicar objetos del área copiada
+1496:Aplicar superposiciones de terreno desde el área copiada
+1497:Ajustar elevación
+1498:Nivela la altura al nivel seleccionado
+1499:Nivel de altura
+1500:El nivel de altura se utiliza en 'Ajustar elevación'
+1501:Elevar todo
+1502:Elevar (clic izquierdo) / Bajar (clic derecho) todos los mosaicos en el mapa con tipo de terreno en el cursor del juego
+1503:Anular objetos
+1504:Los objetos serán reemplazados por otros objetos o eliminados
+1505:Máscara de degradado: usa transiciones creadas automáticamente
+1506:Grande
+1507:Árboles grandes
+1508:Talado
+1509:Árboles talados
+1510:Todos-
+1511:Todos, excepto tocones
+1512:Tiempo de la misión:
+1513:Velocidad de juego actual
+1514:Velocidad de reproducción actual
+1515:Velocidad de juego grabada
+1516:Movimentos en HD
+1517:Movimientos en HD
+1518:Aumenta la resolución de movimiento de unidades y proyectiles.
+1519:Para el jugador %0:s a %1:s el jugador %2:s %3:s debe ser %4:s
+1520:ganar
+1521:sobrevivir
+1522:destruir
+1523:salvar
+1524:edificios principales ( %s )
+1525:Solo se permiten alianzas simétricas
+1526:Animaciones en HD
+1527:Animaciones en HD
+1528:Aumenta el número de fotogramas utilizados en las animaciones
+1529:Picos suaves
+1530:Hacer que los picos de las montañas sean más suaves
+1531:Ajustes del juego
+1532:Ajustes de la repetición
+1533:Configuración del editor de mapas
+1534:Aviso: la IA avanzada utiliza sus propios parámetros de formación e ignorará estos ajustes
+1535:Al mapa de la campaña
+1536:Obtiene cualquier tipo de grupo
+1537:Simple
+1538:Soldados sin armadura, unidades con armadura de cuero o unidades con aramadura de hierro
+1539:Añadir grupo
+1540:Agregar grupo después de colocar la posición de defensa. El grupo depende de las formaciones de IA
+1541:Cantidad
+1542:Número de unidades en grupo. En 0 selecciona las formaciones de la IA
+1543:Columnas
+1544:Número de columnas en el grupo. Si el número de unidades es 0, selecciona el número de columnas de formaciones de la IA
+1545:Suavizar el carbón
+1546:Los depósitos de carbón seleccionados se configurarán automáticamente los mosaicos con el recuento de carbón más bajo en los bordes hasta el más alto en el centro
+1547:Otro jugador recibió un error de sincronización. Envíenos este informe del fallo, nos ayudará a solucionarlo.%sEl otro mensaje de error del jugador es:%s
+1548:Deshacer
+1549:Rehacer
+1550:Hierba
+1551:Musgoso
+1552:Hierba seca
+1553:Hierba y tierra
+1554:Tierra
+1555:Arena de la costa
+1556:Hierba y arena 1
+1557:Hierba y arena 2
+1558:Hierba y arena 3
+1559:Arena
+1560:Pantano
+1561:Agua cubierta de hierba
+1562:Agua
+1563:Aguas rápidas
+1564:Personalizado
+1565:Nieve sobre hierba
+1566:Nieve sobre tierra
+1567:Nieve
+1568:Nevada
+1569:Hielo
+1570:Piedras
+1571:Montaña de oro
+1572:Montaña de hierro
+1573:Adoquín
+1574:Grava
+1575:Carbón
+1576:Oro
+1577:Hierro
+1578:Lava
+1579:Abismo
+1580:Cualquier cambio no guardado se perderá. ¿Salir?
+1581:Advertencia
+1582:Sin recubrimiento del camino
+1583:Etapa de recubrimiento del camino 1
+1584:Etapa de recubrimiento del camino 2
+1585:Etapa de recubrimiento del camino 3
+1586:Etapa de recubrimiento del camino 4
+1587:Recubrimiento del camino

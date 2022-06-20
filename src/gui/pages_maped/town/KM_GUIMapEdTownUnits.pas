@@ -20,6 +20,7 @@ type
       Button_Warriors: array [0..13] of TKMButtonFlat;
       Button_Animals: array [0..7] of TKMButtonFlat;
       NumEd_WarrCount, NumEd_WarrColumns: TKMNumericEdit;  //number of units in group + number of rows
+      NumEd_FishCount: TKMNumericEdit;
 
   public
     constructor Create(aParent: TKMPanel);
@@ -44,6 +45,8 @@ uses
 
 { TKMMapEdTownUnits }
 constructor TKMMapEdTownUnits.Create(aParent: TKMPanel);
+const
+  MAPED_FISH_CNT_DEFAULT = 50;
 var
   I: Integer;
   lineY: Word;
@@ -68,7 +71,7 @@ begin
   end;
   Button_UnitCancel := TKMButtonFlat.Create(Panel_Units, 9 + 4 * 37, lineY+(Length(Button_Citizen) div 5)*37, 33, 33, 340);
   Button_UnitCancel.Hint := GetHintWHotkey(TX_MAPED_UNITS_REMOVE_HINT, MAPED_SUBMENU_ACTIONS_HOTKEYS[0]);
-  Button_UnitCancel.Tag := 255; //Erase
+  Button_UnitCancel.Tag := UNIT_REMOVE_TAG; //Erase
   Button_UnitCancel.OnClick := Town_UnitChange;
 
   lineY := 146;
@@ -119,6 +122,20 @@ begin
     Button_Animals[I].OnClick := Town_UnitChange;
   end;
 
+  lineY := 390;
+
+  with TKMLabel.Create(Panel_Units, 9, lineY, Panel_Units.Width - 100, 20, gResTexts[TX_MAPED_FISH_COUNT], fntMetal, taLeft) do
+  begin
+    Anchors := [anLeft, anTop, anRight];
+    Hint := gResTexts[TX_MAPED_UNITS_FORMATION_COLUMNS_HINT];
+  end;
+
+  NumEd_FishCount := TKMNumericEdit.Create(Panel_Units, 9, lineY + 20, 1, FISH_CNT_MAX);
+  NumEd_FishCount.Anchors := [anLeft, anTop, anRight];
+//  NumEd_FishCount.Hint := gResTexts[TX_MAPED_UNITS_FORMATION_COLUMNS_HINT];
+  NumEd_FishCount.AutoFocusable := False;
+  NumEd_FishCount.OnChange := Town_NumericChange;
+  NumEd_FishCount.Value := MAPED_FISH_CNT_DEFAULT;
 
   for I := 0 to High(fSubMenuActionsEvents) do
     fSubMenuActionsEvents[I] := Town_UnitChange;
@@ -142,8 +159,9 @@ procedure TKMMapEdTownUnits.Town_NumericChange(Sender: TObject);
 begin
   //refresh formations
   gCursor.MapEdGroupFormation.NumUnits    := NumEd_WarrCount.Value;
-  NumEd_WarrColumns.Enabled := NumEd_WarrCount.Value > 0;
+  NumEd_WarrColumns.Enabled := NumEd_WarrCount.Enabled and (NumEd_WarrCount.Value > 0);
   gCursor.MapEdGroupFormation.UnitsPerRow := NumEd_WarrColumns.Value;
+  gCursor.MapEdFishCount := NumEd_FishCount.Value;
 end;
 
 
@@ -165,6 +183,7 @@ begin
 
   NumEd_WarrCount.Enabled := UT in UNITS_WARRIORS;
   NumEd_WarrColumns.Enabled := NumEd_WarrCount.Enabled and (NumEd_WarrCount.Value > 0);
+  NumEd_FishCount.Enabled := UT = utFish;
 end;
 
 

@@ -491,7 +491,13 @@ end;
 function TKMScriptUtils.Format(const aFormatting: string; aData: array of const): string;
 begin
   try
-    Result := SysUtils.Format(aFormatting, aData);
+    try
+      Result := SysUtils.Format(aFormatting, aData);
+    except
+      //Format may throw an exception
+      on E: EConvertError do
+        LogParamWarn('Utils.Format: EConvertError: ' + E.Message, [aFormatting], aData);
+    end;
   except
     gScriptEvents.ExceptionOutsideScript := True;
     raise;
@@ -505,7 +511,13 @@ end;
 function TKMScriptUtils.FormatFloat(const aFormat: string; aValue: Single): string;
 begin
   try
-    Result := SysUtils.FormatFloat(aFormat, aValue);
+    try
+      Result := SysUtils.FormatFloat(aFormat, aValue);
+    except
+      //Format may throw an exception
+      on E: EConvertError do
+        LogParamWarn('Utils.FormatFloat: EConvertError: ' + E.Message, [aFormat, aValue]);
+    end;
   except
     gScriptEvents.ExceptionOutsideScript := True;
     raise;

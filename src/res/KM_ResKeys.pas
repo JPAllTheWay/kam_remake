@@ -83,6 +83,7 @@ const
 
     // Map Editor Keys
     13,                                     // Map Editor Extra's menu (Return)
+    83,                                     // Map Editor Save map (S, but Ctrl+S is actually used)
     112, 113, 114, 115, 116,                // Map Editor menus (F1-F5)
     49, 50, 51, 52, 53, 54,                 // Map Editor sub-menus (1-6)
     81, 87, 69, 82, 84, 89, 85,             // Map Editor sub-menu actions (Q, W, E, R, T, Y, U)
@@ -90,7 +91,9 @@ const
     119,                                    // Map Editor show tiles palette (F8)
     46,                                     // Map Editor universal erasor (Delete)
     45,                                     // Map Editor paint bucket (Insert)
-    72                                      // Map Editor history (H)
+    72,                                     // Map Editor history (H)
+    0,                                      // Map Editor Flat terrain
+    0                                       // Map Editor Tiles grid
   );
 
 

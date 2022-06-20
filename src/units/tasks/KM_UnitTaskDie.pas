@@ -19,7 +19,9 @@ type
 
 implementation
 uses
-  KM_ResSound, KM_Sound, KM_HandsCollection, KM_Resource, KM_UnitWarrior, KM_ScriptingEvents,
+  KM_ResSound, KM_Sound,
+  KM_HandsCollection, KM_HandTypes, KM_HandEntity,
+  KM_Resource, KM_UnitWarrior, KM_ScriptingEvents,
   KM_ResUnits;
 
 

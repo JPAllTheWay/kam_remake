@@ -20,22 +20,35 @@ type
     ListBox1: TListBox;
     Label1: TLabel;
     btnUpdateList: TButton;
-    edSpritesBaseDir: TEdit;
+    edSpritesLoadDir: TEdit;
     Label2: TLabel;
     chkPackToRXA: TCheckBox;
+    chkAddRXXHeader: TCheckBox;
+    chkPackToRXX: TCheckBox;
+    Label3: TLabel;
+    edSpritesSaveDir: TEdit;
     procedure btnPackRXXClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnUpdateListClick(Sender: TObject);
+    procedure chkPackToRXXClick(Sender: TObject);
+    procedure chkPackToRXAClick(Sender: TObject);
+    procedure edSpritesLoadDirChange(Sender: TObject);
   private
     fPalettes: TKMResPalettes;
     fRxxPacker: TKMRXXPacker;
     fPacksData: array of TRXXPackData;
     fPacksCnt: Integer;
+    fSettingsPath: string;
+    fUpdating: Boolean;
 
+    procedure UpdateUI;
     function AddPackData(aName: String; aId: Integer): TRXXPackData;
 
     procedure UpdateList;
+
+    procedure LoadSettings;
+    procedure SaveSettings;
   end;
 
 
@@ -45,6 +58,7 @@ var
 
 implementation
 uses
+  INIFiles,
   KM_ResHouses, KM_ResUnits, KM_ResTypes,
   KM_Points;
 
@@ -65,13 +79,14 @@ var
   RT: TRXType;
   packData: TRXXPackData;
 begin
-  ExeDir := edSpritesBaseDir.Text;
+  fRXXPacker.SpritesLoadDir := edSpritesLoadDir.Text;
+
   ListBox1.Items.Clear;
   fPacksCnt := 0;
   SetLength(fPacksData, fPacksCnt);
   for RT := Low(TRXType) to High(TRXType) do
     if (RT = rxTiles) //Tiles are always in the list
-    or FileExists(ExeDir + 'SpriteResource\' + RXInfo[RT].FileName + '.rx') then
+    or FileExists(fRXXPacker.SpritesLoadDir + 'SpriteResource\' + RXInfo[RT].FileName + '.rx') then
     begin
       packData := AddPackData(GetEnumName(TypeInfo(TRXType), Integer(RT)), Integer(RT));
       ListBox1.Items.Add(packData.Name);
@@ -80,11 +95,11 @@ begin
   if ListBox1.Items.Count = 0 then
   begin
     ShowMessage('No .RX file was found in' + #10 + ExeDir + 'SpriteResource\');
-    btnPackRXX.Enabled := false;
+    btnPackRXX.Enabled := False;
   end
   else
   begin
-    btnPackRXX.Enabled := true;
+    btnPackRXX.Enabled := True;
     ListBox1.ItemIndex := 0;
     ListBox1.SelectAll;
   end;
@@ -100,6 +115,33 @@ begin
   btnUpdateList.Enabled := true;
 end;
 
+
+procedure TRXXForm1.UpdateUI;
+begin
+  btnPackRXX.Enabled := chkPackToRXX.Checked or chkPackToRXA.Checked;
+end;
+
+
+procedure TRXXForm1.chkPackToRXAClick(Sender: TObject);
+begin
+  UpdateUI;
+end;
+
+
+procedure TRXXForm1.chkPackToRXXClick(Sender: TObject);
+begin
+  UpdateUI;
+end;
+
+
+procedure TRXXForm1.edSpritesLoadDirChange(Sender: TObject);
+begin
+  if fUpdating then Exit;
+
+  SaveSettings;
+end;
+
+
 procedure TRXXForm1.FormCreate(Sender: TObject);
 begin
   ExeDir := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..\..\');
@@ -109,11 +151,16 @@ begin
   //Although we don't need them in this tool, these are required to load sprites
   gLog := TKMLog.Create(ExeDir + 'RXXPacker.log');
 
-  edSpritesBaseDir.Text := ExeDir;
+  fUpdating := True;
+  edSpritesLoadDir.Text := ExeDir;
+  fUpdating := False;
 
   fRXXPacker := TKMRXXPacker.Create(ExeDir);
   fPalettes := TKMResPalettes.Create;
   fPalettes.LoadPalettes(ExeDir + 'data\gfx\');
+
+  fSettingsPath := ExtractFilePath(ParamStr(0)) + 'RXXPacker.ini';
+  LoadSettings;
 
   fPacksCnt := 0;
   SetLength(fPacksData, 0);
@@ -130,6 +177,39 @@ begin
 end;
 
 
+procedure TRXXForm1.LoadSettings;
+var
+  ini: TINIFile;
+begin
+  fUpdating := True;
+
+  ini := TINIFile.Create(fSettingsPath);
+
+  edSpritesLoadDir.Text := ini.ReadString('SETTINGS',  'SpritesLoadDir', ExeDir);
+  edSpritesSaveDir.Text := ini.ReadString('SETTINGS',  'SpritesSaveDir', ExeDir);
+
+  FreeAndNil(ini);
+
+  fUpdating := False;
+
+  if not FileExists(fSettingsPath) then
+    SaveSettings;
+end;
+
+
+procedure TRXXForm1.SaveSettings;
+var
+  ini: TINIFile;
+begin
+  ini := TINIFile.Create(fSettingsPath);
+
+  ini.WriteString('SETTINGS',  'SpritesLoadDir', edSpritesLoadDir.Text);
+  ini.WriteString('SETTINGS',  'SpritesSaveDir', edSpritesSaveDir.Text);
+
+  FreeAndNil(ini);
+end;
+
+
 procedure TRXXForm1.btnPackRXXClick(Sender: TObject);
 var
   RT: TRXType;
@@ -137,13 +217,19 @@ var
   tick: Cardinal;
 begin
   btnPackRXX.Enabled := False;
+  chkPackToRXX.Enabled := False;
+  chkPackToRXA.Enabled := False;
+  chkAddRXXHeader.Enabled := False;
   tick := GetTickCount;
 
-  fRXXPacker.SpritesBaseDir := edSpritesBaseDir.Text;
-  fRxxPacker.PackToRXA := chkPackToRXA.Checked;
+  fRXXPacker.SpritesLoadDir := edSpritesLoadDir.Text;
+  fRXXPacker.SpritesSaveDir := edSpritesSaveDir.Text;
+  fRxxPacker.PackToRXX      := chkPackToRXX.Checked;
+  fRxxPacker.PackToRXA      := chkPackToRXA.Checked;
+  fRxxPacker.AddRXXHeader   := chkAddRXXHeader.Checked;
 
-  Assert(DirectoryExists(fRXXPacker.SpritesBaseDir + SPRITES_RES_DIR + '\'),
-         'Cannot find ' + fRXXPacker.SpritesBaseDir + SPRITES_RES_DIR + '\ folder.' + #10#13 +
+  Assert(DirectoryExists(fRXXPacker.SpritesLoadDir + SPRITES_RES_DIR + '\'),
+         'Cannot find ' + fRXXPacker.SpritesLoadDir + SPRITES_RES_DIR + '\ folder.' + #10#13 +
          'Please make sure this folder exists.');
 
   for I := 0 to ListBox1.Items.Count - 1 do
@@ -158,7 +244,11 @@ begin
     end;
 
   Label1.Caption := 'Elapsed: ' + IntToStr(GetTickCount - tick) + ' ms';
+
   btnPackRXX.Enabled := True;
+  chkPackToRXX.Enabled := True;
+  chkPackToRXA.Enabled := True;
+  chkAddRXXHeader.Enabled := True;
 end;
 
 

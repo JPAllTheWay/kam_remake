@@ -28,6 +28,8 @@ REM Pack rx data
 echo ######                       RX Pack                                 ######
 call rx_pack.bat > rx_pack.log 2>&1
 if errorlevel 3 (goto exit3)
+echo elapsed:
+call "timer.exe" /nologo /r /n
 
 REM Build utility applications, included into the final build
 echo ######                       Build utils                             ######

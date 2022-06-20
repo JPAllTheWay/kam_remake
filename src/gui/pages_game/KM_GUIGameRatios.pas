@@ -12,7 +12,7 @@ type
 
   TKMGUIGameRatios = class
   private
-    fActiveTab: TKMRatioTab; //Active resource distribution tab
+    fActiveTab: TKMRatioTab; // Active resource distribution tab
     fAllowEditing: Boolean;
 
     procedure RatioTabClick(Sender: TObject);
@@ -65,6 +65,7 @@ var
 begin
   inherited Create;
 
+  fActiveTab := rtSteel;
   fAllowEditing := aAllowEditing;
   Panel_Ratios:=TKMPanel.Create(aParent, TB_PAD, 44, TB_WIDTH, 332);
 
@@ -166,25 +167,36 @@ end;
 
 
 procedure TKMGUIGameRatios.Show;
+
+  function CanUseTab(aTab: TKMRatioTab): Boolean;
+  var
+    K: Integer;
+  begin
+    Result := False;
+    for K := 0 to RES_RATIO_HOUSE_CNT[aTab] - 1 do
+      //Do not allow player to see blocked house (never able to build). Though house may be prebuilt and blocked
+      if not gMySpectator.Hand.Locks.HouseBlocked[RES_RATIO_HOUSE[aTab, K]]
+        or (gMySpectator.Hand.Stats.GetHouseQty(RES_RATIO_HOUSE[aTab, K]) > 0) then
+      begin
+        //Select first tab we find with an unblocked house
+        RatioTabSet(aTab);
+        Exit(True);
+      end;
+  end;
+
 var
-  I: TKMRatioTab;
-  K: Integer;
+  TAB: TKMRatioTab;
 begin
   Panel_Ratios.Show;
   //Select the default tab, which is the first tab with an unblocked house
   //(so f.e. steel isn't the default tab when it's blocked by mission)
-  for I := Low(TKMRatioTab) to High(TKMRatioTab) do
-    for K := 0 to RES_RATIO_HOUSE_CNT[fActiveTab] - 1 do
-      //Do not allow player to see blocked house (never able to build). Though house may be prebuilt and blocked
-      if (not gMySpectator.Hand.Locks.HouseBlocked[RES_RATIO_HOUSE[I, K]])
-      or (gMySpectator.Hand.Stats.GetHouseQty(RES_RATIO_HOUSE[I, K]) > 0) then
-      begin
-        //Select first tab we find with an unblocked house
-        RatioTabSet(I);
+  if not CanUseTab(fActiveTab) then
+    for TAB := Low(TKMRatioTab) to High(TKMRatioTab) do
+      if (TAB <> fActiveTab) and CanUseTab(TAB) then
         Exit;
-      end;
+
   //All houses are blocked, so select the first tab
-  RatioTabSet(rtSteel);
+  RatioTabSet(fActiveTab);
 end;
 
 

@@ -156,6 +156,7 @@ type
     procedure UpdateHeight;
   public
     FlagColor: TColor4; //When using an image
+    CapColor: TColor4;
     Font: TKMFont;
     MakesSound: Boolean;
     TexID: Word;
@@ -194,6 +195,8 @@ type
     Font: TKMFont;
     HideHighlight: Boolean;
     Clickable: Boolean; //Disables clicking without dimming
+    EdgeAlpha: Single;
+    BackAlpha: Single;
 
     constructor Create(aParent: TKMPanel; aLeft, aTop, aWidth, aHeight, aTexID: Integer; aRX: TRXType = rxGui);
 
@@ -234,7 +237,8 @@ uses
   KM_ControlsTypes,
   KM_Sound,
   KM_Resource, KM_ResSound, KM_ResSprites,
-  KM_Defaults, KM_CommonUtils;
+  KM_Defaults, KM_CommonUtils,
+  KM_RenderTypes;
 
 
 { TKMBevel }
@@ -496,7 +500,7 @@ begin
     Parent.MasterControl.CtrlOver := Self;
     Parent.MasterControl.CtrlUp := Self;
     if Assigned(OnClick) then OnClick(Self);
-    Result := true; //Click has happened
+    Result := True; //Click has happened
   end
   else
     Result := False; //No, we couldn't click for Control is unreachable
@@ -652,6 +656,7 @@ begin
   ShowImageEnabled  := True;
   AutoHeight        := False;
   AutoTextPadding   := 5;
+  CapColor          := icWhite;
 end;
 
 
@@ -732,7 +737,7 @@ begin
   if TexID <> 0 then Exit;
 
   //If disabled then text should be faded
-  col := IfThen(Enabled, icWhite, icGray);
+  col := IfThen(Enabled, CapColor, icGray);
 
   top := AbsTop + Byte(bsDown in stateSet) + CapOffsetY;
 
@@ -758,6 +763,8 @@ begin
   CapColor  := $FFFFFFFF;
   Font      := fntGame;
   Clickable := True;
+  EdgeAlpha := BEVEL_EDGE_ALPHA_DEF;
+  BackAlpha := BEVEL_BACK_ALPHA_DEF;
 end;
 
 
@@ -775,7 +782,7 @@ procedure TKMButtonFlatCommon.Paint;
 begin
   inherited;
 
-  TKMRenderUI.WriteBevel(AbsLeft, AbsTop, Width, Height);
+  TKMRenderUI.WriteBevel(AbsLeft, AbsTop, Width, Height, EdgeAlpha, BackAlpha);
 
   if (csOver in State) and Enabled and not HideHighlight then
     TKMRenderUI.WriteShape(AbsLeft+1, AbsTop+1, Width-2, Height-2, $40FFFFFF);

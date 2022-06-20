@@ -258,7 +258,9 @@ begin
 
   gLog.AddTime('LoadGameResources ... AlphaShadows: ' + BoolToStr(aAlphaShadows, True) + '. Forced: ' + BoolToStr(aForceReload, True));
   doForceReload := aForceReload or (aAlphaShadows <> fSprites.AlphaShadows);
-  if (fDataState <> rlsAll) or not fSprites.GameResLoadCompleted or doForceReload then
+  if (fDataState <> rlsAll)
+    {$IFDEF LOAD_GAME_RES_ASYNC}or not fSprites.GameResLoadCompleted {$ENDIF}
+    or doForceReload then
   begin
     // Load game Reources
     // TempData is cleared while loading GameResources (after each step)

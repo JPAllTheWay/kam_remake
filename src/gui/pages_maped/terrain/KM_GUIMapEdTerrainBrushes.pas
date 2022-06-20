@@ -199,14 +199,18 @@ begin
 
   top := 390;
 
-  with TKMLabel.Create(Panel_Brushes, 9, NextTop(20), Panel_Brushes.Width - 9, 20, gResTexts[TX_MAPED_TERRAIN_BRUSH_BLENDING], fntMetal, taLeft) do
+  with TKMLabel.Create(Panel_Brushes, 9, NextTop(0{20}), Panel_Brushes.Width - 9, 20, gResTexts[TX_MAPED_TERRAIN_BRUSH_BLENDING], fntMetal, taLeft) do
+  begin
     Hint := gResTexts[TX_MAPED_TERRAIN_BRUSH_BLENDING_HINT];
+    Hide;
+  end;
 
-  BrushBlending := TKMTrackBar.Create(Panel_Brushes, 9, NextTop(35), BTN_TKIND_S_SP_X*SURF_ROW_LEN, 0, TERRAIN_MAX_BLENDING_LEVEL);
+  BrushBlending := TKMTrackBar.Create(Panel_Brushes, 9, NextTop(0{35}), BTN_TKIND_S_SP_X*SURF_ROW_LEN, 0, TERRAIN_MAX_BLENDING_LEVEL);
   BrushBlending.Anchors := [anLeft, anTop, anRight];
   BrushBlending.Position := TERRAIN_DEF_BLENDING_LVL; //Default value
   BrushBlending.OnChange := BrushChange;
   BrushBlending.Hint := gResTexts[TX_MAPED_TERRAIN_BRUSH_BLENDING_HINT];
+  BrushBlending.Hide;
 
   RandomElements := TKMCheckBox.Create(Panel_Brushes, 9, NextTop(25), Panel_Brushes.Width - 9, 40, gResTexts[TX_MAPED_TERRAIN_BRUSH_RANDOM], fntMetal);
   RandomElements.OnClick := BrushChange;

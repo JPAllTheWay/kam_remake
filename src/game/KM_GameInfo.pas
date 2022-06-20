@@ -3,7 +3,7 @@ unit KM_GameInfo;
 interface
 uses
   KM_CommonClasses, KM_Maps, KM_MapTypes, KM_Defaults,
-  KM_HandTypes;
+  KM_HandTypes, KM_CommonTypes;
 
 
 type
@@ -18,11 +18,10 @@ type
   TKMGameInfo = class
   private
     fMapTxtInfo: TKMMapTxtInfo;
-    fMapTxtInfoNasToBeFreed: Boolean;
     fParseError: TKMGameInfoParseError;
     procedure ResetParseError;
     function GetVersionUnicode: UnicodeString;
-    procedure SetMapTxtInfo(const Value: TKMMapTxtInfo);
+    function IsOnlyAILoc(aLoc: Integer): Boolean;
   public
     Title: UnicodeString; //Used for campaigns and to store in savegames
     Version: AnsiString; //Savegame version, yet unused in maps, they always have actual version
@@ -38,25 +37,28 @@ type
     PlayerCount: Byte;
     Enabled: array [0..MAX_HANDS-1] of Boolean;
     CanBeHuman: array [0..MAX_HANDS-1] of Boolean;
+    CanBeClassicAI: array [0..MAX_HANDS-1] of Boolean;
+    CanBeAdvancedAI: array [0..MAX_HANDS-1] of Boolean;
     OwnerNickname: array [0..MAX_HANDS-1] of AnsiString; //Nickname of the player who plays this location
     HandTypes: array [0..MAX_HANDS-1] of TKMHandType;
     Color: array [0..MAX_HANDS-1] of Cardinal;
     Team: array [0..MAX_HANDS-1] of Integer;
 
     //To be used in Savegames
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(aMapTxtInfo: TKMMapTxtInfo); overload;
     destructor Destroy; override;
 
     procedure Save(SaveStream: TKMemoryStream);
     procedure Load(LoadStream: TKMemoryStream);
 
-    property TxtInfo: TKMMapTxtInfo read fMapTxtInfo write SetMapTxtInfo;
-    property MapTxtInfoNasToBeFreed: Boolean read fMapTxtInfoNasToBeFreed write fMapTxtInfoNasToBeFreed;
+    property TxtInfo: TKMMapTxtInfo read fMapTxtInfo write fMapTxtInfo;
     property ParseError: TKMGameInfoParseError read fParseError;
     function IsValid(aCheckDATCRC: Boolean): Boolean;
     function AICount: Byte;
     function HumanCount: Byte;
     function HumanUsableLocs: TKMHandIDArray;
+    function FixedLocsColors: TKMCardinalArray;
     function GetTimeText: UnicodeString;
     function GetTitleWithTime: UnicodeString;
     function GetSaveTimestamp: UnicodeString;
@@ -75,18 +77,23 @@ uses
 { TKMGameInfo }
 constructor TKMGameInfo.Create;
 begin
-  inherited;
-  fMapTxtInfo := TKMMapTxtInfo.Create;
-  fMapTxtInfoNasToBeFreed := True;
+  Create(TKMMapTxtInfo.Create);
+end;
 
+
+constructor TKMGameInfo.Create(aMapTxtInfo: TKMMapTxtInfo);
+begin
+  inherited Create;
+
+  fMapTxtInfo := aMapTxtInfo;
   ResetParseError;
 end;
 
 
 destructor TKMGameInfo.Destroy;
 begin
-  if fMapTxtInfoNasToBeFreed then
-    FreeAndNil(fMapTxtInfo);
+  if fMapTxtInfo <> nil then
+    fMapTxtInfo.Free;
 
   inherited;
 end;
@@ -127,6 +134,8 @@ procedure TKMGameInfo.Load(LoadStream: TKMemoryStream);
     for I := 0 to PlayerCount - 1 do
     begin
       LoadStream.Read(CanBeHuman[I]);
+      LoadStream.Read(CanBeClassicAI[I]);
+      LoadStream.Read(CanBeAdvancedAI[I]);
       LoadStream.Read(Enabled[I]);
       LoadStream.ReadA(OwnerNickname[I]);
       LoadStream.Read(HandTypes[I], SizeOf(HandTypes[I]));
@@ -200,6 +209,8 @@ begin
   for I := 0 to PlayerCount - 1 do
   begin
     SaveStream.Write(CanBeHuman[I]);
+    SaveStream.Write(CanBeClassicAI[I]);
+    SaveStream.Write(CanBeAdvancedAI[I]);
     SaveStream.Write(Enabled[I]);
     SaveStream.WriteA(OwnerNickname[I]);
     SaveStream.Write(HandTypes[I], SizeOf(HandTypes[I]));
@@ -208,18 +219,6 @@ begin
   end;
 
   fMapTxtInfo.Save(SaveStream);
-end;
-
-
-procedure TKMGameInfo.SetMapTxtInfo(const Value: TKMMapTxtInfo);
-begin
-  // Free initially created fMapTxtInfo object
-  if fMapTxtInfoNasToBeFreed then
-    FreeAndNil(fMapTxtInfo);
-
-  fMapTxtInfoNasToBeFreed := False; // We don't want to free object, created outside of this class instance
-
-  fMapTxtInfo := Value;
 end;
 
 
@@ -264,6 +263,32 @@ begin
       SetLength(Result, Length(Result)+1);
       Result[Length(Result)-1] := I;
     end;
+end;
+
+
+function TKMGameInfo.IsOnlyAILoc(aLoc: Integer): Boolean;
+begin
+  Assert(aLoc < MAX_HANDS);
+  Result := not CanBeHuman[aLoc] and (CanBeClassicAI[aLoc] or CanBeAdvancedAI[aLoc]);
+end;
+
+
+// Color is fixed for loc if map has BlockColorSelection attribute
+// or if its only AI loc, no available for player
+// *** We don't need to check if loc is only for AI for now, it works fine without it
+function TKMGameInfo.FixedLocsColors: TKMCardinalArray;
+var
+  I: Integer;
+begin
+  SetLength(Result, 0);
+  if Self = nil then Exit;
+
+  SetLength(Result, PlayerCount);
+  for I := 0 to PlayerCount - 1 do
+    if TxtInfo.BlockColorSelection or IsOnlyAILoc(I) then
+      Result[I] := Color[I]
+    else
+      Result[I] := 0;
 end;
 
 

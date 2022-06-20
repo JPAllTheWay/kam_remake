@@ -2,7 +2,8 @@ unit KM_CommonShellUtils;
 {$I KaM_Remake.inc}
 interface
 
-  function OpenPDF(const aURL: string): Boolean;
+  function ShellOpenFile(const aURL: string): Boolean;
+  function ShellOpenFolder(const aURL: string; aSelectFile: Boolean): Boolean;
 
   function GetMemUsed: NativeUInt;
   function GetCommittedStackSize: NativeUInt;
@@ -16,12 +17,32 @@ uses
   ;
 
 
-function OpenPDF(const aURL: string): Boolean;
+function ShellOpenFile(const aURL: string): Boolean;
 begin
   if aURL = '' then Exit(False);
 
   {$IFDEF WDC}
   Result := ShellExecute(Application.Handle, 'open', PChar(aURL), nil, nil, SW_SHOWNORMAL) > 32;
+  {$ENDIF}
+
+  {$IFDEF FPC}
+  Result := OpenDocument(aURL);
+  {$ENDIF}
+end;
+
+
+function ShellOpenFolder(const aURL: string; aSelectFile: Boolean): Boolean;
+var
+  url: string;
+begin
+  if aURL = '' then Exit(False);
+
+  {$IFDEF WDC}
+  url := '"' + aURL + '"';
+  if aSelectFile then
+    url := '/select, ' + url;
+
+  Result := ShellExecute(Application.Handle, 'open', 'explorer.exe', PChar(url),  nil, SW_SHOWNORMAL) > 32;
   {$ENDIF}
 
   {$IFDEF FPC}

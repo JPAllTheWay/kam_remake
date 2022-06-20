@@ -39,6 +39,7 @@ type
 
 implementation
 uses
+  KM_Entity,
   KM_RenderUI, KM_HandsCollection, KM_ResTexts, KM_Resource, KM_ResFonts, KM_ResUnits,
   KM_Hand, KM_Pics, KM_Points,
   KM_ResTypes;
@@ -212,7 +213,8 @@ begin
     begin
       UT := StatPlan[I].UnitType[K];
       qty := gMySpectator.Hand.Stats.GetUnitQty(UT);
-      wipQty := gMySpectator.Hand.Stats.GetUnitWip(UT);
+      // WIP qty is Training - Dismissing qty
+      wipQty := gMySpectator.Hand.Stats.GetUnitTraining(UT) - gMySpectator.Hand.Stats.GetUnitDismissing(UT);
 
       // Hightlight unit qty, when there are not enough workers
       doHighlight := (I < High(StatPlan) - 1) // do not highlight last 2 rows - Barracks/Watch tower and Storehouse/Inn/School
@@ -224,7 +226,15 @@ begin
         Stat_UnitQty[UT].FontColor := clStatsUnitDefault;
 
       Stat_UnitQty[UT].Caption := IfThen(not doHighlight and (qty  = 0), '-', IntToStr(qty));
-      Stat_UnitWip[UT].Caption := IfThen(wipQty = 0, '', '+' + IntToStr(wipQty));
+
+      if wipQty > 0 then
+        Stat_UnitWip[UT].Caption := '+' + IntToStr(wipQty)
+      else
+      if wipQty < 0 then
+        Stat_UnitWip[UT].Caption := IntToStr(wipQty)
+      else
+        Stat_UnitWip[UT].Caption := '';
+
       Stat_UnitPic[UT].Hint := gRes.Units[UT].GUIName;
       Stat_UnitPic[UT].FlagColor := gMySpectator.Hand.FlagColor;
     end;

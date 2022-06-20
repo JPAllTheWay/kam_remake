@@ -8,7 +8,6 @@ uses
 
 type
   TKMScriptPreProcessorGame = class(TKMScriptPreProcessor)
-
   protected
     function AllowGameUpdate: Boolean; override;
     function TryLoadCustomEventDirectives(const aDirectiveName, aDirectiveParam: string; aParser: TPSPascalPreProcessorParser): Boolean; override;

@@ -382,12 +382,12 @@ end;
 
 
 //Unit mining ranges. (measured from KaM)
-function TKMUnitSpec.GetMiningRange: byte;
+function TKMUnitSpec.GetMiningRange: Byte;
 begin
   case fUnitType of
     utWoodcutter:  Result := 10;
     utFarmer:      Result := 10;
-    utStonemason: Result := 16;
+    utStonemason:  Result := 16;
     utFisher:      Result := 14;
   else
     raise Exception.Create(GUIName + ' has no mining range');

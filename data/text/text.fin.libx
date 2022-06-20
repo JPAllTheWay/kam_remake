@@ -1,14 +1,14 @@
 ﻿0:Saha
 1:Rautasulattamo
-2:Asepaja
+2:Asesepän paja
 3:Hiilikaivos
 4:Rautakaivos
 5:Kultakaivos
 6:Kalastajan maja
 7:Leipomo
 8:Maatila
-9:Puunhakkaajan mökki
-10:(?)Paja
+9:Metsänhoitajan mökki
+10:Panssarisepän paja
 11:Varasto
 12:Hevostalli
 13:Koulurakennus
@@ -18,12 +18,13 @@
 17:Vartiotorni
 18:Raatihuone
 19:Aseverstas
-20:(?)Verstas
+20:Varusteverstas
 21:Kasarmi
 22:Mylly
 23:Sotakonepaja
 24:Teurastamo
 25:Nahkatehdas
+26:Harjoitteluhalli
 27:Taverna
 28:Viinitila
 29:Kauppatori
@@ -75,7 +76,7 @@
 75:Jousimies
 76:Varsijousimies
 77:Keihäsmies
-78:Pertuskamies
+78:Hilparimies
 79:Tiedustelija
 80:Ritari
 81:Villi
@@ -175,7 +176,7 @@
 177:Kultakaivoksesi on kuihtunut.
 178:Metsänhoitajasi ei löydä puita kaadettavaksi.
 179:Rakennuksessa ei ole asukkia.
-180:Joukkosi ovat hyvin nälkäisiä, heidän on parempi saada ruokaa nopeasti.
+180:Joukkosi ovat nälkäisiä, heidän on saatava ruokaa nopeasti.
 181:TAUKO
 182:Kuljettaa
 183:Rakentaa tietä
@@ -225,10 +226,10 @@
 227:Kampanjat
 228:Kampanjat
 229:Aloita kampanja!
-230:Aloita yksittäinen kartta
+230:Karttavalikko
 231:Aloita kartta
 232:Takaisin valikkoon
-233:Lataa tallennettu peli
+233:Lataa tallennus
 234:Moninpeli
 235:Asetukset
 236:Lopputekstit
@@ -299,7 +300,7 @@
 301:Näppäinasetukset:
 302:Peliasetukset:
 303:Äänet
-304:Poista musiikki käytöstä
+304:Hiljennä musiikki
 305:Grafiikat
 306:Kirkkaus
 307:Pystytahdistus
@@ -359,6 +360,9 @@
 365:Valitse oikealla hiirennäppäimellä tavara johon haluat vaihtaa
 366:x%d
 367:x%d
+413:Oletuspelaaja
+457:Klassinen AI: Monta alokasta tekoälyllä pitää olla kasarmissa|\nEdistynyt AI: Parametri ei käytössä
+485:Aseta puolustussijainti tekoälylle.|Vaihtaaksesi parametrejä, käytä:| RMB - Suunta, CTRL + RMB - Ryhmät tyyppi, ALT + RMB - Puolustava / Hyökkäävä
 500:Pelaajan nimi
 501:Tila:
 502:Luo palvelin
@@ -407,7 +411,7 @@
 545:Valmis
 546:Ei valmis
 547:Aloita!
-548:Pelinopeus (Rauhan aika) [real]
+548:Pelinopeus (Rauha) [real]
 549:Pelinopeus [real]
 550:OK
 551:Peruuta
@@ -473,7 +477,7 @@
 614:Peruuta
 615:Tämän resurssin vaihto ei ole saatavilla tässä tehtävässä
 616:Kaada ja istuta
-617:Pelkkä kaataminen
+617:Puiden kaato
 618:Ei sallittu rauhan aikana
 619:Rauhan aikaa jäljellä: %s
 620:Rauhan aika on ohi. Tarttukaa aseisiin!
@@ -529,6 +533,8 @@
 700:Merikäärme
 701:Meritähti
 702:Rapu
+703:Lumpeenkukka
+704:Lumme
 705:Ankka
 706:Tämä sotilas ei ole saatavilla
 707:Tämä yksikkö ei ole saatavilla
@@ -566,6 +572,7 @@
 771:Näytä sumu
 772:Katsele
 773:Katselija
+775:Tekoälyn ryhmät hyökkäävät automaattisesti jos olet lähempänä kuin näin monta tiiltä
 778:Salli katsojat
 779:Ylennä isännäksi
 780:Katsoja
@@ -574,7 +581,7 @@
 795:Aloitaaksesi aiemmin avattu tehtävä kampanjasta, valitse tehtävän lippu kampanjan kartalta
 796:%s äänesti aulaan palaamisesta (Tarvitaan lisää ääniä %s)
 797:Äänestä aulaan palaamisesta. Peliä voidaan jatkaa tai muuttaa sen jälkeen.
-798:Äänestä aulaan palaamisesta
+798:Palaa aulaan
 799:%s äänesti aulaan palaamisesta (Äänestys onnistui)
 800:Äänestys aulaan palaamisesta epäonnistui
 801:Uusinnan poistaminen poistaa myös siihen liitetyn tallennuksen. Oletko varma että haluat poistaa tallennuksen?
@@ -588,8 +595,8 @@
 825:Avaa Lueminut PDF
 826:PDF tiedostoa ei pystynyt avaamaan
 828:Virhe: Keskeytetty tiedosto ei täsmää paikalliseen keskeytettyyn tiedostoon. On tapahtunut virhe tai isäntä yrittää huijata.
-829:Tilauksesi on valmiina.
-830:Lataa Aasialaiset fontit
+829:Tilauksesi ovat valmistuneet
+830:Aasialaiset fontit
 831:Siirrä ladatuista
 832:Uudelleennimeä uusinta
 833:Uudelleennimeä uusinta
@@ -601,8 +608,8 @@
 839:OK
 840:Toiminto
 841:Näppäin
-844:Nollaa näppäinsidonnat
-964:Odottaa pelistä poistuneiden pelaajien dataa:
+844:Palauta
+964:Odottaa pelistä poistuneiden pelaajien tietoa:
 966:Tämä (?)paja ei ole asutettu
 967:Tämä (?)verstas ei ole asutettu
 968:Tämä leipomo ei ole asutettu
@@ -637,13 +644,13 @@
 1025:%s ei ole enää yhteydessä peliin
 1026:Kulta
 1027:Suurin määrä kultaa joka toimitetaan raatihuoneelle
-1028:Pelkkä istuttaminen
+1028:Puiden istutus
 1029:Avaa / Sulje rakennus %s
 1030:Kaikki
 1031:Kaikki
 1032:Kaikki
 1033:Uudelleenimeä Kartta
-1034:Tauko rauhan ajan päättyessä
+1034:Tauko rauhan päättyessä
 1035:Pelin kesto
 1036:Nimi
 1037:Armeijan vahvuus
@@ -686,11 +693,11 @@
 1105:Joukkueet
 1113:Omistaja: %s
 1117:Sulje
-1119:Poista musiikki käytöstä
+1119:Hiljennä musiikki
 1120:Sekoita kappaleet
 1121:Sekoita kappaleet päälle/pois
 1122:Kartan tyyppi
-1123:Skenaariokartta
+1123:Skenaariokartat
 1124:Yksinpeli mahdollinen
 1139:Poistuu
 1140:Häädä
@@ -702,7 +709,7 @@
 1168:Karttafiltteri
 1169:Nollaa filtteri
 1170:Pelaajien määrä
-1171:Takaisin peliin
+1171:Takaisin
 1172:Näytä yksityiskohtaiset tiedot pelistä
 1173:Vaikeustaso
 1174:Helppo
@@ -809,15 +816,21 @@
 1513:Nykyinen pelin nopeus
 1514:Nykyinen uusinnan nopeus
 1515:Tallennettu pelinnopeus
-1516:Interpolaatio-piirtäjä
-1517:Interpolaatio-piirtäjä
-1518:Interpolaatio-piirtäjä
+1516:HD Liikehdintä
+1517:HD Liikehdintä
+1518:Lisää yksiköiden ja ammusten liikkeen resoluutiota
 1519:Jotta pelaaja %0:s %1:s pelaajan/pelaajien %2:s %3:s täytyy olla %4:s
 1520:Voittaa
 1521:Selviydy
 1522:Tuhottu
 1523:Pelastettu
 1524:Päärakennukset ( %s )
-1526:Interpolaatio-animaatiot
-1527:Interpolaatio-animaatiot
-1528:Interpolaatio-animaatiot
+1526:HD Animaatiot
+1527:HD Animaatiot
+1528:Lisää animaatioissa käytettävien kehysten määrää.
+1531:Pelin asetukset
+1532:Uusintojen asetukset
+1533:Karttaeditorin asetukset
+1535:Kampanjan karttaan
+1537:Heikko
+1547:Toinen pelaaja sai Desync-virheen. Lähettäkää meille tämä kaatumisraportti, se auttaa meitä korjaamaan virheen.%sToisen pelaajan virheviesti on:%s

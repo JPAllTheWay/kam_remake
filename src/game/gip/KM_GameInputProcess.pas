@@ -473,8 +473,9 @@ type
 implementation
 uses
   Classes, SysUtils, StrUtils, TypInfo, Math,
+  KM_Entity,
   KM_GameApp, KM_Game, KM_GameParams, KM_GameSettings,
-  KM_HandsCollection,
+  KM_HandsCollection, KM_HandEntity,
   KM_HouseMarket, KM_HouseBarracks, KM_HouseSchool, KM_HouseTownHall, KM_HouseStore, KM_HouseArmorWorkshop,
   KM_ScriptingEvents, KM_Alerts, KM_CommonUtils, KM_RenderUI,
   KM_ResFonts, KM_Resource,
@@ -1016,11 +1017,11 @@ begin
 
       gicWareDistributionChange:  begin
                                     P.Stats.WareDistribution[TKMWareType(IntParams[0]), TKMHouseType(IntParams[1])] := IntParams[2];
-                                    P.Houses.UpdateResRequest;
+                                    P.Houses.UpdateDemands;
                                   end;
       gicWareDistributions:       begin
                                     P.Stats.WareDistribution.LoadFromStr(UnicodeString(AnsiStrParam));
-                                    P.Houses.UpdateResRequest;
+                                    P.Houses.UpdateDemands;
                                   end;
 
       gicTempAddScout:            if DEBUG_CHEATS and (MULTIPLAYER_CHEATS or not gGameParams.IsMultiPlayerOrSpec) then

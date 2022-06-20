@@ -8,21 +8,22 @@ uses
 type
   //Individual message
   TKMLogMessage = class
+  private
     fKind: TKMMessageKind;
-    fEntityUID: Cardinal;
+    fEntityUID: Integer;
     fLoc: TKMPoint;
     fTextID: Integer;
     fIsReadGIP: Boolean; //This is synced through GIP
     fIsReadLocal: Boolean; //This is used locally so it responds instantly
   public
-    constructor Create(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal);
+    constructor Create(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer);
     constructor Load(LoadStream: TKMemoryStream);
 
     function IsGoto: Boolean;
     function IsRead: Boolean;
     function Text: UnicodeString;
     property Loc: TKMPoint read fLoc;
-    property EntityUID: Cardinal read fEntityUID;
+    property EntityUID: Integer read fEntityUID;
     property Kind: TKMMessageKind read fKind;
 
     property IsReadGIP: Boolean write fIsReadGIP;
@@ -50,7 +51,7 @@ type
 
     function HasNewMessages: Boolean;
 
-    procedure Add(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal);
+    procedure Add(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer);
 
     procedure Save(SaveStream: TKMemoryStream);
     procedure Load(LoadStream: TKMemoryStream);
@@ -65,7 +66,7 @@ uses
 
 
 { TKMLogMessage }
-constructor TKMLogMessage.Create(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal);
+constructor TKMLogMessage.Create(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer);
 begin
   inherited Create;
 
@@ -150,7 +151,7 @@ begin
 end;
 
 
-procedure TKMMessageLog.Add(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Cardinal);
+procedure TKMMessageLog.Add(aKind: TKMMessageKind; aTextID: Integer; const aLoc: TKMPoint; aEntityUID: Integer);
 begin
   SetLength(fListLog, fCountLog + 1);
   fListLog[fCountLog] := TKMLogMessage.Create(aKind, aTextID, aLoc, aEntityUID);

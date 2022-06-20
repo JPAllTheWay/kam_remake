@@ -27,7 +27,10 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_ResSound, KM_Sound, KM_Resource, KM_Projectiles, KM_GameParams, KM_ResUnits;
+  KM_Entity,
+  KM_HandsCollection,
+  KM_Resource, KM_ResSound, KM_ResUnits,
+  KM_Sound, KM_Projectiles, KM_GameParams;
 
 
 const
@@ -58,7 +61,7 @@ end;
 procedure TKMTaskAttackHouse.SyncLoad;
 begin
   inherited;
-  fHouse := gHands.GetHouseByUID(Cardinal(fHouse));
+  fHouse := gHands.GetHouseByUID(Integer(fHouse));
 end;
 
 
@@ -79,6 +82,7 @@ function TKMTaskAttackHouse.Execute: TKMTaskResult;
 var
    AnimLength: Integer;
    Delay, Cycle: Integer;
+   closest: TKMPoint;
 begin
   Result := trTaskContinues;
 
@@ -124,7 +128,7 @@ begin
               SetActionLockedStay(Delay,uaWork); //Pretend to aim
 
               if not KMSamePoint(Position, fHouse.GetClosestCell(Position)) then //Unbuilt houses can be attacked from within
-                Direction := KMGetDirection(Position, fHouse.Entrance); //Look at house
+                Direction := KMGetDirection(PositionNext, fHouse.Entrance); //Look at house
 
               if gMySpectator.FogOfWar.CheckTileRevelation(Round(PositionF.X), Round(PositionF.Y)) >= 255 then
               case UnitType of
@@ -144,8 +148,9 @@ begin
                 Exit;
               end;
               SetActionLockedStay(0,uaWork,False); //Melee units pause after the hit
-              if not KMSamePoint(Position, fHouse.GetClosestCell(Position)) then //Unbuilt houses can be attacked from within
-                Direction := KMGetDirection(Position, fHouse.GetClosestCell(Position)); //Look at house
+              closest := fHouse.GetClosestCell(PositionNext);
+              if not KMSamePoint(PositionNext, closest) then //Unbuilt houses can be attacked from within
+                Direction := KMGetDirection(PositionNext, closest); //Look at house
 
             end;
           end;

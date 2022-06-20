@@ -34,11 +34,11 @@ type
 
 
   TBalancedResource = record
-    InitOwner, Resource, MinesCnt: Byte;
+    InitOwner, Resource, MinesCnt, FinalCnt: Byte;
     //Owners: array[0..MAX_HANDS] of Byte;
     Quantity: Integer;
     TileCounter: TIntegerArray;
-    Points: TKMPointArray;
+    Points, MinePoints: TKMPointArray;
   end;
 
   TBalancedResource1Array = array of TBalancedResource;
@@ -977,6 +977,7 @@ begin
     //Owners[0] := aOwner;
     Resource := aResource;
     MinesCnt := aMinesCnt;
+    FinalCnt := 0;
     Quantity := aQuantity;
     Points := aPoints;
   end;

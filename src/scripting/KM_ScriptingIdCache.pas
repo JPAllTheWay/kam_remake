@@ -42,7 +42,10 @@ type
 
 implementation
 uses
-  KM_GameParams, KM_HandsCollection, KM_DevPerfLog, KM_DevPerfLogTypes;
+  KM_Entity,
+  KM_GameParams, KM_HandsCollection,
+  KM_DevPerfLog, KM_DevPerfLogTypes,
+  KM_Defaults;
 
 
 { TKMScriptingIdCache }
@@ -305,13 +308,13 @@ var
   I: Integer;
 begin
   for I := Low(fUnitCache) to High(fUnitCache) do
-    fUnitCache[I].U := gHands.GetUnitByUID(Cardinal(fUnitCache[I].U));
+    fUnitCache[I].U := gHands.GetUnitByUID(Integer(fUnitCache[I].U));
 
   for I := Low(fHouseCache) to High(fHouseCache) do
-    fHouseCache[I].H := gHands.GetHouseByUID(Cardinal(fHouseCache[I].H));
+    fHouseCache[I].H := gHands.GetHouseByUID(Integer(fHouseCache[I].H));
 
   for I := Low(fGroupCache) to High(fGroupCache) do
-    fGroupCache[I].G := gHands.GetGroupByUID(Cardinal(fGroupCache[I].G));
+    fGroupCache[I].G := gHands.GetGroupByUID(Integer(fGroupCache[I].G));
 end;
 
 

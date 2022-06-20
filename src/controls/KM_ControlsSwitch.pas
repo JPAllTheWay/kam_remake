@@ -201,7 +201,9 @@ begin
 
   checkSize := gRes.Fonts[fFont].GetTextSize('x').Y + 1;
 
-  TKMRenderUI.WriteBevel(AbsLeft, AbsTop, checkSize - 4, checkSize-4, 1, {0.35 - }Byte(not IsSemiChecked)*0.35);
+
+
+  TKMRenderUI.WriteBevel(AbsLeft, AbsTop, checkSize - 4, checkSize-4, 1, Byte(not IsSemiChecked and Enabled)*0.35);
 
   if DrawOutline then
     TKMRenderUI.WriteOutline(AbsLeft, AbsTop, checkSize - 4, checkSize - 4, LineWidth, LineColor);
@@ -209,7 +211,7 @@ begin
   case fState of
     cbsChecked:     TKMRenderUI.WriteText(AbsLeft + (checkSize-4) div 2, AbsTop - 1, 0, 'x', fFont, taCenter, col);
     cbsSemiChecked: TKMRenderUI.WriteText(AbsLeft + (checkSize-4) div 2, AbsTop - 1, 0, 'x', fFont, taCenter, semiCol);
-    cbsUnchecked: ; //Do not draw anything
+    cbsUnchecked:   ; //Do not draw anything
   end;
 
 

@@ -38,7 +38,7 @@ uses
   KM_Game,
   KM_GameParams,
   KM_GameTypes,
-  KM_HandsCollection,
+  KM_HandsCollection, KM_HandEntity, KM_HandTypes,
   KM_ScriptingEvents;
 
 

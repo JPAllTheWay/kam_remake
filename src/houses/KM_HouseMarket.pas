@@ -14,7 +14,12 @@ type
     fResFrom, fResTo: TKMWareType;
     fMarketResIn: array [WARE_MIN..WARE_MAX] of Word;
     fMarketResOut: array [WARE_MIN..WARE_MAX] of Word;
+    // For some reason fMarketDeliveryCount is not the same as house / townhall delivery count
+    // In the market we don't count actual wares on the market in the delivery count, but for other houses we do
     fMarketDeliveryCount: array [WARE_MIN..WARE_MAX] of Word;
+    // Number of demands that were reqeusted to close. We don't klnow if they will succeed in closing or not
+    // Closing could be cancelled, if serf is already entering the house of the demand
+    fMarketDemandsClosing: array [WARE_MIN..WARE_MAX] of Word;
     fTradeAmount: Word;
     procedure AttemptExchange;
     procedure SetResFrom(aRes: TKMWareType);
@@ -35,6 +40,8 @@ type
     function GetResOrder(aId: Byte): Integer; override;
     procedure SetResOrder(aId: Byte; aValue: Integer); override;
     procedure CheckTakeOutDeliveryMode; override;
+
+    function TryDecResourceDelivery(aWare: TKMWareType; aDeleteCanceled: Boolean): Boolean; override;
   public
     constructor Create(aUID: Integer; aHouseType: TKMHouseType; PosX, PosY: Integer; aOwner: TKMHandID; aBuildState: TKMHouseBuildState);
     constructor Load(LoadStream: TKMemoryStream); override;
@@ -48,8 +55,6 @@ type
     function ShouldAbandonDeliveryFrom(aWareType: TKMWareType; aImmidiateCheck: Boolean = False): Boolean; override;
     function ShouldAbandonDeliveryTo(aWareType: TKMWareType): Boolean; override;
 
-    procedure DecResourceDelivery(aWare: TKMWareType); override;
-
     function AllowedToTrade(aRes: TKMWareType): Boolean;
     function TradeInProgress: Boolean;
     function GetResTotal(aWare: TKMWareType): Word; overload;
@@ -59,6 +64,8 @@ type
     procedure ResTakeFromOut(aWare: TKMWareType; aCount: Word = 1; aFromScript: Boolean = False); override;
     function ResCanAddToIn(aRes: TKMWareType): Boolean; override;
     function ResOutputAvailable(aRes: TKMWareType; const aCount: Word): Boolean; override;
+
+    procedure UpdateDemands; override;
 
     procedure Save(SaveStream: TKMemoryStream); override;
     procedure Paint; override;
@@ -70,8 +77,9 @@ type
 implementation
 uses
   Math, SysUtils, TypInfo,
+  KM_Entity,
   KM_RenderPool,
-  KM_HandsCollection, KM_HandLogistics,
+  KM_HandsCollection, KM_HandLogistics, KM_HandTypes, KM_HandEntity,
   KM_Resource, KM_ResSound,
   KM_ScriptingEvents, KM_Sound,
   KM_CommonUtils;
@@ -159,7 +167,7 @@ end;
 
 function TKMHouseMarket.GetResRequired: Integer;
 begin
-  Result := fTradeAmount * RatioFrom - (fMarketDeliveryCount[fResFrom] + ResToTrade[fResFrom]);
+  Result := fTradeAmount * RatioFrom - (fMarketDeliveryCount[fResFrom] - fMarketDemandsClosing[fResFrom] + ResToTrade[fResFrom]);
 end;
 
 
@@ -178,7 +186,7 @@ begin
     SetResInCnt(aResource, fMarketResIn[aResource] + aCount); //Place the new resource in the IN list
 
     //As we only order 10 resources at one time, we might need to order another now to fill the gap made by the one delivered
-    ordersAllowed := MAX_RES_ORDERED - fMarketDeliveryCount[fResFrom];
+    ordersAllowed := MAX_RES_ORDERED - (fMarketDeliveryCount[fResFrom] - fMarketDemandsClosing[fResFrom]);
 
     Assert(ordersAllowed >= 0); //We must never have ordered more than we are allowed
 
@@ -411,27 +419,26 @@ begin
 end;
 
 
-procedure TKMHouseMarket.DecResourceDelivery(aWare: TKMWareType);
+function TKMHouseMarket.TryDecResourceDelivery(aWare: TKMWareType; aDeleteCanceled: Boolean): Boolean;
 begin
-  fMarketDeliveryCount[aWare] := Max(0, fMarketDeliveryCount[aWare] - 1);
+  Assert(fMarketDemandsClosing[aWare] > 0);
+
+  // Do not decrease DeliveryCount, if demand delete was cancelled (demand closing was not possible, f.e. when serf enters the house)
+  // thus serf brought ware to the house and we should not decrease delivery count in that case here
+  // (but it will be decreased anyway in the ResAddToIn for market)
+  if not aDeleteCanceled then
+    fMarketDeliveryCount[aWare] := Max(0, fMarketDeliveryCount[aWare] - 1);
+  fMarketDemandsClosing[aWare] := Max(0, fMarketDemandsClosing[aWare] - 1);
+
+  Result := True;
 end;
 
 
-//Player has changed the amount of order
-procedure TKMHouseMarket.SetResOrder(aId: Byte; aValue: Integer);
+procedure TKMHouseMarket.UpdateDemands;
 var
-  resRequired, ordersAllowed, ordersRemoved, orderToDo, movedOut2In: Integer;
+  resRequired, ordersAllowed, ordersRemoved, orderToDo, movedOut2In, plannedToRemove: Integer;
 begin
   if (fResFrom = wtNone) or (fResTo = wtNone) or (fResFrom = fResTo) then Exit;
-
-  fTradeAmount := EnsureRange(aValue, 0, MAX_WARES_ORDER);
-
-  //Try to make an exchange from existing resources
-  AttemptExchange;
-
-  //If player cancelled exchange then move all remainders of From resource to Offers list
-  if fTradeAmount = 0 then
-    MoveResIn2Out(fResFrom, fMarketResIn[fResFrom]);
 
   //@Lewin: If player has cancelled the exchange and then started it again resources will not be
   //removed from offers list and perhaps serf will carry them off the marketplace
@@ -449,12 +456,13 @@ begin
     if movedOut2In > 0 then
     begin
       //Remove demands, we took some of the wares from OUT queue
-      ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, fResFrom, movedOut2In);
+      ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, fResFrom, movedOut2In, plannedToRemove);
       Dec(fMarketDeliveryCount[fResFrom], ordersRemoved);
+      Inc(fMarketDemandsClosing[fResFrom], plannedToRemove);
     end;
   end;
 
-  ordersAllowed := MAX_RES_ORDERED - fMarketDeliveryCount[fResFrom];
+  ordersAllowed := MAX_RES_ORDERED - (fMarketDeliveryCount[fResFrom] - fMarketDemandsClosing[fResFrom]);
 
   Assert(ordersAllowed >= 0); //We must never have ordered more than we are allowed
 
@@ -469,12 +477,31 @@ begin
     gHands[Owner].Deliveries.Queue.AddDemand(Self, nil, fResFrom, orderToDo, dtOnce, diNorm)
   end
   else
-    //There are too many resources ordered, so remove as many as we can from the delivery list (some will be being performed)
-    if (resRequired < 0) then
-    begin
-      ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, fResFrom, -resRequired);
-      Dec(fMarketDeliveryCount[fResFrom], ordersRemoved);
-    end;
+  //There are too many resources ordered, so remove as many as we can from the delivery list (some will be being performed)
+  if (resRequired < 0) then
+  begin
+    ordersRemoved := gHands[Owner].Deliveries.Queue.TryRemoveDemand(Self, fResFrom, -resRequired, plannedToRemove);
+    Dec(fMarketDeliveryCount[fResFrom], ordersRemoved);
+    Inc(fMarketDemandsClosing[fResFrom], plannedToRemove);
+  end;
+end;
+
+
+//Player has changed the amount of order
+procedure TKMHouseMarket.SetResOrder(aId: Byte; aValue: Integer);
+begin
+  if (fResFrom = wtNone) or (fResTo = wtNone) or (fResFrom = fResTo) then Exit;
+
+  fTradeAmount := EnsureRange(aValue, 0, MAX_WARES_ORDER);
+
+  //Try to make an exchange from existing resources
+  AttemptExchange;
+
+  //If player cancelled exchange then move all remainders of From resource to Offers list
+  if fTradeAmount = 0 then
+    MoveResIn2Out(fResFrom, fMarketResIn[fResFrom]);
+
+  UpdateDemands;
 end;
 
 
@@ -512,6 +539,7 @@ begin
   LoadStream.Read(fMarketResIn, SizeOf(fMarketResIn));
   LoadStream.Read(fMarketResOut, SizeOf(fMarketResOut));
   LoadStream.Read(fMarketDeliveryCount, SizeOf(fMarketDeliveryCount));
+  LoadStream.Read(fMarketDemandsClosing, SizeOf(fMarketDemandsClosing));
 end;
 
 
@@ -526,6 +554,7 @@ begin
   SaveStream.Write(fMarketResIn, SizeOf(fMarketResIn));
   SaveStream.Write(fMarketResOut, SizeOf(fMarketResOut));
   SaveStream.Write(fMarketDeliveryCount, SizeOf(fMarketDeliveryCount));
+  SaveStream.Write(fMarketDemandsClosing, SizeOf(fMarketDemandsClosing));
 end;
 
 
@@ -558,7 +587,7 @@ end;
 
 function TKMHouseMarket.ObjToString(const aSeparator: String = '|'): String;
 var
-  resInStr, resOutStr, deliveryCntStr, strIn, strOut, strDel: string;
+  resInStr, resOutStr, deliveryCntStr, demandsCloseStr, strIn, strOut, strDel, strDemClose: string;
   WT: TKMWareType;
   len: Integer;
 begin
@@ -573,20 +602,25 @@ begin
     strIn  := IntToStr(fMarketResIn[WT]);
     strOut := IntToStr(fMarketResOut[WT]);
     strDel := IntToStr(fMarketDeliveryCount[WT]);
+    strDemClose := IntToStr(fMarketDemandsClosing[WT]);
     len := Max3(Length(strIn), Length(strOut), Length(strDel));
-    resInStr        := resInStr       + ' ' + StringOfChar(' ', len - Length(strIn))  + strIn;
-    resOutStr       := resOutStr      + ' ' + StringOfChar(' ', len - Length(strOut)) + strOut;
-    deliveryCntStr  := deliveryCntStr + ' ' + StringOfChar(' ', len - Length(strDel)) + strDel;
+    resInStr        := resInStr        + ' ' + StringOfChar(' ', len - Length(strIn))       + strIn;
+    resOutStr       := resOutStr       + ' ' + StringOfChar(' ', len - Length(strOut))      + strOut;
+    deliveryCntStr  := deliveryCntStr  + ' ' + StringOfChar(' ', len - Length(strDel))      + strDel;
+    demandsCloseStr := demandsCloseStr + ' ' + StringOfChar(' ', len - Length(strDemClose)) + strDemClose;
   end;
 
   Result := inherited +
-            Format('|MarketResFrom = %s|MarketResTo = %s|TradeAmount = %d|MarketResIn       = %s|MarketResOut      = %s|MarketDeliveryCnt = %s',
-                   [GetEnumName(TypeInfo(TKMWareType), Integer(fResFrom)),
-                    GetEnumName(TypeInfo(TKMWareType), Integer(fResTo)),
-                    fTradeAmount,
-                    resInStr,
-                    resOutStr,
-                    deliveryCntStr]);
+            Format('%sMarketResFrom = %s%sMarketResTo = %s%sTradeAmount = %d%sMarketResIn       = %s%sMarketResOut      = %s' +
+                   '%sMarketDeliveryCnt = %s%sMarketDemandClose = %s',
+                   [aSeparator,
+                    GetEnumName(TypeInfo(TKMWareType), Integer(fResFrom)), aSeparator,
+                    GetEnumName(TypeInfo(TKMWareType), Integer(fResTo)), aSeparator,
+                    fTradeAmount, aSeparator,
+                    resInStr, aSeparator,
+                    resOutStr, aSeparator,
+                    deliveryCntStr, aSeparator,
+                    demandsCloseStr]);
 end;
 
 

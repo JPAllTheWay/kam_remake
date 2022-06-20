@@ -8,20 +8,20 @@ uses
 type
   TKMSavePoint = class
   private
-    fStream: TKMemoryStream;
+    fStreamCompressed: TKMemoryStream; // Compressed stream of a game save (save point)
     fTick: Cardinal;
     // Opened spectator menu, viewports position etc...
   public
     constructor Create(aStream: TKMemoryStream; aTick: Cardinal);
     destructor Destroy; override;
 
-    property Stream: TKMemoryStream read fStream;
+    property StreamCompressed: TKMemoryStream read fStreamCompressed;
     property Tick: Cardinal read fTick;
   end;
 
   TKMSavePointCollection = class
   private
-    fAsyncSaveThreadsCnt: Byte; //Number of threads doing save atm. Usually should be not more than 1
+    fAsyncThreadsCnt: Byte; //Number of worker threads working atm. Used to make saves or create compressed savepoints
     fWaitCS: TCriticalSection;
     fSaveCS: TCriticalSection;
     fSavePoints: TDictionary<Cardinal, TKMSavePoint>;
@@ -50,6 +50,7 @@ type
     procedure FillTicks(aTicksList: TList<Cardinal>);
 
     procedure NewSavePoint(aStream: TKMemoryStream; aTick: Cardinal);
+    procedure NewSavePointAsyncAndFree(var aStream: TKMemoryStream; aTick: Cardinal; aWorkerThread: TKMWorkerThread);
 
     function LatestPointTickBefore(aTick: Cardinal): Cardinal;
 
@@ -71,14 +72,14 @@ constructor TKMSavePoint.Create(aStream: TKMemoryStream; aTick: Cardinal);
 begin
   inherited Create;
 
-  fStream := aStream;
+  fStreamCompressed := aStream;
   fTick := aTick;
 end;
 
 
 destructor TKMSavePoint.Destroy;
 begin
-  fStream.Free;
+  fStreamCompressed.Free;
 
   inherited;
 end;
@@ -104,7 +105,7 @@ begin
   begin
     fWaitCS.Enter;
     try
-      if fAsyncSaveThreadsCnt = 0 then
+      if fAsyncThreadsCnt = 0 then
         Break;
     finally
       fWaitCS.Leave;
@@ -228,21 +229,79 @@ begin
   Lock;
   try
     if fSavePoints.TryGetValue(aTick, savePoint) then
-      Result := savePoint.Stream;
+      Result := savePoint.StreamCompressed;
   finally
     Unlock;
   end;
 end;
 
 
+procedure TKMSavePointCollection.NewSavePointAsyncAndFree(var aStream: TKMemoryStream; aTick: Cardinal; aWorkerThread: TKMWorkerThread);
+{$IFDEF WDC}
+var
+  localStream: TKMemoryStream;
+{$ENDIF}
+begin
+  {$IFDEF WDC}
+  // fSavePoints could be accessed by different threads
+  Lock;
+  try
+    // Check if we don't have same tick save here too, since we work in multithread environment
+    if fSavePoints.ContainsKey(aTick) then Exit;
+  finally
+    Unlock;
+  end;
+
+  localStream := aStream;
+  aStream := nil; //So caller doesn't use it by mistake
+
+  // Increase save threads counter in main thread
+  AtomicIncrement(fAsyncThreadsCnt);
+
+  aWorkerThread.QueueWork(
+    procedure
+    var
+      S: TKMemoryStream;
+    begin
+      S := TKMemoryStreamBinary.Create;
+      try
+        localStream.SaveToStreamCompressed(S);
+      finally
+        localStream.Free;
+      end;
+
+      // fSavePoints could be accessed by different threads
+      Lock;
+      try
+        fSavePoints.Add(aTick, TKMSavePoint.Create(S, aTick));
+      finally
+        Unlock;
+      end;
+      // Decrease thread counter
+      AtomicDecrement(fAsyncThreadsCnt);
+    end, 'NewSavePointAsyncAndFree');
+
+  {$ELSE}
+  NewSavePoint(aStream, aTick);
+  {$ENDIF}
+end;
+
+
 procedure TKMSavePointCollection.NewSavePoint(aStream: TKMemoryStream; aTick: Cardinal);
+var
+  S: TKMemoryStream;
 begin
   if Self = nil then Exit;
 
   Lock;
   try
-    if not fSavePoints.ContainsKey(aTick) then // Check if we don't have same tick save here too, since we work in multithread environment
-      fSavePoints.Add(aTick, TKMSavePoint.Create(aStream, aTick));
+    // Check if we don't have same tick save here too, since we work in multithread environment
+    if fSavePoints.ContainsKey(aTick) then Exit;
+
+    S := TKMemoryStreamBinary.Create;
+    aStream.SaveToStreamCompressed(S);
+
+    fSavePoints.Add(aTick, TKMSavePoint.Create(S, aTick));
   finally
     Unlock;
   end;
@@ -272,8 +331,8 @@ begin
       aSaveStream.PlaceMarker('SavePoint');
       aSaveStream.Write(key);
       savePoint := fSavePoints.Items[key];
-      aSaveStream.Write(Cardinal(savePoint.fStream.Size));
-      aSaveStream.CopyFrom(savePoint.fStream, 0);
+      aSaveStream.Write(Cardinal(savePoint.fStreamCompressed.Size));
+      aSaveStream.CopyFrom(savePoint.fStreamCompressed, 0);
     end;
   finally
     Unlock;
@@ -290,37 +349,29 @@ begin
   if Self = nil then Exit;
 
   {$IFDEF WDC}
-    fWaitCS.Enter;
-    try
-      Inc(fAsyncSaveThreadsCnt); // Increase save threads counter in main thread
-    finally
-      fWaitCS.Leave;
-    end;
+   // Increase save threads counter in main thread
+  AtomicIncrement(fAsyncThreadsCnt);
 
-    aWorkerThread.QueueWork(
-      procedure
-      var
-        localStream: TKMemoryStream;
-      begin
-        localStream := TKMemoryStreamBinary.Create;
-        try
-          Save(localStream); // Save has Lock / Unlock inside already
-          fWaitCS.Enter;
-          try
-            Dec(fAsyncSaveThreadsCnt); // Decrease thread counter since we saved all data into thread local stream
-          finally
-            fWaitCS.Leave;
-          end;
-          localStream.SaveToFileCompressed(aFileName, 'SavePointsCompressed');
-        finally
-          localStream.Free;
-        end;
-      end, 'Save SavePoints');
+  aWorkerThread.QueueWork(
+    procedure
+    var
+      localStream: TKMemoryStream;
+    begin
+      localStream := TKMemoryStreamBinary.Create;
+      try
+        Save(localStream); // Save has Lock / Unlock inside already
+        // Decrease thread counter since we saved all data into thread local stream
+        AtomicDecrement(fAsyncThreadsCnt);
+        localStream.SaveToFile(aFileName);
+      finally
+        localStream.Free;
+      end;
+    end, 'Save SavePoints');
   {$ELSE}
     localStream := TKMemoryStreamBinary.Create;
     try
       Save(localStream);
-      localStream.SaveToFileCompressed(aFileName, 'SavePointsCompressed');
+      localStream.SaveToFile(aFileName);
     finally
       localStream.Free;
     end;
@@ -353,7 +404,7 @@ begin
 
   S := TKMemoryStreamBinary.Create;
   try
-    S.LoadFromFileCompressed(aFileName, 'SavePointsCompressed');
+    S.LoadFromFile(aFileName);
     Load(S);
   finally
     S.Free;

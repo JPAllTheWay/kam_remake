@@ -5,8 +5,9 @@ uses
   KM_Terrain, KM_Points, KM_Defaults;
 
 type
-  //We use class procedues/functions here because we don't need to store anything,
-  //it's just a nice way to group the procedures together.
+  // Complicated WalkConnect algorithms wrapped into a single-method class
+  // We use class procedures/functions here because we don't need to store anything,
+  // it's just a nice way to group the procedures together.
   TKMTerrainWalkConnect = class
   private
     //Two different methods for doing full map walk connect update
@@ -28,9 +29,12 @@ type
     class procedure DoUpdate(const aAreaAffected: TKMRect; aWC: TKMWalkConnect; aDiagObjectsEffected: Boolean);
   end;
 
+
 implementation
 uses
-  Math, KM_ResMapElements, KM_DevPerfLog, KM_DevPerfLogTypes;
+  Math,
+  KM_ResMapElements, KM_DevPerfLog, KM_DevPerfLogTypes;
+
 
 { TKMTerrainWalkConnect }
 class procedure TKMTerrainWalkConnect.DoUpdate(const aAreaAffected: TKMRect; aWC: TKMWalkConnect; aDiagObjectsEffected: Boolean);
@@ -77,7 +81,7 @@ begin
     //  102
     //  102
     //So we can see now that the affected tile (in the middle) became unwalkable.
-    //This means ExactlyOneAreaIDInRect_New returns false (there are exactly 2 areas, not 1)
+    //This means ExactlyOneAreaIDInRect_New returns False (there are exactly 2 areas, not 1)
     //and we do a global update.
 
     //   EXAMPLE 2
@@ -158,29 +162,29 @@ begin
 end;
 
 
-//Returns true if there is exactly one walkable area within Rect in Land.WalkConnect (from last time we updated WalkConnect)
+//Returns True if there is exactly one walkable area within Rect in Land.WalkConnect (from last time we updated WalkConnect)
 class function TKMTerrainWalkConnect.ExactlyOneAreaIDInRect_Current(const aRect:TKMRect; aWC: TKMWalkConnect): Boolean;
 var
-  AreaID: Byte;
+  areaId: Byte;
   X, Y: Word;
 begin
   with gTerrain do
   begin
-    //First find out the AreaID for this rect area BEFORE the change (must only be one!)
-    AreaID := 0;
+    //First find out the areaId for this rect area BEFORE the change (must only be one!)
+    areaId := 0;
     for Y := aRect.Top to aRect.Bottom do
       for X := aRect.Left to aRect.Right do
-        if (Land[Y,X].WalkConnect[aWC] <> 0) and (Land^[Y,X].WalkConnect[aWC] <> AreaID) then
+        if (Land[Y,X].WalkConnect[aWC] <> 0) and (Land^[Y,X].WalkConnect[aWC] <> areaId) then
         begin
-          //If we already found a different AreaID then there's more than one, so we can exit immediately
-          if (AreaID <> 0) then
+          //If we already found a different areaId then there's more than one, so we can exit immediately
+          if (areaId <> 0) then
           begin
             Result := False;
             Exit;
           end;
-          AreaID := Land^[Y,X].WalkConnect[aWC];
+          areaId := Land^[Y,X].WalkConnect[aWC];
         end;
-    Result := (AreaID <> 0); //If we haven't exited yet and AreaID <> 0 then there's exactly one
+    Result := (areaId <> 0); //If we haven't exited yet and AreaID <> 0 then there's exactly one
   end;
 end;
 
@@ -248,7 +252,7 @@ end;
 
 class procedure TKMTerrainWalkConnect.FloodFill(aWC: TKMWalkConnect; aPass: TKMTerrainPassability; aAllowDiag: Boolean);
 var
-  AreaID: Byte;
+  areaId: Byte;
   Count: Integer;
 
   procedure FillArea(X,Y: Word);
@@ -257,7 +261,7 @@ var
       if (Land^[Y,X].WalkConnect[aWC] = 0) //Untested area
       and (aPass in Land^[Y,X].Passability) then //Matches passability
       begin
-        Land^[Y,X].WalkConnect[aWC] := AreaID;
+        Land^[Y,X].WalkConnect[aWC] := areaId;
         Inc(Count);
         //Using custom TileInMapCoords replacement gives ~40% speed improvement
         //Using custom CanWalkDiagonally is also much faster
@@ -293,23 +297,23 @@ begin
     for I := 1 to MapY do for K := 1 to MapX do
       Land^[I,K].WalkConnect[aWC] := 0;
 
-    AreaID := 0;
+    areaId := 0;
     for I := 1 to MapY do for K := 1 to MapX do
       if (Land^[I,K].WalkConnect[aWC] = 0)
         and (aPass in Land^[I,K].Passability) then
       begin
-        Inc(AreaID);
+        Inc(areaId);
         Count := 0;
         FillArea(K,I);
 
         if Count <= 1 then //Revert
         begin
-          Dec(AreaID);
+          Dec(areaId);
           Count := 0;
           Land^[I,K].WalkConnect[aWC] := 0;
         end;
 
-        Assert(AreaID < 255, 'UpdateWalkConnect failed due too many unconnected areas');
+        Assert(areaId < 255, 'UpdateWalkConnect failed due too many unconnected areas');
       end;
   end;
 end;
@@ -336,7 +340,7 @@ const Samples: array [0..3, 0..1] of ShortInt = ((-1,-1),(0,-1),(1,-1),(-1,0));
 var
   I,K,H: Word;
   X,Y: Smallint;
-  AreaID: Word;
+  areaId: Word;
   NCount: Byte;
 begin
   with gTerrain do
@@ -347,7 +351,7 @@ begin
 
     FillChar(Parent, SizeOf(Parent), #0);
 
-    AreaID := 1;
+    areaId := 1;
     for I := 1 to MapY do
     for K := 1 to MapX do
     if (aPass in Land^[I,K].Passability) then
@@ -379,10 +383,10 @@ begin
       //If there's no Area we create new one
       if NCount = 0 then
       begin
-        Land^[I,K].WalkConnect[aWC] := AreaID;
-        Parent[AreaID] := AreaID;
-        Inc(AreaID);
-        Assert(AreaID < 32767, 'UpdateWalkConnect failed due too many unconnected areas');
+        Land^[I,K].WalkConnect[aWC] := areaId;
+        Parent[areaId] := areaId;
+        Inc(areaId);
+        Assert(areaId < 32767, 'UpdateWalkConnect failed due too many unconnected areas');
       end;
     end;
 
@@ -392,7 +396,7 @@ begin
     //4 -> 5    4 -> 5
     //5 -> 5    5 -> 5
     //Merge parents
-    for I := 1 to AreaID - 1 do
+    for I := 1 to areaId - 1 do
       while Parent[I] <> Parent[Parent[I]] do
         Parent[I] := Parent[Parent[I]];
 
@@ -407,7 +411,7 @@ end;
 
 class procedure TKMTerrainWalkConnect.GlobalUpdate(aWC: TKMWalkConnect; aPass: TKMTerrainPassability; aAllowDiag: Boolean);
 begin
-  if USE_CCL_WALKCONNECT then
+  if FEAT_CCL_WALKCONNECT then
     CCLFind(aWC, aPass, aAllowDiag)
   else
     FloodFill(aWC, aPass, aAllowDiag);
@@ -420,27 +424,27 @@ end;
 //See comments in TKMTerrainWalkConnect.DoUpdate for a full explanation of the logic.
 class procedure TKMTerrainWalkConnect.LocalUpdate(const aRect: TKMRect; aWC: TKMWalkConnect; aPass: TKMTerrainPassability; aAllowDiag: Boolean);
 var
-  AreaID: Byte;
+  areaId: Byte;
   X, Y: Word;
 begin
   with gTerrain do
   begin
-    //First find out the AreaID for this rect area BEFORE the change (must only be one!)
-    AreaID := 0;
+    //First find out the areaId for this rect area BEFORE the change (must only be one!)
+    areaId := 0;
     for Y := aRect.Top to aRect.Bottom do
       for X := aRect.Left to aRect.Right do
-        if (Land[Y,X].WalkConnect[aWC] <> 0) and (Land^[Y,X].WalkConnect[aWC] <> AreaID) then
+        if (Land[Y,X].WalkConnect[aWC] <> 0) and (Land^[Y,X].WalkConnect[aWC] <> areaId) then
         begin
-          Assert(AreaID = 0, 'Must not do local walk connect update with multiple AreaIDs in Rect');
-          AreaID := Land^[Y,X].WalkConnect[aWC];
+          Assert(areaId = 0, 'Must not do local walk connect update with multiple AreaIDs in Rect');
+          areaId := Land^[Y,X].WalkConnect[aWC];
         end;
-    Assert(AreaID <> 0, 'Must not do local walk connect update with zero AreaIDs in Rect');
+    Assert(areaId <> 0, 'Must not do local walk connect update with zero AreaIDs in Rect');
 
-    //Now update WalkConnect based on passability, setting it to either AreaID or 0
+    //Now update WalkConnect based on passability, setting it to either areaId or 0
     for Y := aRect.Top to aRect.Bottom do
       for X := aRect.Left to aRect.Right do
         if aPass in Land^[Y,X].Passability then
-          Land^[Y,X].WalkConnect[aWC] := AreaID //Walkable
+          Land^[Y,X].WalkConnect[aWC] := areaId //Walkable
         else
           Land^[Y,X].WalkConnect[aWC] := 0; //Unwalkable
   end;

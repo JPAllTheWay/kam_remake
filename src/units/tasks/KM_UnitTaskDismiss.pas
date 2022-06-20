@@ -30,7 +30,8 @@ type
 
 implementation
 uses
-  KM_HandsCollection, KM_Hand,
+  KM_Entity,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_ResTypes;
 
 
@@ -39,6 +40,8 @@ constructor TKMTaskDismiss.Create(aUnit: TKMUnit);
 begin
   Assert(aUnit is TKMCivilUnit, 'Only civil units are allowed to be dismissed');
   inherited;
+
+  gHands[fUnit.Owner].Stats.UnitDismissed(fUnit.UnitType);
 
   fType := uttDismiss;
   FindNewSchool;
@@ -57,6 +60,7 @@ destructor TKMTaskDismiss.Destroy;
 begin
   gHands.CleanUpHousePointer(fSchool);
   fUnit.DismissInProgress := False; //Reset dismissInProgress Flag to show proper UI
+  gHands[fUnit.Owner].Stats.UnitDismissCanceled(fUnit.UnitType);
 
   inherited;
 end;
@@ -88,7 +92,7 @@ end;
 procedure TKMTaskDismiss.SyncLoad;
 begin
   inherited;
-  fSchool := gHands[fUnit.Owner].Houses.GetHouseByUID(Cardinal(fSchool));
+  fSchool := gHands[fUnit.Owner].Houses.GetHouseByUID(Integer(fSchool));
 end;
 
 
@@ -125,7 +129,7 @@ begin
 
   with fUnit do
     case fPhase of
-      0:  SetActionWalkToSpot(fSchool.PointBelowEntrance);
+      0:  SetActionWalkToSpot(fSchool.PointBelowEntrance, uaWalk, 0, fUnit.AnimStep); // Preserv current AnimStep
       1:  SetActionGoIn(uaWalk, gdGoInside, fSchool);
       2:  begin
             //Note: we do not set trTaskDone here, as we are going to destroy this task and Close (delete) unit

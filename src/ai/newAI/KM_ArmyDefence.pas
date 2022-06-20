@@ -92,6 +92,7 @@ const
 implementation
 uses
   Math,
+  KM_Entity,
   KM_GameParams, KM_HandsCollection, KM_Hand, KM_RenderAux,
   KM_AIFields, KM_NavMesh,
   KM_UnitGroupTypes;
@@ -138,7 +139,7 @@ end;
 
 procedure TKMDefencePosition.SyncLoad();
 begin
-  fGroup := gHands.GetGroupByUID(Cardinal(fGroup));
+  fGroup := gHands.GetGroupByUID(Integer(fGroup));
 end;
 
 

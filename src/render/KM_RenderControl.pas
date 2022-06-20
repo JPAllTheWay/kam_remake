@@ -11,7 +11,7 @@ uses
   ;
 
 type
-  TResizeEvent = procedure(aWidth, aHeight: Integer) of object;
+  TKMResizeEvent = procedure(aWidth, aHeight: Integer) of object;
 
   {$IFDEF MSWindows}
     //Custom flicker-free Panel
@@ -38,7 +38,7 @@ type
     property OnMouseWheel; //Required for Lazarus
   public
     OnRender: TNotifyEvent;
-    OnResize: TResizeEvent;
+    OnResize: TKMResizeEvent;
     procedure CreateRenderContext;
     procedure DestroyRenderContext;
     {$IFDEF MSWindows}

@@ -29,6 +29,8 @@ type
     palAvoidAsUnwalkable    // Avoid locked tiles as mark them unwalkable (no route will be made through them)
   );
 
+  TKMPathRouteKind = (rkRoute, rkAvoid, rkReturnToWalkable);
+
   // This is a helper class for TKMTerrain
   // Here should be pathfinding and all associated stuff
   // I think we should refactor this unit and move some TKMTerrain methods here
@@ -48,10 +50,12 @@ type
     end;
   protected
     fPass: TKMTerrainPassabilitySet;
+    fPassBest: TKMTerrainPassability; // Best passability, used by RouteAvoid
     fTargetWalkConnect: TKMWalkConnect;
     fTargetNetwork: Byte;
     fDistance: Single;
     fAvoidLocked: TKMPathAvoidLocked;
+    fRouteKind: TKMPathRouteKind;
     fTargetHouse: TKMHouse;
     procedure AddToCache(NodeList: TKMPointList);
     function TryRouteFromCache(NodeList: TKMPointList): Boolean;
@@ -74,7 +78,7 @@ type
 
     function Route_Make(const aLocA, aLocB: TKMPoint; aPass: TKMTerrainPassabilitySet; aDistance: Single;
                         aTargetHouse: TKMHouse; NodeList: TKMPointList; aAvoidLocked: TKMPathAvoidLocked = palNoAvoid): Boolean;
-    function Route_MakeAvoid(const aLocA, aLocB: TKMPoint; aPass: TKMTerrainPassabilitySet; aDistance: Single; aTargetHouse: TKMHouse; NodeList: TKMPointList): Boolean;
+    function Route_MakeAvoid(const aLocA, aLocB: TKMPoint; aPassBest, aPassAlt: TKMTerrainPassability; aDistance: Single; aTargetHouse: TKMHouse; NodeList: TKMPointList): Boolean;
     function Route_ReturnToWalkable(const aLocA, aLocB: TKMPoint; aTargetWalkConnect: TKMWalkConnect; aTargetNetwork: Byte;
                                     aPass: TKMTerrainPassabilitySet; NodeList: TKMPointList): Boolean;
 
@@ -129,6 +133,7 @@ begin
   try
     Result := False;
 
+    fRouteKind := rkRoute;
     fLocA := aLocA;
     fLocB := aLocB;
     fPass := aPass;
@@ -177,7 +182,7 @@ end;
 
 
 //We are using Interaction Avoid mode (go around busy units)
-function TKMPathFinding.Route_MakeAvoid(const aLocA, aLocB: TKMPoint; aPass: TKMTerrainPassabilitySet; aDistance: Single; aTargetHouse: TKMHouse; NodeList: TKMPointList): Boolean;
+function TKMPathFinding.Route_MakeAvoid(const aLocA, aLocB: TKMPoint; aPassBest, aPassAlt: TKMTerrainPassability; aDistance: Single; aTargetHouse: TKMHouse; NodeList: TKMPointList): Boolean;
 begin
   {$IFDEF PERFLOG}
   gPerfLogs.SectionEnter(psPathfinding);
@@ -185,9 +190,12 @@ begin
   try
     Result := False;
 
+    fRouteKind := rkAvoid;
+
     fLocA := aLocA;
     fLocB := aLocB;
-    fPass := aPass;
+    fPass := [aPassBest] + [aPassAlt] - [tpNone];
+    fPassBest := aPassBest;
     fTargetNetwork := 0;
     fTargetWalkConnect := wcWalk;
     fDistance := aDistance;
@@ -220,6 +228,8 @@ begin
   {$ENDIF}
   try
     Result := False;
+
+    fRouteKind := rkReturnToWalkable;
 
     fLocA := aLocA;
     fLocB := aLocB;
@@ -261,6 +271,10 @@ end;
 
 //How much it costs to move From -> To
 function TKMPathFinding.MovementCost(aFromX, aFromY, aToX, aToY: Word): Cardinal;
+const
+  AVOID_ROAD_PENALTY = 25; // 2.5 tiles
+  AVOID_LOCKED_PENALTY = 200; // 20 tiles
+  AVOID_UNIT_PENALTY = 15; // 1.5 tiles
 var
   DX, DY: Word;
   U: TKMUnit;
@@ -276,11 +290,18 @@ begin
   if (aToX <> fLocB.X) or (aToY <> fLocB.Y) then
   begin
     U := gTerrain.Land^[aToY,aToX].IsUnit;
+
+    // Goind offroad, when unit has to walk on road is possible to avoid locked tiles,
+    // but unit has to get bakc to the road
+    if (fRouteKind = rkAvoid) and not gTerrain.CheckPassability(aToX, aToY, fPassBest) then
+      Inc(Result, AVOID_ROAD_PENALTY);
+
     //Always avoid congested areas on roads
     if DO_WEIGHT_ROUTES and (U <> nil) and ((tpWalkRoad in fPass) or U.PathfindingShouldAvoid) then
-      Inc(Result, 15); //Unit = 1.5 extra tiles
+      Inc(Result, AVOID_UNIT_PENALTY); //Unit = 1.5 extra tiles
+
     if (fAvoidLocked = palAvoidByMovementCost) and gTerrain.TileIsLocked(KMPoint(aToX,aToY)) then
-      Inc(Result, 200); //In interaction avoid mode, working unit (or warrior attacking house) = 20 tiles
+      Inc(Result, AVOID_LOCKED_PENALTY); //In interaction avoid mode, working unit (or warrior attacking house) = 20 tiles
   end;
 end;
 

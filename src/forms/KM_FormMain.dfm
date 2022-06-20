@@ -13,7 +13,7 @@ object FormMain: TFormMain
   Font.Style = []
   KeyPreview = True
   Menu = MainMenu1
-  OldCreateOrder = False
+  OldCreateOrder = True
   Position = poDesigned
   Scaled = False
   OnClose = FormClose
@@ -89,6 +89,8 @@ object FormMain: TFormMain
       Caption = 'Misc'
       Collapsed = True
       TabOrder = 0
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 144
       object chkBevel: TCheckBox
         Left = 168
@@ -131,6 +133,8 @@ object FormMain: TFormMain
       Caption = 'Logs'
       Collapsed = True
       TabOrder = 1
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 198
       object chkLogCommands: TCheckBox
         Left = 120
@@ -242,6 +246,8 @@ object FormMain: TFormMain
       DoubleBuffered = True
       ParentDoubleBuffered = False
       TabOrder = 2
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 168
       object Label1: TLabel
         Left = 101
@@ -382,6 +388,8 @@ object FormMain: TFormMain
       Caption = 'User Interface'
       Collapsed = True
       TabOrder = 3
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 114
       object chkUIControlsBounds: TCheckBox
         Left = 8
@@ -453,6 +461,8 @@ object FormMain: TFormMain
       Caption = 'Perf Logs'
       Collapsed = True
       TabOrder = 4
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 660
     end
     object cpAI: TCategoryPanel
@@ -461,6 +471,8 @@ object FormMain: TFormMain
       Caption = 'AI'
       Collapsed = True
       TabOrder = 5
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       object Label5: TLabel
         Left = 202
         Top = 111
@@ -689,6 +701,8 @@ object FormMain: TFormMain
       Caption = 'Scripting'
       Collapsed = True
       TabOrder = 6
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 50
       object chkDebugScripting: TCheckBox
         Left = 8
@@ -711,6 +725,8 @@ object FormMain: TFormMain
       Caption = 'Debug Input'
       Collapsed = True
       TabOrder = 7
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 210
       object gbFindObjByUID: TGroupBox
         Left = 8
@@ -844,6 +860,8 @@ object FormMain: TFormMain
       Caption = 'Game additional'
       Collapsed = True
       TabOrder = 8
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 239
       object chkLoadUnsupSaves: TCheckBox
         Left = 12
@@ -969,6 +987,8 @@ object FormMain: TFormMain
       Caption = 'Debug Output'
       Collapsed = True
       TabOrder = 9
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 97
       object chkUIDs: TCheckBox
         Left = 120
@@ -1049,6 +1069,8 @@ object FormMain: TFormMain
       Caption = 'Debug Terrain'
       Collapsed = True
       TabOrder = 10
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       ExpandedHeight = 248
       object chkShowTerrainIds: TCheckBox
         Left = 8
@@ -1282,6 +1304,8 @@ object FormMain: TFormMain
       DoubleBuffered = True
       ParentDoubleBuffered = False
       TabOrder = 11
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       object Label2: TLabel
         Left = 136
         Top = 5
@@ -1454,12 +1478,23 @@ object FormMain: TFormMain
         TabOrder = 16
         OnClick = ControlsUpdate
       end
+      object chkViewportPos: TCheckBox
+        Left = 8
+        Top = 120
+        Width = 105
+        Height = 17
+        Caption = 'Viewport position'
+        TabOrder = 17
+        OnClick = ControlsUpdate
+      end
     end
     object cpGameControls: TCategoryPanel
       Top = 0
       Height = 121
       Caption = 'Game'
       TabOrder = 12
+      OnCollapse = cpCollapseChanged
+      OnExpand = cpCollapseChanged
       object Label8: TLabel
         Left = 60
         Top = 30
@@ -1492,9 +1527,9 @@ object FormMain: TFormMain
         OnClick = chkSuperSpeedClick
       end
       object btnGameStop: TButton
-        Left = 185
+        Left = 200
         Top = 5
-        Width = 53
+        Width = 35
         Height = 17
         Caption = 'Stop'
         TabOrder = 1
@@ -1540,13 +1575,22 @@ object FormMain: TFormMain
         OnChange = ControlsUpdate
       end
       object btnGameSave: TButton
-        Left = 126
+        Left = 117
         Top = 5
-        Width = 53
+        Width = 35
         Height = 17
         Caption = 'Save'
         TabOrder = 5
         OnClick = btnGameSaveClick
+      end
+      object btnGameRestart: TButton
+        Left = 155
+        Top = 5
+        Width = 42
+        Height = 17
+        Caption = 'Restart'
+        TabOrder = 6
+        OnClick = btnGameRestartClick
       end
     end
   end
@@ -1595,6 +1639,10 @@ object FormMain: TFormMain
       object mnOpenSettingsDir: TMenuItem
         Caption = 'Open settings folder'
         OnClick = mnOpenSettingsDirClick
+      end
+      object mnOpenSettingsXML: TMenuItem
+        Caption = 'Open settings.xml'
+        OnClick = mnOpenSettingsXMLClick
       end
       object N7: TMenuItem
         Caption = '-'
@@ -1666,62 +1714,110 @@ object FormMain: TFormMain
           Enabled = False
         end
         object Export_TreesRX: TMenuItem
-          Caption = 'Trees.rx'
+          Caption = 'Trees.rxx'
           OnClick = Export_TreesRXClick
         end
         object Export_HousesRX: TMenuItem
-          Caption = 'Houses.rx'
+          Caption = 'Houses.rxx'
           OnClick = Export_HousesRXClick
         end
         object Export_UnitsRX: TMenuItem
-          Caption = 'Units.rx'
+          Caption = 'Units.rxx'
           OnClick = Export_UnitsRXClick
         end
         object Export_GUIRX: TMenuItem
-          Caption = 'GUI.rx'
+          Caption = 'GUI.rxx'
           OnClick = Export_GUIClick
         end
         object Export_GUIMainRX: TMenuItem
-          Caption = 'GUI Main.rx'
+          Caption = 'GUIMain.rxx'
           OnClick = Export_GUIMainRXClick
+        end
+        object Export_Tileset: TMenuItem
+          Caption = 'Tileset.rxx'
+          OnClick = Export_TilesetClick
         end
         object Export_Custom: TMenuItem
           Caption = 'Custom'
           OnClick = Export_CustomClick
         end
-        object Export_Tileset: TMenuItem
-          Caption = 'Tileset'
-          OnClick = Export_TilesetClick
-        end
-      end
-      object AnimData1: TMenuItem
-        Caption = '-'
-        Enabled = False
-      end
-      object Export_TreeAnim1: TMenuItem
-        Caption = 'Tree Anim'
-        OnClick = Export_TreeAnim1Click
-      end
-      object Export_HouseAnim1: TMenuItem
-        Caption = 'House Anim'
-        OnClick = Export_HouseAnim1Click
-      end
-      object Export_UnitAnim1: TMenuItem
-        Caption = 'Unit Anim'
-        object UnitAnim_All: TMenuItem
-          Caption = 'All'
-          OnClick = UnitAnim_AllClick
-        end
-        object N3: TMenuItem
+        object N14: TMenuItem
           Caption = '-'
+          Enabled = False
         end
-        object Soldiers: TMenuItem
-          Caption = 'Soldiers'
-          OnClick = SoldiersClick
+        object reesrxa1: TMenuItem
+          Caption = 'Trees.rxa'
+          OnClick = reesrxa1Click
         end
-        object Civilians1: TMenuItem
-          Caption = 'Civilians'
-          OnClick = Civilians1Click
+        object Housesrxa1: TMenuItem
+          Caption = 'Houses.rxa'
+          OnClick = Housesrxa1Click
+        end
+        object Unitsrxa1: TMenuItem
+          Caption = 'Units.rxa'
+          OnClick = Unitsrxa1Click
+        end
+      end
+      object mnAnimations: TMenuItem
+        Caption = 'Animations'
+        object mnExportTreeAnim: TMenuItem
+          Caption = 'Tree Anim'
+          OnClick = mnExportTreeAnimClick
+        end
+        object mnExportHouseAnim: TMenuItem
+          Caption = 'House Anim'
+          OnClick = mnExportHouseAnimClick
+        end
+        object mnExportUnitAnim: TMenuItem
+          Caption = 'Unit Anim'
+          object mnExportUnitAnimAll: TMenuItem
+            Caption = 'All'
+            OnClick = mnExportUnitAnimAllClick
+          end
+          object N3: TMenuItem
+            Caption = '-'
+          end
+          object mnExportUnitAnimSoldiers: TMenuItem
+            Caption = 'Soldiers'
+            OnClick = mnExportUnitAnimSoldiersClick
+          end
+          object mnExportUnitAnimCivilians: TMenuItem
+            Caption = 'Civilians'
+            OnClick = mnExportUnitAnimCiviliansClick
+          end
+        end
+      end
+      object mnHDAnimations: TMenuItem
+        Caption = 'HD Animations'
+        object mnExportHDTreeAnim: TMenuItem
+          Caption = 'HD Tree Anim'
+          OnClick = mnExportHDTreeAnimClick
+        end
+        object mnExportHDHouseAnim: TMenuItem
+          Caption = 'HD House Anim'
+          OnClick = mnExportHDHouseAnimClick
+        end
+        object mnExportHDUnitAnim: TMenuItem
+          Caption = 'HD Unit Anim'
+          object mnExportHDUnitAnimAll: TMenuItem
+            Caption = 'All HD'
+            OnClick = mnExportHDUnitAnimAllClick
+          end
+          object N13: TMenuItem
+            Caption = '-'
+          end
+          object mnExportHDUnitAnimSoldiers: TMenuItem
+            Caption = 'Soldiers HD'
+            OnClick = mnExportHDUnitAnimSoldiersClick
+          end
+          object mnExportHDUnitAnimCivilians: TMenuItem
+            Caption = 'Civilians HD'
+            OnClick = mnExportHDUnitAnimCiviliansClick
+          end
+          object mnExportHDUnitThoughts: TMenuItem
+            Caption = 'Thoughts HD'
+            OnClick = mnExportHDUnitThoughtsClick
+          end
         end
       end
       object N2: TMenuItem
@@ -1746,6 +1842,10 @@ object FormMain: TFormMain
       object ScriptData1: TMenuItem
         Caption = 'Script Data'
         OnClick = Export_ScriptDataClick
+      end
+      object mnScriptCode: TMenuItem
+        Caption = 'Script Code'
+        OnClick = mnScriptCodeClick
       end
       object N6: TMenuItem
         Caption = '-'

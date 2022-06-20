@@ -40,7 +40,7 @@ end;
 
 
 //Try to determine TMapFolder for specified aFolderName
-//Returns true when succeeded
+//Returns True when succeeded
 function DetermineMapKind(const aFolderName: UnicodeString; out aMapKind: TKMMapKind): Boolean;
 var
   MK: TKMMapKind;

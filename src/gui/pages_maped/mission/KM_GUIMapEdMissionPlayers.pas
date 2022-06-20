@@ -5,7 +5,7 @@ uses
   {$IFDEF MSWindows} Windows, {$ENDIF}
   {$IFDEF Unix} LCLIntf, LCLType, {$ENDIF}
   Classes, SysUtils,
-  KM_Controls, KM_ControlsBase, KM_ControlsPopUp, KM_ControlsSwitch,
+  KM_Controls, KM_ControlsBase, KM_ControlsPopUp, KM_ControlsSwitch, KM_ControlsScroll,
   KM_Defaults, KM_Pics;
 
 type
@@ -38,6 +38,7 @@ type
       Button_Close: TKMButton;
 
     PopUp_Confirm_Player: TKMPopUpMenu;
+      Players_ScrollPanel: TKMScrollPanel;
       Image_Confirm_Player: TKMImage;
       Button_PlayerConfirm, Button_PlayerConfirmCancel: TKMButton;
       Label_PlayerConfirmTitle, Label_PlayerConfirmWarn: TKMLabel;
@@ -89,8 +90,9 @@ begin
 
   Panel_PlayerTypes := TKMPopUpPanel.Create(aParent.MasterParent, PANEL_W, panelH + 20, gResTexts[TX_MAPED_PLAYERS_TYPE],
                                             pubgitYellow, False, False);
+
   top := 0;
-  TKMLabel.Create(Panel_PlayerTypes.ItemsPanel,  13, top, 20, 20, '#', fntGrey, taLeft);
+  TKMLabel.Create(Players_ScrollPanel,  13, top, 20, 20, '#', fntGrey, taLeft);
 
   with TKMLabel.Create(Panel_PlayerTypes.ItemsPanel, 33, top, 30, 20, gResTexts[TX_MAPED_PLAYERS_DEFAULT_SHORT], fntGrey, taLeft) do
     Hint := gResTexts[TX_MAPED_PLAYERS_DEFAULT];
@@ -102,40 +104,54 @@ begin
     Hint := gResTexts[TX_AI_PLAYER_ADVANCED];
 
   Inc(top, 25);
+
+  Players_ScrollPanel := TKMScrollPanel.Create(Panel_PlayerTypes.ItemsPanel, 0, top, Panel_PlayerTypes.ItemsPanel.Width + 10,
+                                               Panel_PlayerTypes.ItemsPanel.Height - top - 75,
+                                               [saVertical], bsGame, ssGame);
+  Players_ScrollPanel.Anchors := [anTop, anBottom];
+
+  top := 5;
+
   for I := 0 to MAX_HANDS - 1 do
   begin
-
-    Label_PlayerId[I] := TKMLabel.Create(Panel_PlayerTypes.ItemsPanel,  13, top, 20, 20, IntToStr(I+1), fntOutline, taLeft);
+    Label_PlayerId[I] := TKMLabel.Create(Players_ScrollPanel,  13, top, 20, 20, IntToStr(I+1), fntOutline, taLeft);
 
     for MPT := Low(TKMMapEdPlayerType) to High(TKMMapEdPlayerType) do
     begin
-      ChkBox_PlayerTypes[I,MPT] := TKMCheckBox.Create(Panel_PlayerTypes.ItemsPanel, 43 + Ord(MPT)*42, top - 2, 20, 20, '', fntMetal);
+      ChkBox_PlayerTypes[I,MPT] := TKMCheckBox.Create(Players_ScrollPanel, 43 + Ord(MPT)*42, top - 2, 20, 20, '', fntMetal);
       ChkBox_PlayerTypes[I,MPT].Tag     := I;
       ChkBox_PlayerTypes[I,MPT].OnClick := Mission_PlayerTypesChange;
     end;
 
-    Button_PlayerMPSetup[I] := TKMButtonFlat.Create(Panel_PlayerTypes.ItemsPanel,
-                                                   ChkBox_PlayerTypes[I, mptAdvancedAI].Right + 20, top - 5, BTN_MPSETUP_W, BTN_MPSETUP_W, 678);
+    Button_PlayerMPSetup[I] := TKMButtonFlat.Create(Players_ScrollPanel,
+                                                   ChkBox_PlayerTypes[I, mptAdvancedAI].Right + 20, top - 5,
+                                                   BTN_MPSETUP_W, BTN_MPSETUP_W, 678);
     Button_PlayerMPSetup[I].Hint := Format(gResTexts[TX_MAPED_PLAYER_AI_MP_SETUP_HINT],  [I + 1]);
     Button_PlayerMPSetup[I].Tag := I;
     Button_PlayerMPSetup[I].OnClick := PlayerMPSetup_Click;
+    Button_PlayerMPSetup[I].BackAlpha := 0.2;
 
-    Button_PlayerDelete[I] := TKMButtonFlat.Create(Panel_PlayerTypes.ItemsPanel,
-                                                   Button_PlayerMPSetup[I].Right + 20, top - 4, BTN_DELETE_W, BTN_DELETE_W, 340);
+    Button_PlayerDelete[I] := TKMButtonFlat.Create(Players_ScrollPanel,
+                                                   Button_PlayerMPSetup[I].Right + 20, top - 4,
+                                                   BTN_DELETE_W, BTN_DELETE_W, 340);
     Button_PlayerDelete[I].Hint := Format(gResTexts[TX_MAPED_PLAYER_DELETE_HINT], [I + 1]);
     Button_PlayerDelete[I].Tag := I;
     Button_PlayerDelete[I].OnClick := PlayerDelete_Click;
+    Button_PlayerDelete[I].BackAlpha := 0.2;
 
     Inc(top, LINE_H);
   end;
 
-  Label_PlayerTypesAll := TKMLabel.Create(Panel_PlayerTypes.ItemsPanel,  13, top, 75, 20, gResTexts[TX_MAPED_PLAYER_TYPE_ALLOW_ALL],
-                                          fntOutline, taLeft);
+  Label_PlayerTypesAll := TKMLabel.Create(Panel_PlayerTypes.ItemsPanel,  13, Panel_PlayerTypes.ItemsPanel.Height - 72, 75, 20,
+                                          gResTexts[TX_MAPED_PLAYER_TYPE_ALLOW_ALL], fntOutline, taLeft);
+  Label_PlayerTypesAll.Anchors := [anLeft, anRight, anBottom];
 
   for MPT := Low(ChkBox_PlayerTypesAll) to High(ChkBox_PlayerTypesAll) do
   begin
-    ChkBox_PlayerTypesAll[MPT] := TKMCheckBox.Create(Panel_PlayerTypes.ItemsPanel, 43 + Ord(MPT)*42, top - 2, 20, 20, '', fntMetal, True);
+    ChkBox_PlayerTypesAll[MPT] := TKMCheckBox.Create(Panel_PlayerTypes.ItemsPanel, 43 + Ord(MPT)*42,
+                                                     Panel_PlayerTypes.ItemsPanel.Height - 72, 20, 20, '', fntMetal, True);
     ChkBox_PlayerTypesAll[MPT].Tag     := Ord(MPT);
+    ChkBox_PlayerTypesAll[MPT].Anchors := [anLeft, anRight, anBottom];
     ChkBox_PlayerTypesAll[MPT].Hint    := Format(gResTexts[TX_MAPED_PLAYER_TYPE_ALLOW_ALL_HINT],
                                                [gResTexts[PLAYER_TYPE_TX[MPT]]]);
     ChkBox_PlayerTypesAll[MPT].OnClick := Mission_PlayerTypesAllClick;
@@ -158,10 +174,12 @@ begin
     Image_Confirm_Player := TKMImage.Create(PopUp_Confirm_Player, 0, 0, PopUp_Confirm_Player.Width, PopUp_Confirm_Player.Height, 15, rxGuiMain);
     Image_Confirm_Player.ImageStretch;
 
-    Label_PlayerConfirmTitle := TKMLabel.Create(PopUp_Confirm_Player, PopUp_Confirm_Player.Width div 2, 40, Format(gResTexts[TX_MAPED_PLAYER_DELETE_TITLE], [0]), fntOutline, taCenter);
+    Label_PlayerConfirmTitle := TKMLabel.Create(PopUp_Confirm_Player, PopUp_Confirm_Player.Width div 2, 40,
+                                                Format(gResTexts[TX_MAPED_PLAYER_DELETE_TITLE], [0]), fntOutline, taCenter);
     Label_PlayerConfirmTitle.Anchors := [anLeft, anBottom];
 
-    Label_PlayerConfirmWarn := TKMLabel.Create(PopUp_Confirm_Player, 20, 85, PopUp_Confirm_Player.Width - 40, 0, gResTexts[TX_MAPED_PLAYER_DELETE_CONFIRM], fntMetal, taCenter);
+    Label_PlayerConfirmWarn := TKMLabel.Create(PopUp_Confirm_Player, 20, 85, PopUp_Confirm_Player.Width - 40, 0,
+                                               gResTexts[TX_MAPED_PLAYER_DELETE_CONFIRM], fntMetal, taCenter);
     Label_PlayerConfirmWarn.WordWrap := True;
     Label_PlayerConfirmWarn.Anchors := [anLeft, anBottom];
 

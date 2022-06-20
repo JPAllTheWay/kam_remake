@@ -26,7 +26,8 @@ uses
   KM_GUIMapEdMenuQuickPlay,
   KM_GUIMapEdUnit,
   KM_GUIMapEdRMG,
-  KM_MapEdTypes;
+  KM_MapEdTypes,
+  KM_CommonTypes;
 
 type
   TKMMapEdInterface = class(TKMUserInterfaceGame)
@@ -56,6 +57,10 @@ type
     fGuiMarkerDefence: TKMMapEdMarkerDefence;
     fGuiMarkerReveal: TKMMapEdMarkerReveal;
     fGuiMenu: TKMMapEdMenu;
+
+    fMapIsMultiplayer: Boolean;
+
+    fInfoHideTime: Cardinal;
 
     procedure Layers_UpdateVisibility;
     procedure Marker_Done(Sender: TObject);
@@ -87,6 +92,7 @@ type
     procedure ShowSubMenu(aIndex: Byte);
     procedure ExecuteSubMenuAction(aIndex: Byte; var aHandled: Boolean);
     procedure Update_Label_Coordinates;
+    procedure Update_Label_Info;
     procedure MapTypeChanged(aIsMultiplayer: Boolean);
 
     procedure SetHousePosition(aHouse: TKMHouse; aPos: TKMPoint);
@@ -100,16 +106,20 @@ type
     procedure History_UpdatePos;
 
     function GetGuiTerrain: TKMMapEdTerrain;
+
+    procedure MapSaveStarted;
+    procedure MapSaveEnded;
+
+    procedure ManageExtrasKeys(Key: Word; Shift: TShiftState);
   protected
     MinimapView: TKMMinimapView;
     Label_Coordinates: TKMLabel;
+    Label_Info: TKMLabel;
     Button_PlayerSelect: array [0..MAX_HANDS-1] of TKMFlatButtonShape; //Animals are common for all
     Button_History: TKMButtonFlat;
     Button_Undo, Button_Redo: TKMButtonFlat;
     Button_ChangeOwner: TKMButtonFlat;
     Button_UniversalEraser: TKMButtonFlat;
-
-    Label_Stat: TKMLabel;
 
     Panel_Common: TKMPanel;
       Button_Main: array [1..5] of TKMButton; //5 buttons
@@ -129,7 +139,7 @@ type
     procedure MapEdOptionsWereChanged;
     procedure OptionsChanged; override;
   public
-    constructor Create(aRender: TRender);
+    constructor Create(aRender: TKMRender; var aMapSaveStarted, aMapSaveEnded: TEvent);
     destructor Destroy; override;
 
     procedure ShowMessage(const aText: string);
@@ -165,28 +175,38 @@ type
 implementation
 uses
   KM_System,
-  KM_HandsCollection, KM_Hand, KM_HandTypes,
+  KM_HandsCollection, KM_Hand, KM_HandTypes, KM_HandEntity,
   KM_ResTexts, KM_Game, KM_GameParams, KM_Cursor,
   KM_Resource, KM_ResHouses, KM_TerrainDeposits, KM_ResKeys, KM_GameApp,
   KM_AIDefensePos, KM_RenderUI, KM_ResFonts, KM_CommonClasses, KM_UnitWarrior,
-  KM_Utils,
+  KM_Maps,
+  KM_Utils, KM_CommonUtils,
   KM_UnitGroupTypes,
-  KM_ResTypes,
-  KM_CommonTypes;
+  KM_ResTypes;
+
+const
+  INFO_SHOW_TIME = 3000; // in ms
 
 
 { TKMMapEdInterface }
-constructor TKMMapEdInterface.Create(aRender: TRender);
+constructor TKMMapEdInterface.Create(aRender: TKMRender; var aMapSaveStarted, aMapSaveEnded: TEvent);
 const
   TB_PAD_MAP_ED = 0;
   TB_PAD_MBTN_LEFT = 9;
+  HND_COL = 9;
+  HND_S = 21;
+  HND_P = 2;
+  TOP_SIDE_BTN = 48;
 var
   I: Integer;
   S: TKMShape;
 begin
-  inherited;
+  inherited Create(aRender);
 
   fMinimap.PaintVirtualGroups := True;
+
+  aMapSaveStarted := MapSaveStarted;
+  aMapSaveEnded := MapSaveEnded;
 
   ResetDragObject;
   //                                   250
@@ -202,43 +222,48 @@ begin
 
   Label_MissionName := TKMLabel.Create(Panel_Main, MAPED_TOOLBAR_WIDTH + 4, 10, 500, 10, NO_TEXT, fntGrey, taLeft);
   Label_Coordinates := TKMLabel.Create(Panel_Main, MAPED_TOOLBAR_WIDTH + 4, 30, 'X: Y:', fntGrey, taLeft);
-  Label_Stat := TKMLabel.Create(Panel_Main, MAPED_TOOLBAR_WIDTH + 4, 50, 0, 0, '', fntOutline, taLeft);
+  Label_Info := TKMLabel.Create(Panel_Main, MAPED_TOOLBAR_WIDTH + 4, 50, '', fntOutline, taLeft);
 
 //  TKMLabel.Create(Panel_Main, TB_PAD, 190, TB_WIDTH, 0, gResTexts[TX_MAPED_PLAYERS], fntOutline, taLeft);
   for I := 0 to MAX_HANDS - 1 do
   begin
-    Button_PlayerSelect[I]         := TKMFlatButtonShape.Create(Panel_Main, TB_PAD + (I mod 6)*24, 190 + 24*(I div 6), 21, 21, IntToStr(I+1), fntGrey, $FF0000FF);
+    Button_PlayerSelect[I]         := TKMFlatButtonShape.Create(Panel_Main, TB_PAD + (I mod HND_COL)*(HND_S+HND_P),
+                                                                190 + (HND_S+HND_P)*(I div HND_COL),
+                                                                HND_S, HND_S, IntToStr(I+1), fntGrey, $FF0000FF);
     Button_PlayerSelect[I].Tag     := I;
     Button_PlayerSelect[I].OnClick := Player_ActiveClick;
   end;
   Button_PlayerSelect[0].Down := True; //First player selected by default
 
-  Button_History := TKMButtonFlat.Create(Panel_Main, Button_PlayerSelect[5].Right + 3, 190, 31, 32, 677);
+  Button_History := TKMButtonFlat.Create(Panel_Main, MAPED_TOOLBAR_WIDTH - 33, TOP_SIDE_BTN, 31, 32, 677);
+  Button_History.BackAlpha := 1;
   Button_History.TexOffsetX := -1;
   Button_History.Down := False; // History is hidden by default
   Button_History.OnClick := History_Click;
 
-  Button_ChangeOwner := TKMButtonFlat.Create(Panel_Main, MAPED_TOOLBAR_WIDTH - 44 - 30 + TB_PAD, 190, 30, 32, 662);
-  Button_ChangeOwner.Down := False;
-  Button_ChangeOwner.OnClick := ChangeOwner_Click;
-
-  //Button_TerrainUndo := TKMButton.Create(Panel_Terrain, Panel_Terrain.Width - 20, 0, 10, SMALL_TAB_H + 4, '<', bsGame);
-  Button_Undo := TKMButtonFlat.Create(Panel_Main, Button_PlayerSelect[5].Right + 3, 227, 15, 32, 0);
+  Button_Undo := TKMButtonFlat.Create(Panel_Main, MAPED_TOOLBAR_WIDTH - 33, TOP_SIDE_BTN + 35, 15, 32, 0);
+  Button_Undo.BackAlpha := 1;
   Button_Undo.Caption := '<';
   Button_Undo.CapOffsetY := -10;
   Button_Undo.CapColor := icGreen;
   Button_Undo.Hint := gResTexts[TX_MAPED_UNDO_HINT]+ ' (''Ctrl + Z'')';
   Button_Undo.OnClick := UnRedo_Click;
 
-  //Button_TerrainRedo := TKMButton.Create(Panel_Terrain, Panel_Terrain.Width - 10, 0, 10, SMALL_TAB_H + 4, '>', bsGame);
-  Button_Redo := TKMButtonFlat.Create(Panel_Main, Button_Undo.Right + 1, 227, 15, 32, 0);
+  Button_Redo := TKMButtonFlat.Create(Panel_Main, Button_Undo.Right + 1, TOP_SIDE_BTN + 35, 15, 32, 0);
+  Button_Redo.BackAlpha := 1;
   Button_Redo.Caption := '>';
   Button_Redo.CapOffsetY := -10;
   Button_Redo.CapColor := icGreen;
   Button_Redo.Hint := gResTexts[TX_MAPED_REDO_HINT] + ' (''Ctrl + Y'' or ''Ctrl + Shift + Z'')';
   Button_Redo.OnClick := UnRedo_Click;
 
-  Button_UniversalEraser := TKMButtonFlat.Create(Panel_Main, MAPED_TOOLBAR_WIDTH - 44 - 30 + TB_PAD, 227, 30, 32, 340);
+  Button_ChangeOwner := TKMButtonFlat.Create(Panel_Main, MAPED_TOOLBAR_WIDTH - 33, TOP_SIDE_BTN + 70, 30, 32, 662);
+  Button_ChangeOwner.BackAlpha := 1;
+  Button_ChangeOwner.Down := False;
+  Button_ChangeOwner.OnClick := ChangeOwner_Click;
+
+  Button_UniversalEraser := TKMButtonFlat.Create(Panel_Main, MAPED_TOOLBAR_WIDTH - 33, TOP_SIDE_BTN + 105, 30, 32, 340);
+  Button_UniversalEraser.BackAlpha := 1;
   Button_UniversalEraser.Down := False;
   Button_UniversalEraser.OnClick := UniversalEraser_Click;
 
@@ -367,7 +392,7 @@ begin
   fGuiMessage.Free;
   fGuiUnit.Free;
 
-  SHOW_TERRAIN_WIRES := false; //Don't show it in-game if they left it on in MapEd
+  SHOW_TERRAIN_WIRES := False; //Don't show it in-game if they left it on in MapEd
   SHOW_TERRAIN_PASS := 0; //Don't show it in-game if they left it on in MapEd
   inherited;
 end;
@@ -505,6 +530,7 @@ begin
   fViewport.UpdateStateIdle(aFrameTime, not fDragScrolling, False);
   fGuiTown.UpdateStateIdle;
   Update_Label_Coordinates;
+  Update_Label_Info;
 end;
 
 
@@ -600,6 +626,7 @@ begin
   if fGuiMenu.GuiMenuResize.Visible then
     gGame.MapEditor.VisibleLayers := gGame.MapEditor.VisibleLayers + [melMapResize];
 
+  // Update Lighting if FlatTerrain layer was added or removed
   if flatTerWasEnabled xor (mlFlatTerrain in gGameParams.VisibleLayers) then
     gTerrain.UpdateLighting;
 end;
@@ -959,6 +986,51 @@ begin
 end;
 
 
+procedure TKMMapEdInterface.MapSaveStarted;
+begin
+  gSystem.Cursor := kmcAnimatedDirSelector;
+  fInfoHideTime := High(Cardinal);
+  Label_Info.Visible := True;
+  Label_Info.Caption := gResTexts[TX_MAPED_MAP_SAVING];
+
+  gGameApp.Render; // Update 'Map saving' label
+end;
+
+
+procedure TKMMapEdInterface.MapSaveEnded;
+begin
+  fInfoHideTime := TimeGet + INFO_SHOW_TIME;
+  Label_Info.Caption := gResTexts[TX_MAPED_MAP_SAVED];
+  gSystem.Cursor := kmcDefault;
+end;
+
+
+procedure TKMMapEdInterface.ManageExtrasKeys(Key: Word; Shift: TShiftState);
+begin
+  if not Key in [gResKeys[kfMapedFlatTerrain], gResKeys[kfMapedTilesGrid]] then Exit;
+
+  // Flat terrain
+  if Key = gResKeys[kfMapedFlatTerrain] then
+  begin
+    fGuiExtras.CheckBox_ShowFlatTerrain.Checked := not fGuiExtras.CheckBox_ShowFlatTerrain.Checked;
+    Layers_UpdateVisibility;
+  end;
+
+  // Tiles grid
+  if Key = gResKeys[kfMapedTilesGrid] then
+  begin
+    fGuiExtras.CheckBox_ShowFlatTerrain.Checked := not fGuiExtras.CheckBox_ShowFlatTerrain.Checked;
+    SHOW_TERRAIN_TILES_GRID := not SHOW_TERRAIN_TILES_GRID;
+  end;
+
+  //Call event handlers after we updated visible layers
+  if Assigned(gGameApp.OnOptionsChange) then
+    gGameApp.OnOptionsChange;
+
+  fGuiExtras.Refresh;
+end;
+
+
 procedure TKMMapEdInterface.KeyUp(Key: Word; Shift: TShiftState; var aHandled: Boolean);
 var
   I: Integer;
@@ -981,6 +1053,9 @@ begin
   keyHandled := False;
 
   if keyHandled then Exit;
+
+  if (Key = gResKeys[kfMapedSaveMap]) and (ssCtrl in Shift) then
+    gGame.SaveMapEditor(TKMapsCollection.FullPath(Trim(gGameParams.Name), '.dat', fMapIsMultiplayer));
 
   //F1-F5 menu shortcuts
   if Key = gResKeys[kfMapedTerrain]   then
@@ -1019,6 +1094,7 @@ begin
   if Key = gResKeys[kfMapedHistory] then
     History_Click(Button_History);
 
+  ManageExtrasKeys(Key, Shift);
 
   if (ssCtrl in Shift) and (Key = Ord('Y')) then
   begin
@@ -1053,7 +1129,7 @@ begin
 
   if (Button = mbLeft) and (gCursor.Mode = cmNone) then
   begin
-    obj := gMySpectator.HitTestCursor;
+    obj := gMySpectator.HitTestCursor(True);
     if obj <> nil then
     begin
       UpdateSelection;
@@ -1082,6 +1158,25 @@ begin
   Label_Coordinates.Caption := Format('X: %d, Y: %d, Z: %d', [gCursor.Cell.X, gCursor.Cell.Y,
                                                               gTerrain.Land^[EnsureRange(Round(gCursor.Float.Y + 1), 1, gTerrain.MapY),
                                                                              EnsureRange(Round(gCursor.Float.X + 1), 1, gTerrain.MapX)].Height]);
+end;
+
+
+procedure TKMMapEdInterface.Update_Label_Info;
+const
+  FADE_TIME_MAX = 1000;
+var
+  time: Cardinal;
+  A: Byte;
+begin
+  time := TimeGet;
+  if time > fInfoHideTime then
+    Label_Info.Visible := False
+  else
+  begin
+    // a bit of 'animation'
+    A := Round(Min(fInfoHideTime - time, FADE_TIME_MAX) / FADE_TIME_MAX * 255);
+    Label_Info.FontColor := ((A shl 24) or $FFFFFF);
+  end;
 end;
 
 
@@ -1193,7 +1288,7 @@ begin
     if marker.MarkerType <> mmtNone then
       gSystem.Cursor := kmcInfo
     else
-    if gMySpectator.HitTestCursor <> nil then
+    if gMySpectator.HitTestCursor(True) <> nil then
       gSystem.Cursor := kmcInfo
     else
     if not fViewport.Scrolling then
@@ -1302,7 +1397,7 @@ var
 begin
   newPos := aHouse.Position <> aPos;
 
-  aHouse.SetPosition(aPos);
+  aHouse.UpdatePosition(aPos);
 
   if newPos then
     gGame.MapEditor.History.MakeCheckpoint(caHouses, Format(gResTexts[TX_MAPED_HISTORY_CHPOINT_MOVE_SMTH],
@@ -1368,7 +1463,7 @@ end;
 
 procedure TKMMapEdInterface.UpdateSelection;
 begin
-  gMySpectator.UpdateSelect;
+  gMySpectator.UpdateSelect(True, True);
 
   if gMySpectator.Selected is TKMHouse then
   begin
@@ -1379,7 +1474,8 @@ begin
   if gMySpectator.Selected is TKMUnit then
   begin
     HidePages;
-    Player_SetActive(TKMUnit(gMySpectator.Selected).Owner);
+    if not (gMySpectator.Selected is TKMUnitAnimal) then
+      Player_SetActive(TKMUnit(gMySpectator.Selected).Owner);
     fGuiUnit.Show(TKMUnit(gMySpectator.Selected));
   end;
   if gMySpectator.Selected is TKMUnitGroup then
@@ -1568,6 +1664,7 @@ end;
 
 procedure TKMMapEdInterface.SetLoadMode(aMultiplayer: Boolean);
 begin
+  fMapIsMultiplayer := aMultiplayer;
   fGuiMenu.SetLoadMode(aMultiplayer);
 end;
 

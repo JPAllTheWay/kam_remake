@@ -142,6 +142,7 @@ begin
   {$IFDEF PERFLOG}
   gPerfLogs := TKMPerfLogs.Create([], True);
   gPerfLogs.ShowForm(fFormMain.cpPerfLogs);
+  gPerfLogs.OnFormChanged := fFormMain.OtherFormChanged;
 
   collapsed := fFormMain.cpPerfLogs.Collapsed; //Save collapsed flag
   fFormMain.cpPerfLogs.Collapsed := False; //We can set TCategoryPanel height only when collapsed set to False
@@ -201,8 +202,11 @@ const
 var
   tryInd: Integer;
   logsPath: UnicodeString;
+  time: Cardinal;
 begin
   Result := True;
+
+  time := TimeGet;
 
   ExeDir := ExtractFilePath(ParamStr(0));
 
@@ -243,6 +247,8 @@ begin
     gLog.DeleteOldLogs;
   end;
 
+  gLog.AddTime('Game Load started');
+
   //Resolutions are created first so that we could check Settings against them
   fResolutions := TKMResolutions.Create;
 
@@ -263,7 +269,7 @@ begin
 
   fFormMain.Caption := 'KaM Remake - ' + UnicodeString(GAME_VERSION);
   //Will make the form slightly higher, so do it before ReinitRender so it is reset
-  fFormMain.ControlsSetVisibile(SHOW_DEBUG_CONTROLS);
+  fFormMain.UpdateFormState;
 
   // Check INI window params, if not valid - set NeedResetToDefaults flag for future update
   if not gMainSettings.WindowParams.IsValid(GetScreenMonitorsInfo) then
@@ -275,7 +281,8 @@ begin
   if not ReinitRender(False) then
     Exit(False);
 
-  fFormMain.ControlsRefill; //Refill some of the debug controls from game settings
+  fFormMain.ControlsReset;  // Reset controls will update Defaults.pas settings after loaded DevSettings
+  fFormMain.ControlsRefill; // Refill some of the debug controls from game settings
 
   // Create gSystem before Application.OnActivate (it uses FlashingStop)
   gSystem := TKMSystem.Create(fFormMain.Handle);
@@ -293,6 +300,8 @@ begin
   fFormLoading.Hide;
 
   fFormMain.AfterFormCreated;
+
+  gLog.AddTime('Game Load Done in ' + IntToStr(TimeSince(time)));
 end;
 
 
@@ -353,6 +362,7 @@ end;
 procedure TKMMain.Stop(Sender: TObject);
 begin
   try
+    gLog.AddTime('Stopping game application...');
     FreeThenNil(gSystem);
     //Reset the resolution
     FreeThenNil(fResolutions);

@@ -25,6 +25,7 @@ begin
   inherited;
 
   fType := uttGoHome;
+  aUnit.Thought := thHome;
 end;
 
 

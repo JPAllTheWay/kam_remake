@@ -18,11 +18,12 @@ const
 
   HANDS_NAMES_OFFSET = 100;
   MISSION_NAME_LIBX_ID = 200; //Reserved Libx ID for Mission name in Campaigns
+  LIBX_NO_ID = -1;
 
 type
   TKMTextLibraryCommon = class
   private
-    procedure LoadLIBXFile(const FilePath: string; var aArray: TUnicodeStringArray);
+    procedure LoadLIBXFile(const FilePath: string; var aArray: TUnicodeStringArray; aFullScan: Boolean = False);
   end;
 
 
@@ -52,7 +53,8 @@ type
     function DoParseTextMarkup(const aText: UnicodeString; aTagSym: Char): UnicodeString;
   public
     constructor Create;
-    procedure LoadLocale(const aPathTemplate: string); // All locales for Mission strings
+    procedure LoadLocale(const aPathTemplate: string; aFullScan: Boolean = False); // All locales for Mission strings
+    procedure Clear;
     function ParseTextMarkup(const aText: UnicodeString): UnicodeString; overload;
     function ParseTextMarkup(const aText: UnicodeString; aParams: array of const): UnicodeString; overload;
     function HasText(aIndex: Word): Boolean;
@@ -76,10 +78,13 @@ var
   gResTexts: TKMTextLibraryMulti;
 
 implementation
+uses
+  Math;
 
 { TKMTextLibraryCommon }
 // LIBX files consist of lines. Each line has an index and a text. Lines without index are skipped
-procedure TKMTextLibraryCommon.LoadLIBXFile(const FilePath: string; var aArray: TUnicodeStringArray);
+procedure TKMTextLibraryCommon.LoadLIBXFile(const FilePath: string; var aArray: TUnicodeStringArray; aFullScan: Boolean = False);
+
   function TextToArray(const aText: UnicodeString): TUnicodeStringArray;
   var
     P, start: PWideChar;
@@ -105,13 +110,13 @@ procedure TKMTextLibraryCommon.LoadLIBXFile(const FilePath: string; var aArray: 
     end;
   end;
 var
-  Tmp: TUnicodeStringArray;
+  tmp: TUnicodeStringArray;
   langCode: AnsiString;
   libTxt: UnicodeString;
   I: Integer;
   s: UnicodeString;
   firstDelimiter: Integer;
-  id, topId: Integer;
+  id, topId, lineId: Integer;
   {$IFDEF FPC} tmpA: AnsiString; {$ENDIF}
 begin
   if not FileExists(FilePath) then Exit;
@@ -119,26 +124,38 @@ begin
   // Load ANSI file with codepage we say into unicode string
   langCode := AnsiString(Copy(FilePath, Length(FilePath) - 7, 3));
   libTxt := ReadTextU(FilePath, gResLocales.LocaleByCode(langCode).FontCodepage);
-  Tmp := TextToArray(libTxt);
+  tmp := TextToArray(libTxt);
 
-  for I := High(Tmp) downto 0 do
+  topId := -1;
+
+  for I := High(tmp) downto 0 do
   begin
-    firstDelimiter := Pos(':', Tmp[I]);
+    firstDelimiter := Pos(':', tmp[I]);
     if firstDelimiter = 0 then Continue;
 
-    if TryStrToInt(LeftStr(Tmp[I], firstDelimiter - 1), topId) then
-      Break;
+    if TryStrToInt(LeftStr(tmp[I], firstDelimiter - 1), lineId) then
+    begin
+      if not aFullScan then
+      begin
+        topId := lineId;
+        Break;
+      end;
+      topId := Max(lineId, topId);
+    end;
   end;
 
-  Assert(topId <= 2048, 'Dont allow too many strings for no reason');
+  // No strings were found
+  if topId = -1 then Exit;
+
+  Assert(topId <= 2048, 'Don''t allow too many strings for no reason');
 
   // Don't shrink the array, we might be overloading base locale with a partial translation
   if Length(aArray) < topId + 1 then
     SetLength(aArray, topId + 1);
 
-  for I := 0 to High(Tmp) do
+  for I := 0 to High(tmp) do
   begin
-    s := Tmp[I];
+    s := tmp[I];
 
     // Get string index and skip erroneous lines
     firstDelimiter := Pos(':', s);
@@ -273,15 +290,21 @@ begin
 end;
 
 
+procedure TKMTextLibraryMulti.Clear;
+begin
+  SetLength(fTexts, 0);
+end;
+
+
 // Path template with %s
-procedure TKMTextLibraryMulti.LoadLocale(const aPathTemplate: string);
+procedure TKMTextLibraryMulti.LoadLocale(const aPathTemplate: string; aFullScan: Boolean = False);
 var
   I: Integer;
 begin
   SetLength(fTexts, gResLocales.Count);
 
   for I := 0 to gResLocales.Count - 1 do
-    LoadLIBXFile(Format(aPathTemplate, [gResLocales[I].Code]), fTexts[I]);
+    LoadLIBXFile(Format(aPathTemplate, [gResLocales[I].Code]), fTexts[I], aFullScan);
 end;
 
 

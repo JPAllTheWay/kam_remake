@@ -143,19 +143,19 @@
 144:Destroy selected building
 145:Decrease order amount
 146:Increase order amount
-147:Previous soldier type. Use Shift to get to the first soldier type
-148:Next soldier type. Use Shift to get to the last soldier type
-149:Equip current soldier type. Use Shift to equip 10 soldiers
-150:Next profession. Use Shift to get to the last profession
-151:Previous profession. Use Shift to get to the first profession
-152:Add to queue.|Use RMB, Ctrl or Alt to modify the queue and Shift to fill it
+147:Previous soldier type. Use RMB or Alt to get to the first soldier type
+148:Next soldier type. Use RMB or Alt to get to the last soldier type
+149:Equip current soldier type. Use RMB or Alt to equip 10 soldiers
+150:Next profession. Use RMB or Alt to get to the last profession
+151:Previous profession. Use RMB or Alt to get to the first profession
+152:Add to queue.|Use Shift or Ctrl to modify the queue and RMB or Alt to fill it
 153:Switch between delivery modes of wares: demand / closed / offer|Use LMB / RMB to switch forward / backward
 154:Cost:
 155:Switch on/off house repair
 156:Building not available at this time
 157:Condition
-158:Turn troop left|Click RMB or press Shift to turn 90 degrees, press Ctrl to turn 180 degrees
-159:Turn troop right|Click RMB or press Shift to turn 90 degrees, press Ctrl to turn 180 degrees
+158:Turn troop left|Click RMB or press Alt to turn 90 degrees, press Shift to turn 180 degrees
+159:Turn troop right|Click RMB or press Alt to turn 90 degrees, press Shift to turn 180 degrees
 160:Attack
 161:Dispatch troop
 162:Supply troop with food
@@ -1537,3 +1537,10 @@
 1590:Multiplayer setup for AI player %d
 1591:Warning: This will override all existing AI settings for player %d. Continue?
 1592:Stores the current password for future use
+1593:Fish count
+1594:Save map
+1595:Map saved
+1596:Saving map...
+1597:Flat terrain
+1598:Tiles grid
+1599:Save file does not exist

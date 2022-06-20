@@ -21,6 +21,8 @@ type
     function GetExplanation: UnicodeString; override;
     function Execute: TKMActionResult; override;
     procedure Save(SaveStream: TKMemoryStream); override;
+
+    function ObjToStringShort(const aSeparator: String = ' '): String; override;
   end;
 
 
@@ -80,13 +82,13 @@ begin
                     end;
     utFarmer:      case ActionType of
                       uaWork:  if Step = 8 then gSoundPlayer.Play(sfxCornCut,fUnit.PositionF);
-                      uaWork1: if Step = 0 then gSoundPlayer.Play(sfxCornSow,fUnit.PositionF,true,0.6);
+                      uaWork1: if Step = 0 then gSoundPlayer.Play(sfxCornSow,fUnit.PositionF,True,0.6);
                     end;
     utStonemason: if ActionType = uaWork then
-                      if Step = 3 then gSoundPlayer.Play(sfxMinestone,fUnit.PositionF,true,1.4);
+                      if Step = 3 then gSoundPlayer.Play(sfxMinestone,fUnit.PositionF,True,1.4);
     utWoodCutter:  case ActionType of
-                      uaWork: if (fUnit.AnimStep mod Cycle = 3) and (fUnit.Direction <> dirN) then gSoundPlayer.Play(sfxChopTree, fUnit.PositionF,true)
-                      else     if (fUnit.AnimStep mod Cycle = 0) and (fUnit.Direction =  dirN) then gSoundPlayer.Play(sfxWoodcutterDig, fUnit.PositionF,true);
+                      uaWork: if (fUnit.AnimStep mod Cycle = 3) and (fUnit.Direction <> dirN) then gSoundPlayer.Play(sfxChopTree, fUnit.PositionF,True)
+                      else     if (fUnit.AnimStep mod Cycle = 0) and (fUnit.Direction =  dirN) then gSoundPlayer.Play(sfxWoodcutterDig, fUnit.PositionF,True);
                     end;
   end;
 end;
@@ -135,6 +137,16 @@ end;
 function TKMUnitActionStay.CanBeInterrupted(aForced: Boolean = True): Boolean;
 begin
   Result := not Locked; //Initial pause before leaving barracks is locked
+end;
+
+
+function TKMUnitActionStay.ObjToStringShort(const aSeparator: String): String;
+begin
+  Result := inherited + Format('%s[StayStill = %s%sTimeToStay = %d%sStillFrame = %d]', [
+                               aSeparator,
+                               BoolToStr(StayStill, True), aSeparator,
+                               TimeToStay, aSeparator,
+                               StillFrame]);
 end;
 
 

@@ -6,7 +6,7 @@ uses
   KM_Defaults, KM_CommonClasses, KM_Points;
 
 type
-  //General implementation of algorithm that finds something on terrain without building a route to it
+  // General implementation of algorithm that finds something on terrain without building a route to it
   TKMTerrainFinderCommon = class
   private
     fMapX: Word;

@@ -111,11 +111,11 @@ begin
         begin
           Inc(I);
           paramString := ParamStr(I);
-          if ((LowerCase(paramString) = 'sbd') or (LowerCase(paramString) = 'spritesbasedir')) then
+          if ((LowerCase(paramString) = 'sld') or (LowerCase(paramString) = 'spritesloaddir')) then
           begin
             if (I >= ParamCount) then
             begin
-              writeln('spritesBaseDir directory not specified');
+              writeln('spritesLoadDir directory not specified');
               Exit;
             end;
 
@@ -123,11 +123,23 @@ begin
 
             if not DirectoryExists(ParamStr(I)) then
             begin
-              writeln('spritesBaseDir directory does not exist: ' + ParamStr(I));
+              writeln('spritesLoadDir directory does not exist: ' + ParamStr(I));
               Exit;
             end;
-            lRxxPacker.SpritesBaseDir := ParamStr(I);
+            lRxxPacker.SpritesLoadDir := ParamStr(I);
+            Continue;
+          end;
 
+          if ((LowerCase(paramString) = 'ssd') or (LowerCase(paramString) = 'spritessavedir')) then
+          begin
+            if (I >= ParamCount) then
+            begin
+              writeln('spritesSaveDir directory not specified');
+              Exit;
+            end;
+
+            Inc(I);
+            lRxxPacker.SpritesSaveDir := ParamStr(I);
             Continue;
           end;
 

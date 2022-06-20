@@ -27,7 +27,7 @@ uses
   Math,
   KM_Sound,
   KM_ResSound,
-  KM_Hand, KM_HandsCollection,
+  KM_Hand, KM_HandsCollection, KM_HandTypes, KM_HandEntity,
   KM_RenderPool,
   KM_Defaults, KM_CommonUtils;
 

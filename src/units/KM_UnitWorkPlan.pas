@@ -171,7 +171,7 @@ begin
     gsFisherCatch:     Found := FindFishWater(aLoc, gRes.Units[aUnit.UnitType].MiningRange, aAvoidLoc, False, NewLoc);
     gsWoodCutterCut:   Found := ChooseTree(aLoc, KMGetVertexTile(aAvoidLoc, WorkDir), gRes.Units[aUnit.UnitType].MiningRange, taCut, aUnit, NewLoc, PlantAct);
     gsWoodCutterPlant: Found := ChooseTree(aLoc, aAvoidLoc, gRes.Units[aUnit.UnitType].MiningRange, taPlant, aUnit, NewLoc, PlantAct);
-    else                Found := False; //Can find a new resource for an unknown gathering script, so return with false
+    else                Found := False; //Can find a new resource for an unknown gathering script, so return with False
   end;
 
   if Found then
@@ -238,8 +238,7 @@ begin
 end;
 
 
-procedure TKMUnitWorkPlan.FindPlan(aUnit: TKMUnit; aHome: TKMHouseType; aProduct: TKMWareType;
-                                 aLoc: TKMPoint; aPlantAct: TKMPlantAct);
+procedure TKMUnitWorkPlan.FindPlan(aUnit: TKMUnit; aHome: TKMHouseType; aProduct: TKMWareType; aLoc: TKMPoint; aPlantAct: TKMPlantAct);
 var
   I: Integer;
   tmp: TKMPointDir;
@@ -494,7 +493,7 @@ begin
                         if fIssued then
                         begin
                           ResourcePlan(wtNone,0,wtNone,0,wtFish);
-                          WalkStyle(tmp,uaWalk,uaWork2,12,0,uaWalkTool,gsFisherCatch);
+                          WalkStyle(tmp,uaWalk,uaWork2,10,0,uaWalkTool,gsFisherCatch);
                         end else
                           //We must check again this time ignoring working units since they don't indicate the resource is depleted
                           ResourceDepleted := not gTerrain.FindFishWater(aLoc, gRes.Units[aUnit.UnitType].MiningRange, KMPOINT_ZERO, True, tmp);
